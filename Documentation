@@ -1,0 +1,58 @@
+Backends:
+  * PostgreSQL
+  * LDAP
+
+Backend (PostgreSQL):
+  * Tables:
+  * (Details can be found in the backend/pgsql/pgsql.sql file)
+
+Configuration:
+
+# make sure to set correct access rights to this
+# file as it contains critical informations!
+
+[global]
+# backend - LDAP (ldap) or PostgreSQL (pgsql)
+backend = ldap
+
+# x509 subjects must be unique or not
+# default: yes
+unique_subject = yes
+
+# path to public and private ca key
+# and the passphrase protecting it.
+ca_public_key = /path/to/public/ca/certificate
+ca_private_key = /path/to/private/ca/certificate
+ca_passphrase = ItsSoFluffyImGonnaDie!
+
+# default message digest to use when signing certificates
+# see man 1ssl dgst for supported digest algorithm
+digest = sha256
+
+# use random serial number for certificates (random) or increment
+# the serial number (increment)
+serial_number = random
+
+# Backend configurations
+[pgsql]
+host = 127.0.0.1
+port = 5432
+user = dbuser
+passphrase = DoesThisCountAsAnnoying?
+database = pkidb
+
+[ldap]
+host = 127.0.0.1
+port = 389
+user = cn=admin,dc=organisation,dc=org
+passphrase = AssembleTheMinions!
+Store:
+
+Commands:
+ sign - sign csr
+ revoke - revoke certificate
+ search - search certificate in data backend
+
+Options:
+ --digest=<dgst>  Sign certificate using <dgst> instead of default digest
+

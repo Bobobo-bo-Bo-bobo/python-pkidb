@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- so BIGINT is to small, we use TEXT instead to hold the hex string
   --
   -- serial_number is NULL for certificates that are
-  -- not issued yet
+  -- not issued yet, therefore it can't be used as primary key
   serial_number TEXT UNIQUE CHECK(serial_number <> '')
 
   -- set to NULL when certificate was not issued yet
@@ -71,4 +71,20 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- revocation_date, not NULL when certificate has been revoked
   revocation_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   -- revocation_reason reason for revocation
+  -- possible values are
+  --  0 - unspecified
+  --  1 - keyCompromise
+  --  2 - CACompromise
+  --  3 - affiliationChanged
+  --  4 - superseded
+  --  5 - cessationOfOperation
+  --  6 - certificateHold
+  revocation_reason INTEGER DEFAULT NULL CHECK(revocation_reason >= 0)
 );
+
+-- create index for common queries
+CREATE INDEX certificate_serial_number_idx ON certificate USING btree(serial_number);
+CREATE INDEX certificate_fingerprint_md5_idx ON certificate USING btree(fingerprint_md5);
+CREATE INDEX certificate_fingerprint_sha1_idx ON certificate USING btree(fingerprint_sha1);
+CREATE INDEX certificate_state_idx ON certificate USING btree(state);
+

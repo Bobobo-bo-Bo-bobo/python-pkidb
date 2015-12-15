@@ -1,3 +1,6 @@
+Requirements:
+  * python-openssl
+
 Backends:
   * PostgreSQL
   * LDAP

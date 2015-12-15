@@ -52,9 +52,13 @@ Store:
 
 Commands:
  sign - sign csr
- revoke - revoke certificate
- search - search certificate in data backend
+  * pass certificate signing request as file or - to read from stdin
 
+ revoke - revoke certificate
+  * pass certificate to revoke as file or - to read from stdin
+
+ search - search certificate in data backend
+  * 
 Options:
  --digest=<dgst>  Sign certificate using <dgst> instead of default digest
  --config=<cfg>   Configuration file to use instead of the default (/etc/pki/config.ini)

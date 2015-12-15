@@ -1,16 +1,3 @@
-Requirements:
-  * python-openssl
-
-Backends:
-  * PostgreSQL
-  * LDAP
-
-Backend (PostgreSQL):
-  * Tables:
-  * (Details can be found in the backend/pgsql/pgsql.sql file)
-
-Configuration:
-
 # make sure to set correct access rights to this
 # file as it contains critical informations!
 
@@ -18,7 +5,8 @@ Configuration:
 # backend - LDAP (ldap) or PostgreSQL (pgsql)
 backend = ldap
 
-# x509 subjects must be unique (yes) or not (no)
+# x509 subjects must be unique or not
+# default: yes
 unique_subject = yes
 
 # path to public and private ca key
@@ -48,13 +36,4 @@ host = 127.0.0.1
 port = 389
 user = cn=admin,dc=organisation,dc=org
 passphrase = AssembleTheMinions!
-Store:
 
-Commands:
- sign - sign csr
- revoke - revoke certificate
- search - search certificate in data backend
-
-Options:
- --digest=<dgst>  Sign certificate using <dgst> instead of default digest
- --config=<cfg>   Configuration file to use instead of the default (/etc/pki/config.ini)

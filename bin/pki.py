@@ -3,17 +3,25 @@
 import getopt
 import os
 import sys
+import time
 import OpenSSL
 
 # default configuration file
 global configfile
 configfile = "/etc/pki/config.ini"
 
-global shortopts
-global longopts
+global shortoptions
+global longoptions
 
-shortopts = "c:h"
-longopts = ["config=", "help"]
+shortoptions = {
+    "main":"c:h",
+    "sign":"o:S:",
+}
+
+longoptions = {
+    "main":["config=", "help"],
+    "sign":["output=", "san="],
+}
 
 # Python 3 renamed ConfigParser to configparser
 if sys.version_info[0] < 3:
@@ -63,21 +71,222 @@ def parseoptions(optfile):
 
 def usage():
 
-    print("""Usage: %s [-c <cfg>|--config=<cfg>] [-h|--help] <command>
+    print("""Usage: %s [-c <cfg>|--config=<cfg>] [-h|--help] <command> [<commandoptions>]
 
-  -c <cfg>          Use configuration file instead of the default
-  --config=<cfg>    Default: %s
+  -c <cfg>              Use configuration file instead of the default
+  --config=<cfg>        Default: %s
 
-  -h                This text
+  -h                    This text
   --help
-  """ % (os.path.basename(sys.argv[0])), configfile)
 
+  Commands:
+   sign
+     * Options:
+     -S <san>           List of subjectAlternateName data.
+     --san=<san>
+
+     -s <start>         Start time for new certificate as Unix timestamp
+     --start=<start>    Default: now
+
+     -e <end>           End time for new certificate as Unix timestamp
+     --end=<end>        Default: start + <validity_period> days.
+
+     -o <out>           Write data to <outfile> instead of stdout
+     --output=<out>
+
+  """ % (os.path.basename(sys.argv[0]), configfile))
+
+def sign(opts, config):
+    """
+    Sign a certificate signing request.
+    :param opts: array with options
+    :param config: parsed configuration file
+    :return: 0 on success or !=0 otherwise
+    """
+
+    output = None
+    san = []
+    input = None
+    start = None
+    end = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-S", "--san"):
+            san = val.split(",")
+
+        elif opt in ("-e", "--end"):
+            try:
+                end = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
+                return 1
+
+        elif opt in ("-s", "--start"):
+            try:
+                start = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error Can't parse start time %s: %s\n" % (val, error.message))
+                return 1
+
+        elif opt in ("-o", "--output"):
+            output = val
+
+        else:
+            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            sys.exit(1)
+
+    # basic validation of options
+    if not start:
+        start = time.time()
+
+    if not end:
+        end = start + long(config["global"]["validity_period"])
+
+    if start >= end:
+        sys.stderr.write("Error: Start time (%f) is >= end time (%f)\n" % (start, end))
+        return 1
+
+    if len(trailing) == 0:
+        input = sys.stdin
+
+    elif len(trailing) == 1:
+        try:
+            input = open(trailing[0], "r")
+        except IOError as error:
+            sys.stderr.write("Error: Can't open %s for reading: %s" %(trailing[0], error.strerror))
+            return error.errno
+
+    else:
+        sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
+        return 1
+
+    # csr read data from input
+    data = input.read()
+
+    # close non stdin input
+    if input != sys.stdin:
+        input.close()
+
+    # assuming PEM input
+    csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, data)
+
+    # X509Req.get_extensions() is available in pyopenssl 0.15
+    if OpenSSL.__version__ >= "0.15":
+        # FIXME: Handle get_extensions()
+        pass
+
+    # load private CA key
+    cakey = load_ca_key(config)
+
+    if not cakey:
+        sys.stderr.write("Error: Failed to load CA private key\n")
+        return 2
+
+    # set start and and time
+    # Note: start/end time must be formatted as ASN1 GENERALIZEDTIME string
+    #
+    # YYYYMMDDhhmmssZ
+    # YYYYMMDDhhmmss+hhmm
+    # YYYYMMDDhhmmss-hhmm
+    #
+    asn1_start = time.strftime("%Y%m%d%H%M%S%z", time.localtime(start))
+    asn1_end = time.strftime("%Y%m%d%H%M%S%z", time.localtime(end))
+
+    # create new X509 object
+    certificate = OpenSSL.crypto.X509()
+
+    # SSL version 3, Note: version starts at 0
+    certificate.set_version(2)
+
+    # copy subject from certificate signing request
+    certificate.set_subject(csr.get_subject())
+
+    # copy public key from certificate signing request
+    certificate.set_pubkey(csr.get_pubkey())
+
+    # set start and end dates
+    certificate.set_notBefore(start)
+    certificate.set_notAfter(end)
+
+    # get new serial number for certificate
+    serial = get_new_serial_number(config, certificate)
+
+
+def get_new_serial_number(config, cert):
+    """
+    Generate a new serial number. To avoid clashes the serial number will be written to the backend.
+    Stale data should be removed by the signal handler and/or by running the backendcheck handler.
+    :param config: configuration
+    :param cert: X509 object of new certificate
+    :return: serial number
+    """
+
+    # FIXME: handle backend operations
+    #
+    # FIXME:
+    # if unique_subject is true, look for subject in the backend and
+    # throw an error if it already exist.
+
+    if config["global"]["serial_number"] == "random":
+        # FIXME:
+        #
+        # get random number
+        # lookup random number in backend
+        # if found start again
+        # else commit sn and cert data to backend
+        #
+        # Note: another method would be to commit random sn and data to backend
+        # and
+        pass
+    else:
+        # FIXME:
+        #
+        # get last serial number:
+        # SELECT serial_number FROM certificate ORDER BY serial_number DESC LIMIT 1
+        #
+        # convert to long, increment and write
+        # Note: there is a race condition between SELECT and UPDATE!
+        #
+        pass
+    return os.urandom(10)
+
+def load_ca_key(config):
+    """
+    Load CA keyfile
+    :param config: configuration
+    :return: private CA key as PKey object or None
+    """
+
+    result = None
+    ca_passphrase = config["global"]["ca_passphrase"]
+
+    try:
+        fd = open(config["global"]["ca_private_key"], "r")
+        data = fd.read()
+        fd.close()
+    except IOError as error:
+        sys.stderr.write("Error: Can't read CA private key: %s\n" % (error.strerror, ))
+        return None
+
+    try:
+        result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=ca_passphrase)
+    except OpenSSL.crypto.Error as error:
+        sys.stderr.write("Error: Can't load CA private key: %s\n" % (error.message, ))
+        return None
+
+    return result
 
 if __name__ == "__main__":
 
     # parse commandline options
     try:
-        (optval, trailing) = getopt.getopt(sys.argv[1:], shortopts, longopts)
+        (optval, trailing) = getopt.getopt(sys.argv[1:], shortoptions["main"], longoptions["main"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
         sys.exit(1)
@@ -92,6 +301,28 @@ if __name__ == "__main__":
             sys.stderr.write("Error: Unknown option %s" % (opt,))
             sys.exit(1)
 
+    if not os.access(configfile, os.R_OK):
+        sys.stderr.write("Error: Can't open configuration file %s for reading\n" % (configfile, ))
+        sys.exit(1)
+
     options = parseoptions(configfile)
-    
+
+    # FIXME: Validate options
+
+    if len(trailing) == 0:
+        sys.stderr.write("Error: Missing command\n")
+        usage()
+        sys.exit(1)
+
+    command = trailing[0]
+    if command == "sign":
+        sign(trailing[1:], options)
+    elif command == "help":
+        usage()
+        sys.exit(0)
+    else:
+        sys.stderr.write("Error: Unknown command %s\n" % (command,))
+        usage()
+        sys.exit(1)
+
     sys.exit(0)

@@ -8,11 +8,13 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   --  * up to 20 octets (up to 2**160)
   --  * not longer than 20 octets
   --
-  -- so BIGINT is to small, we use TEXT instead to hold the hex string
+  -- use NUMERIC as data type, it is defined as:
   --
+  -- numeric  variable  user-specified precision, exact   up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
+  -- 
   -- serial_number is NULL for certificates that are
   -- not issued yet, therefore it can't be used as primary key
-  serial_number TEXT UNIQUE CHECK(serial_number <> '')
+  serial_number NUMERIC UNIQUE CHECK(serial_number > 0),
 
   -- set to NULL when certificate was not issued yet
   -- (csr submitted but pending)
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
 
   -- state is the current state of the certificate
   -- possible values are
+  -- -1 - temporary: ?
   --  0 - pending: CSR submitted but not issued yet
   --  1 - issued: CSR has been processed, certificate has been issued
   --  2 - revoked: certificate has been revoked

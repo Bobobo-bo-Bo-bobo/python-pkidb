@@ -23,6 +23,9 @@ digest = sha256
 # the serial number (increment)
 serial_number = random
 
+# default validity period for new certificates
+validity_period = 3650
+
 # Backend configurations
 [pgsql]
 host = 127.0.0.1

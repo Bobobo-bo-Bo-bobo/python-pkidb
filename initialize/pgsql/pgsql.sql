@@ -33,27 +33,6 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   fingerprint_md5 VARCHAR(32) UNIQUE DEFAULT NULL CHECK(fingerprint_md5 <> ''),
   fingerprint_sha1 VARCHAR(40) UNIQUE DEFAULT NULL CHECK(fingerprint_sha1 <> ''),
 
-  -- store certificate purpose
-  -- NULL for pending certificates
-  purpose_ssl_client BOOLEAN DEFAULT NULL,
-  purpose_ssl_client_ca BOOLEAN DEFAULT NULL,
-  purpose_ssl_server BOOLEAN DEFAULT NULL,
-  purpose_ssl_server_ca BOOLEAN DEFAULT NULL,
-  purpose_netscape_ssl_server BOOLEAN DEFAULT NULL,
-  purpose_netscape_ssl_server_ca BOOLEAN DEFAULT NULL,
-  purpose_smime_signing BOOLEAN DEFAULT NULL,
-  purpose_smime_signing_ca BOOLEAN DEFAULT NULL,
-  purpose_smime_encryption BOOLEAN DEFAULT NULL,
-  purpose_smime_encryption_ca BOOLEAN DEFAULT NULL,
-  purpose_crl_signing BOOLEAN DEFAULT NULL,
-  purpose_crl_signing_ca BOOLEAN DEFAULT NULL,
-  purpose_any_purpose BOOLEAN DEFAULT NULL,
-  purpose_any_purpose_ca BOOLEAN DEFAULT NULL,
-  purpose_ocsp_helper BOOLEAN DEFAULT NULL,
-  purpose_ocsp_helper_ca BOOLEAN DEFAULT NULL,
-  purpose_timestamp_signing BOOLEAN DEFAULT NULL,
-  purpose_timestamp_signing_ca BOOLEAN DEFAULT NULL,
-
   -- certificate holds the base64 encoded public key
   -- it is NULL for pending certificates
   certificate TEXT UNIQUE CHECK(certificate <> ''),

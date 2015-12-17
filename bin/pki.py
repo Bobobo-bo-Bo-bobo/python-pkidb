@@ -93,5 +93,5 @@ if __name__ == "__main__":
             sys.exit(1)
 
     options = parseoptions(configfile)
-    
+
     sys.exit(0)

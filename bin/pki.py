@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import backends
 import getopt
 import os
 import sys
@@ -16,11 +17,13 @@ global longoptions
 shortoptions = {
     "main":"c:h",
     "sign":"o:S:",
+    "import":"",
 }
 
 longoptions = {
     "main":["config=", "help"],
     "sign":["output=", "san="],
+    "import":[],
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -96,11 +99,12 @@ def usage():
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
-def sign(opts, config):
+def sign(opts, config, backend):
     """
     Sign a certificate signing request.
     :param opts: array with options
     :param config: parsed configuration file
+    :param back: backend object
     :return: 0 on success or !=0 otherwise
     """
 
@@ -167,7 +171,11 @@ def sign(opts, config):
         return 1
 
     # csr read data from input
-    data = input.read()
+    try:
+        data = input.read()
+    except IOError as error:
+        sys.stderr.write("Error: Read from %s failed: %s" % (input.name, error.strerror))
+        return error.errno
 
     # close non stdin input
     if input != sys.stdin:
@@ -211,50 +219,13 @@ def sign(opts, config):
     certificate.set_pubkey(csr.get_pubkey())
 
     # set start and end dates
-    certificate.set_notBefore(start)
-    certificate.set_notAfter(end)
+    certificate.set_notBefore(asn1_start)
+    certificate.set_notAfter(asn1_end)
 
     # get new serial number for certificate
-    serial = get_new_serial_number(config, certificate)
+#    serial = get_new_serial_number(config, certificate)
 
 
-def get_new_serial_number(config, cert):
-    """
-    Generate a new serial number. To avoid clashes the serial number will be written to the backend.
-    Stale data should be removed by the signal handler and/or by running the backendcheck handler.
-    :param config: configuration
-    :param cert: X509 object of new certificate
-    :return: serial number
-    """
-
-    # FIXME: handle backend operations
-    #
-    # FIXME:
-    # if unique_subject is true, look for subject in the backend and
-    # throw an error if it already exist.
-
-    if config["global"]["serial_number"] == "random":
-        # FIXME:
-        #
-        # get random number
-        # lookup random number in backend
-        # if found start again
-        # else commit sn and cert data to backend
-        #
-        # Note: another method would be to commit random sn and data to backend
-        # and
-        pass
-    else:
-        # FIXME:
-        #
-        # get last serial number:
-        # SELECT serial_number FROM certificate ORDER BY serial_number DESC LIMIT 1
-        #
-        # convert to long, increment and write
-        # Note: there is a race condition between SELECT and UPDATE!
-        #
-        pass
-    return os.urandom(10)
 
 def load_ca_key(config):
     """
@@ -282,6 +253,56 @@ def load_ca_key(config):
 
     return result
 
+def import_certificate(opts, config, backend):
+    """
+    Import a certificate (PEM) into the backend
+    :param ops: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: 0 on success, != 0 otherwise
+    """
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["import"], longoptions["import"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        return 1
+
+    for (opt, val) in optval:
+        pass
+
+    input = None
+
+    if len(trailing) == 0:
+        input = sys.stdin
+
+    elif len(trailing) == 1:
+        try:
+            input = open(trailing[0], "r")
+        except IOError as error:
+            sys.stderr.write("Error: Can't open %s for reading: %s\n" %(trailing[0], error.strerror))
+            return error.errno
+
+    else:
+        sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
+        return 1
+
+    try:
+        data = input.read()
+    except IOError as error:
+        sys.stderr.write("Error: Read from %s failed: %s\n" % (input.name, error.strerror))
+        return error.errno
+
+    # close non stdin input
+    if input != sys.stdin:
+        input.close()
+
+    # assuming PEM input
+    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
+
+    for i in range(cert.get_extension_count()):
+        print(i," -> ", cert.get_extension(i).get_short_name(), " / ", cert.get_extension(i).get_critical(), " / ", cert.get_extension(i).get_data())
+
 if __name__ == "__main__":
 
     # parse commandline options
@@ -298,7 +319,7 @@ if __name__ == "__main__":
         elif opt in ("-c", "--config"):
             configfile = val
         else:
-            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             sys.exit(1)
 
     if not os.access(configfile, os.R_OK):
@@ -309,6 +330,12 @@ if __name__ == "__main__":
 
     # FIXME: Validate options
 
+    backend = None
+
+    # create backend object
+    if "backend" in options["global"]:
+        if options["global"]["backend"] == "pgsql":
+            backend = backends.pgsql.PostgreSQL(options)
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")
         usage()
@@ -316,10 +343,12 @@ if __name__ == "__main__":
 
     command = trailing[0]
     if command == "sign":
-        sign(trailing[1:], options)
+        sign(trailing[1:], options, backend)
     elif command == "help":
         usage()
         sys.exit(0)
+    elif command == "import":
+        import_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

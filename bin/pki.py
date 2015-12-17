@@ -17,13 +17,26 @@ global longoptions
 shortoptions = {
     "main":"c:h",
     "sign":"o:S:",
-    "import":"",
+    "import":"c:r:",
 }
 
 longoptions = {
     "main":["config=", "help"],
     "sign":["output=", "san="],
-    "import":[],
+    "import":["csr=", "revoked="],
+}
+
+# map revocation reasons to numeric codes
+global revocation_reason_map
+
+revocation_reason_map = {
+    "unspecified":0,
+    "keycompromise":1,
+    "cacompromise":2,
+    "affiliationChanged":3,
+    "superseded":4,
+    "cessationOfOperation":5,
+    "certificateHold":6
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -83,8 +96,19 @@ def usage():
   --help
 
   Commands:
+   import               Import a certificate
+
+     -c <csr>                   Certificate signing request used for certificate
+     --csr=<csr>                creation. Optional, can be omitted.
+
+     -r <reason>,<time>         Mark certificate as revoked.
+     --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation
+                                <reason> can be one of:
+                                unspecified, keyCompromise, CACompromise, affiliationChanged,
+                                superseded, cessationOfOperation, certificateHold
+
    sign
-     * Options:
+
      -S <san>           List of subjectAlternateName data.
      --san=<san>
 
@@ -225,8 +249,6 @@ def sign(opts, config, backend):
     # get new serial number for certificate
 #    serial = get_new_serial_number(config, certificate)
 
-
-
 def load_ca_key(config):
     """
     Load CA keyfile
@@ -268,8 +290,41 @@ def import_certificate(opts, config, backend):
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         return 1
 
+    csr = None
+    revoked = None
+
     for (opt, val) in optval:
-        pass
+        if opt in ("-c", "--csr"):
+            try:
+                fd = open(val, "r")
+                csrdata = fd.read()
+                fd.close()
+            except IOError as error:
+                sys.stderr.write("Error: Can't read certificate signing request from %s: %s\n" % (val, error.strerror))
+                return error.errno
+
+            csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csrdata)
+        elif opt in ("-r", "--revoked"):
+            # format: <reason>,<revocation_stamp>
+            (reason, revtime) = val.split(',')
+
+            # check timestamp
+            try:
+                revtime = float(revtime)
+            except ValueError as error:
+                sys.stderr.write("Error: Illegal timestamp %s\n" % (revtime, ))
+                return 1
+
+            # treat no reason as unspecified
+            if reason == '':
+                reason = "unspecified"
+
+            # check reason string
+            if reason.lower() in revocation_reason_map:
+                revoked = (revocation_reason_map[reason.lower()], revtime)
+            else:
+                sys.stderr.write("Error: Unknown revocation reason %s\n" % (reason, ))
+                return 1
 
     input = None
 
@@ -299,9 +354,7 @@ def import_certificate(opts, config, backend):
 
     # assuming PEM input
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
-
-    for i in range(cert.get_extension_count()):
-        print(i," -> ", cert.get_extension(i).get_short_name(), " / ", cert.get_extension(i).get_critical(), " / ", cert.get_extension(i).get_data())
+    backend.store_certificate(cert, csr, revoked)
 
 if __name__ == "__main__":
 
@@ -335,7 +388,9 @@ if __name__ == "__main__":
     # create backend object
     if "backend" in options["global"]:
         if options["global"]["backend"] == "pgsql":
+            import backends.pgsql
             backend = backends.pgsql.PostgreSQL(options)
+
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")
         usage()

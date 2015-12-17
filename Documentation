@@ -3,7 +3,6 @@ Requirements:
 
 Backends:
   * PostgreSQL
-  * LDAP
 
 Backend (PostgreSQL):
   * Tables:
@@ -48,6 +47,29 @@ host = 127.0.0.1
 port = 389
 user = cn=admin,dc=organisation,dc=org
 passphrase = AssembleTheMinions!
+
+Getting started:
+  * create database user, e.g.
+
+    * PostgreSQL:
+
+createuser --encrypted --no-inherit --no-createrole --no-superuser --no-createdb --pwprompt <username>)
+
+  * create empty database and assign ownership to <username>
+    * PostgreSQL:
+
+createdb --owner=<username> --encoding=UTF8 <database>
+
+  * initialize database:
+    * PostgreSQL:
+
+pgsql <database> < /path/to/installation/initialize/pgsql/pgsql.sql
+
+  * grant access right to created user <username>:
+    * PostgreSQL:
+
+/path/to/installation/initialize/pgsql/grant.sh <database> <username>
+
 Store:
 
 Commands:

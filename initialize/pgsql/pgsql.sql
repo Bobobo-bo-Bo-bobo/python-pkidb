@@ -1,3 +1,12 @@
+CREATE TYPE x509extension AS (
+  -- name of the x509 extension
+  name TEXT, 
+  -- criticality flag of the x509 extension
+  criticality SMALLINT,
+  -- base64 encoded data of the extension
+  data TEXT
+);
+
 CREATE TABLE IF NOT EXISTS "certificate" (
   certificate_id SERIAL PRIMARY KEY,
 
@@ -15,6 +24,9 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- serial_number is NULL for certificates that are
   -- not issued yet, therefore it can't be used as primary key
   serial_number NUMERIC UNIQUE CHECK(serial_number > 0),
+
+  -- SSL version (Note: SSL starts version at 0)
+  version INTEGER CHECK(version >= 0),
 
   -- set to NULL when certificate was not issued yet
   -- (csr submitted but pending)
@@ -36,6 +48,9 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- certificate holds the base64 encoded public key
   -- it is NULL for pending certificates
   certificate TEXT UNIQUE CHECK(certificate <> ''),
+
+  -- array of x509 extensions
+  extension x509extension[],
 
   -- store original signing request, can be NULL if
   -- original csr is missing.

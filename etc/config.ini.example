@@ -2,8 +2,12 @@
 # file as it contains critical informations!
 
 [global]
-# backend - LDAP (ldap) or PostgreSQL (pgsql)
-backend = ldap
+# backend - to store data
+# 
+# mysql - MySQL (not implemented yet)
+# sqlit3 - SQLite3 (not implemented yet)
+# pgsql - PostgreSQL
+backend = pgsql
 
 # x509 subjects must be unique or not
 # default: yes
@@ -34,9 +38,9 @@ user = dbuser
 passphrase = DoesThisCountAsAnnoying?
 database = pkidb
 
-[ldap]
+[mysql]
 host = 127.0.0.1
-port = 389
-user = cn=admin,dc=organisation,dc=org
-passphrase = AssembleTheMinions!
+port = 3306
+user = dbuser
+passphrase = DoesThisCountAsAnnoying?
 

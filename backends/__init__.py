@@ -8,6 +8,15 @@ import OpenSSL
 
 __all__ = [ "pgsql"]
 class Backend(object):
+
+    _certificate_status_list = [ "pending", "valid", "revoked", "expired", "invalid" ]
+    _certificate_status_map = {
+        "pending":0,
+        "valid":1,
+        "revoked":2,
+        "expired":3,
+        "invalid":4,
+    }
     def __init__(self, config):
         """
         Constructor
@@ -15,7 +24,6 @@ class Backend(object):
         :return: Nothing
         """
     pass
-
 
     def get_new_serial_number(self, cert):
         """
@@ -135,8 +143,15 @@ class Backend(object):
             "pubkey":base64.b64encode(certificate),
             "fp_md5":hashlib.md5(certificate).hexdigest(),
             "fp_sha1":hashlib.sha1(certificate).hexdigest(),
-            "state":1
         }
+
+        # check expiration / validity
+        if dataset["start_date"] > time.time():
+            dataset["state"] = self._certificate_status_map["invalid"]
+        elif dataset["end_date"] < time.time():
+            dataset["state"] = self._certificate_status_map["expired"]
+        else:
+            dataset["state"] = self._certificate_status_map["valid"]
 
         if csr:
             dataset["csr"] = base64.b64encode(OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_ASN1, csr))
@@ -159,3 +174,10 @@ class Backend(object):
             dataset["extension"] = x509ext
 
         return dataset
+
+    def validate_certficates(self):
+        """
+        Check validity of certificates stored in the backend and update certificate status.
+        :return: None
+        """
+        pass

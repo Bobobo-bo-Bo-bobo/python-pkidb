@@ -5,6 +5,7 @@ import base64
 import hashlib
 import psycopg2
 import sys
+import time
 from backends import Backend
 
 class PostgreSQL(Backend):
@@ -143,5 +144,35 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             sys.stderr.write("Error: Can't update certificate data in database: %s\n" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+    def validate_certficates(self):
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certificate;")
+
+            qdata = {
+                "valid":self._certificate_status_map["valid"],
+                "invalid":self._certificate_status_map["invalid"],
+                "expired":self._certificate_status_map["expired"],
+                "now":time.time(),
+            }
+            # set all invalid certificates to valid if notBefore < now and notAfter > now
+            cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=%(invalid)s AND "
+                           "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)
+
+            # set all valid certificates to invalid if notBefore >= now
+            cursor.execute("UPDATE certificate SET state=%(invalid)s WHERE state=%(valid)s AND "
+                           "(start_date >= to_timestamp(%(now)s));", qdata)
+
+            # set all valid certificates to expired if notAfter <= now
+            cursor.execute("UPDATE certificate SET state=%(expired)s WHERE state=%(valid)s AND "
+                           "(end_date <= to_timestamp(%(now)s));", qdata)
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't validate certificates: %s\n" % (error.pgerror, ))
             self.__db.rollback()
             return None

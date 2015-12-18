@@ -16,14 +16,16 @@ global longoptions
 
 shortoptions = {
     "main":"c:h",
-    "sign":"o:S:",
+    "sign":"o:s:e:E:",
     "import":"c:r:",
+    "expire":"",
 }
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "san="],
+    "sign":["output=", "start=", "end=", "exension="],
     "import":["csr=", "revoked="],
+    "expire":[],
 }
 
 # map revocation reasons to numeric codes
@@ -96,12 +98,14 @@ def usage():
   --help
 
   Commands:
+   expire               Checks all certificates in the database for expiration.
+
    import               Import a certificate
 
      -c <csr>                   Certificate signing request used for certificate
-     --csr=<csr>                creation. Optional, can be omitted.
+     --csr=<csr>                creation. Optional.
 
-     -r <reason>,<time>         Mark certificate as revoked.
+     -r <reason>,<time>         Mark certificate as revoked. Optional.
      --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation
                                 <reason> can be one of:
                                 unspecified, keyCompromise, CACompromise, affiliationChanged,
@@ -109,16 +113,19 @@ def usage():
 
    sign
 
-     -S <san>           List of subjectAlternateName data.
-     --san=<san>
+     -e <extdata>           X509 extension. Can be repeated for multiple extensions.
+     --extension=<extdata>  Parameter <extdata> is a komma separated list of:
+                            <name> - Name of the X509 extension
+                            <critical> - Criticality flag. 0: False, 1: True
+                            <data> - data of the extension
 
-     -s <start>         Start time for new certificate as Unix timestamp
-     --start=<start>    Default: now
+     -s <start>             Start time for new certificate as Unix timestamp
+     --start=<start>        Default: now
 
-     -e <end>           End time for new certificate as Unix timestamp
-     --end=<end>        Default: start + <validity_period> days.
+     -e <end>               End time for new certificate as Unix timestamp
+     --end=<end>            Default: start + <validity_period> days.
 
-     -o <out>           Write data to <outfile> instead of stdout
+     -o <out>               Write data to <outfile> instead of stdout
      --output=<out>
 
   """ % (os.path.basename(sys.argv[0]), configfile))
@@ -278,7 +285,7 @@ def load_ca_key(config):
 def import_certificate(opts, config, backend):
     """
     Import a certificate (PEM) into the backend
-    :param ops: options for import
+    :param opts: options for import
     :param config: parsed configuration file
     :param backend: backend object
     :return: 0 on success, != 0 otherwise
@@ -356,6 +363,26 @@ def import_certificate(opts, config, backend):
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
     backend.store_certificate(cert, csr, revoked)
 
+def check_expiration(opts, config, backend):
+    """
+    Check certificates in the backend for expiration.
+    :param opts: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: None
+    """
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["expire"], longoptions["expire"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        return 1
+
+    for (opt, val) in optval:
+        pass
+
+    backend.validate_certficates()
+    return None
+
 if __name__ == "__main__":
 
     # parse commandline options
@@ -404,6 +431,8 @@ if __name__ == "__main__":
         sys.exit(0)
     elif command == "import":
         import_certificate(trailing[1:], options, backend)
+    elif command == "expire":
+        check_expiration(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

@@ -57,8 +57,10 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- possible values are
   -- -1 - temporary: ?
   --  0 - pending: CSR submitted but not issued yet
-  --  1 - issued: CSR has been processed, certificate has been issued
+  --  1 - valid: certificate is valid
   --  2 - revoked: certificate has been revoked
+  --  3 - expired: certificate has been expired
+  --  4 - invalid: certificate is invalid (usually the validity period has not started yet)
   state INTEGER NOT NULL CHECK(state >= 0),
 
   -- revocation_date, not NULL when certificate has been revoked

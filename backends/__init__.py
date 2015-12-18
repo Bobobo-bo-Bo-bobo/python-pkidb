@@ -9,7 +9,14 @@ import OpenSSL
 __all__ = [ "pgsql"]
 class Backend(object):
 
-    _certificate_status_list = [ "pending", "valid", "revoked", "expired", "invalid" ]
+    _certificate_status_reverse_map = {
+        0:"pending",
+        1:"valid",
+        2:"revoked",
+        3:"expired",
+        4:"invalid",
+    }
+
     _certificate_status_map = {
         "pending":0,
         "valid":1,
@@ -182,3 +189,12 @@ class Backend(object):
         :return: None
         """
         pass
+
+    def get_statistics(self):
+        """
+        Report statistics of stored certificates.
+        :return: Dictionary of statistics.
+        Keys:
+        "state" - Dictionary of states with number of certificates in specific state
+        """
+        return None

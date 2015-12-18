@@ -20,6 +20,7 @@ shortoptions = {
     "sign":"o:s:e:E:",
     "import":"c:r:",
     "expire":"",
+    "statistics":"",
 }
 
 longoptions = {
@@ -27,6 +28,7 @@ longoptions = {
     "sign":["output=", "start=", "end=", "exension="],
     "import":["csr=", "revoked="],
     "expire":[],
+    "statistics":[],
 }
 
 # map revocation reasons to numeric codes
@@ -37,14 +39,14 @@ revocation_reason_map = {
     "unspecified":0,
     "keycompromise":1,
     "cacompromise":2,
-    "affiliationChanged":3,
+    "affiliationchanged":3,
     "superseded":4,
-    "cessationOfOperation":5,
-    "certificateHold":6
+    "cessationofoperation":5,
+    "certificatehold":6,
     "unspecified (not used as defined in RFC5280)":7,
-    "removeFromCRL":8
-    "privilegeWithdrawn":9,
-    "aACompromise":10,
+    "removefromcrl":8,
+    "privilegewithdrawn":9,
+    "aacompromise":10,
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -134,6 +136,8 @@ def usage():
 
      -o <out>               Write data to <outfile> instead of stdout
      --output=<out>
+
+   statistics               Print small summary of stored certificates
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
@@ -396,6 +400,31 @@ def check_expiration(opts, config, backend):
     backend.validate_certficates()
     return None
 
+def print_statistics(opts, config, backend):
+    """
+    Print statistics of certificates in the backend database.
+    :param opts: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: None
+    """
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["expire"], longoptions["expire"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        return 1
+
+    for (opt, val) in optval:
+        pass
+
+    stats = backend.get_statistics()
+
+    if "state" in stats:
+        for key in stats["state"]:
+            print("%s:%u" % (key, stats["state"][key]))
+
+    return None
+
 if __name__ == "__main__":
 
     # parse commandline options
@@ -446,6 +475,8 @@ if __name__ == "__main__":
         import_certificate(trailing[1:], options, backend)
     elif command == "expire":
         check_expiration(trailing[1:], options, backend)
+    elif command == "statistics":
+        print_statistics(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

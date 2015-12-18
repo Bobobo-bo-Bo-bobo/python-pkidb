@@ -132,7 +132,7 @@ class PostgreSQL(Backend):
 
             if "revreason" in data:
                 cursor.execute("UPDATE certificate SET revocation_reason=%(revreason)s, "
-                               "revocation_date=to_timestamp(%(revtime)s, state=%(state)s WHERE "
+                               "revocation_date=to_timestamp(%(revtime)s), state=%(state)s WHERE "
                                "serial_number=%(serial)s;", data)
 
             if "extension" in data:
@@ -177,3 +177,30 @@ class PostgreSQL(Backend):
             sys.stderr.write("Error: Can't validate certificates: %s\n" % (error.pgerror, ))
             self.__db.rollback()
             return None
+
+    def get_statistics(self):
+
+        statistics = {}
+
+        state_statistics = {}
+        for state in self._certificate_status_map:
+            state_statistics[state] = 0
+
+        try:
+            cursor = self.__db.cursor()
+
+            cursor.execute("SELECT state, COUNT(state) FROM certificate GROUP BY state;")
+            result = cursor.fetchall()
+
+            for element in result:
+                state_statistics[self._certificate_status_reverse_map[element[0]]] = element[1]
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't read certifcate informations from database:%s\n" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+        statistics["state"] = state_statistics
+
+        return statistics

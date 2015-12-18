@@ -17,13 +17,14 @@ class Backend(object):
         "expired":3,
         "invalid":4,
     }
+
     def __init__(self, config):
         """
         Constructor
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
-    pass
+        pass
 
     def get_new_serial_number(self, cert):
         """

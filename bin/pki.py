@@ -40,6 +40,8 @@ revocation_reason_map = {
     "superseded":4,
     "cessationOfOperation":5,
     "certificateHold":6
+    "privilegeWithdrawn":7,
+    "aaCompromise":8,
 }
 
 # Python 3 renamed ConfigParser to configparser

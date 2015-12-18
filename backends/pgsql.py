@@ -159,6 +159,7 @@ class PostgreSQL(Backend):
                 "expired":self._certificate_status_map["expired"],
                 "now":time.time(),
             }
+
             # set all invalid certificates to valid if notBefore < now and notAfter > now
             cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=%(invalid)s AND "
                            "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)

@@ -2,6 +2,7 @@
 
 import backends
 import getopt
+import re
 import os
 import sys
 import time
@@ -106,7 +107,8 @@ def usage():
      --csr=<csr>                creation. Optional.
 
      -r <reason>,<time>         Mark certificate as revoked. Optional.
-     --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation
+     --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                string in the format YYYYMMDDhhmmssZ
                                 <reason> can be one of:
                                 unspecified, keyCompromise, CACompromise, affiliationChanged,
                                 superseded, cessationOfOperation, certificateHold
@@ -291,6 +293,7 @@ def import_certificate(opts, config, backend):
     :return: 0 on success, != 0 otherwise
     """
 
+    re_asn1_time_string = re.compile("^\d{14}Z$")
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["import"], longoptions["import"])
     except getopt.GetoptError as error:
@@ -314,6 +317,11 @@ def import_certificate(opts, config, backend):
         elif opt in ("-r", "--revoked"):
             # format: <reason>,<revocation_stamp>
             (reason, revtime) = val.split(',')
+
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(revtime):
+                # convert to UNIX timestamp
+                revtime = time.mktime(time.strptime(revtime, "%Y%m%d%H%M%SZ"))
 
             # check timestamp
             try:

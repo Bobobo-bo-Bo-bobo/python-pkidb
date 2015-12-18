@@ -1,15 +1,5 @@
-CREATE TYPE x509extension AS (
-  -- name of the x509 extension
-  name TEXT, 
-  -- criticality flag of the x509 extension
-  criticality SMALLINT,
-  -- base64 encoded data of the extension
-  data TEXT
-);
 
 CREATE TABLE IF NOT EXISTS "certificate" (
-  certificate_id SERIAL PRIMARY KEY,
-
   -- Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
   -- must be:
   --  * unique
@@ -23,7 +13,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- 
   -- serial_number is NULL for certificates that are
   -- not issued yet, therefore it can't be used as primary key
-  serial_number NUMERIC UNIQUE CHECK(serial_number > 0),
+  serial_number NUMERIC PRIMARY KEY CHECK(serial_number > 0),
 
   -- SSL version (Note: SSL starts version at 0)
   version INTEGER CHECK(version >= 0),
@@ -36,6 +26,10 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- subject of certificate
   -- it is NOT unique as it may occur for current and revoked certificates
   subject TEXT NOT NULL CHECK(subject <> ''),
+
+  -- issuer of the certificate
+  -- issuer can be NULL for signing requests
+  issuer TEXT CHECK(issuer <> ''),
 
   -- store fingerprints for subject data
   -- as serial_number and certificate content should be
@@ -50,7 +44,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   certificate TEXT UNIQUE CHECK(certificate <> ''),
 
   -- array of x509 extensions
-  extension x509extension[],
+  extension VARCHAR(128)[],
 
   -- store original signing request, can be NULL if
   -- original csr is missing.
@@ -86,4 +80,22 @@ CREATE INDEX certificate_serial_number_idx ON certificate USING btree(serial_num
 CREATE INDEX certificate_fingerprint_md5_idx ON certificate USING btree(fingerprint_md5);
 CREATE INDEX certificate_fingerprint_sha1_idx ON certificate USING btree(fingerprint_sha1);
 CREATE INDEX certificate_state_idx ON certificate USING btree(state);
+CREATE INDEX certificate_issuer_idx ON certificate USING btree(issuer);
+
+-- table of x509 extensions
+CREATE TABLE IF NOT EXISTS "extension" (
+
+  -- primary key is the sha512 hash of (name+criticality+data)
+  hash VARCHAR(128) PRIMARY KEY,
+
+  -- name of the x509 extension
+  name TEXT NOT NULL CHECK(name <> ''),
+
+  -- criticality flag of the x509 extension
+  criticality BOOLEAN NOT NULL DEFAULT False,
+
+  -- base64 encoded data of the extension
+  data TEXT NOT NULL CHECK(data <> '')
+);
+CREATE INDEX extension_name_idx ON extension USING btree(name);
 

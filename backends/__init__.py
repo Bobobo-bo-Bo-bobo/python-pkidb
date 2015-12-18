@@ -100,6 +100,18 @@ class Backend(object):
 
         return timestamp
 
+    def _store_extension(self, extlist):
+        """
+        Stores list of X509 extensions into the backend.
+        :param extlist: List of x509 extension data. X509 extension
+        data is an array containing [<name>,<critical>,<data>]
+
+        :return: Returns list of primary keys for <extlist> from
+        the databasebackend. If extensions don't exist in the database
+        they will be inserted.
+        """
+        return []
+
     def _extract_data(self, cert, csr=None, revoked=None):
         """
         Extract dictionary of data from X509 object and optional
@@ -141,8 +153,9 @@ class Backend(object):
                 extension = cert.get_extension(i)
                 name = extension.get_short_name()
                 criticality = extension.get_critical()
-                data = base64.b64encode(extenstion.get_data())
+                data = extension.get_data()
 
                 x509ext.append((name, criticality, data))
+            dataset["extension"] = x509ext
 
         return dataset

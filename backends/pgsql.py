@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 
+import base64
+import hashlib
 import psycopg2
 import sys
 from backends import Backend
@@ -61,6 +63,39 @@ class PostgreSQL(Backend):
             if self.__config["global"]["serial_number"] == "random":
                 pass
 
+    def _store_extension(self, extlist):
+        result = []
+
+        for extension in extlist:
+            # primary key is the sha512 hash of name+critical+data
+            pkey = hashlib.sha512(extension[0]+str(extension[1])+extension[2]).hexdigest()
+            extdata = {
+                "hash":pkey,
+                "name":extension[0],
+                "critical":str(extension[1]),
+                "data":base64.b64encode(extension[2]),
+            }
+
+            try:
+                cursor = self.__db.cursor()
+                cursor.execute("LOCK TABLE extension;")
+                cursor.execute("SELECT COUNT(hash) FROM extension WHERE hash='%s';" % (pkey, ))
+                searchresult = cursor.fetchall()
+
+                # no entry found, insert data
+                if searchresult[0][0] == 0:
+                    cursor.execute("INSERT INTO extension (hash, name, criticality, data) "
+                                   "VALUES (%(hash)s, %(name)s, %(critical)s, %(data)s);", extdata)
+
+                cursor.close()
+                self.__db.commit()
+                result.append(pkey)
+            except psycopg2.Error as error:
+                sys.stderr.write("Error: Can't look for extension in database: %s\n" % (error.pgerror, ))
+                self.__db.rollback()
+                return None
+        return result
+
     def store_certificate(self, cert, csr=None, revoked=None):
         data = self._extract_data(cert, csr, revoked)
 
@@ -86,10 +121,11 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE certificate")
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
-                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state) VALUES "
+                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer) VALUES "
                            "(%(serial)s, %(version)s, to_timestamp(%(start_date)s), "
                            "to_timestamp(%(end_date)s), %(subject)s, %(fp_md5)s, %(fp_sha1)s, "
-                           "%(pubkey)s, %(state)s);", data)
+                           "%(pubkey)s, %(state)s, %(issuer)s);", data)
+
             if "csr" in data:
                 cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", data)
 
@@ -97,6 +133,12 @@ class PostgreSQL(Backend):
                 cursor.execute("UPDATE certificate SET revocation_reason=%(revreason)s, "
                                "revocation_date=to_timestamp(%(revtime)s, state=%(state)s WHERE "
                                "serial_number=%(serial)s;", data)
+
+            if "extension" in data:
+                extkeys = self._store_extension(data["extension"])
+                if extkeys:
+                    data["extkey"] = extkeys
+                    cursor.execute("UPDATE certificate SET extension=%(extkey)s WHERE serial_number=%(serial)s;", data)
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:

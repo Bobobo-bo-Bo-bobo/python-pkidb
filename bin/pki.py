@@ -30,6 +30,7 @@ longoptions = {
 }
 
 # map revocation reasons to numeric codes
+# reasonFlag is defined in RFC 5280, 5.3.1. Reason Code
 global revocation_reason_map
 
 revocation_reason_map = {
@@ -40,8 +41,10 @@ revocation_reason_map = {
     "superseded":4,
     "cessationOfOperation":5,
     "certificateHold":6
-    "privilegeWithdrawn":7,
-    "aaCompromise":8,
+    "unspecified (not used as defined in RFC5280)":7,
+    "removeFromCRL":8
+    "privilegeWithdrawn":9,
+    "aACompromise":10,
 }
 
 # Python 3 renamed ConfigParser to configparser

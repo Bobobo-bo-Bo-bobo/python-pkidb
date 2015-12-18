@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- issuer can be NULL for signing requests
   issuer TEXT CHECK(issuer <> ''),
 
+  -- number of bits
+  keysize INTEGER CHECK(keysize > 0),
+
   -- store fingerprints for subject data
   -- as serial_number and certificate content should be
   -- unique, enforce constraints

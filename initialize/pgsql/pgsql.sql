@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS "certificate" (
 
   -- store original signing request, can be NULL if
   -- original csr is missing.
-  -- Note: This is NOT unique 
+  -- Note: This is NOT unique, because the same csr can be
+  -- used, e.g. for reissue a certificate when the old has been
+  -- revoked
   signing_request TEXT UNIQUE CHECK(signing_request <> ''),
 
   -- state is the current state of the certificate

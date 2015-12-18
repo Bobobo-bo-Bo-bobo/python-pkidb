@@ -61,6 +61,16 @@ class Backend(object):
 
         return result
 
+    def _unix_timestamp_to_asn1_time(self, timestamp):
+        """
+        Converts UNIX timestamp to ASN1 GENERALIZEDTIME string
+        :param timestamp: UNIX timestamp
+        :return: ASN1 GENERALIZEDTIME string
+        """
+
+        asn1_time = time.strftime("%Y%m%d%H%M%S%z", time.localtime(timestamp))
+        return asn1_time
+
     def _asn1_time_to_unix_timestamp(self, asn1_time):
         """
         Converts ASN1 GENERALIZEDTIME string to UNIX timestamp

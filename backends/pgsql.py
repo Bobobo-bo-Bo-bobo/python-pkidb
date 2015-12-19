@@ -4,8 +4,10 @@
 import base64
 import hashlib
 import psycopg2
+import random
 import sys
 import time
+import OpenSSL
 from backends import Backend
 
 class PostgreSQL(Backend):
@@ -59,10 +61,59 @@ class PostgreSQL(Backend):
         if self.__db:
             self.__db.close()
 
-    def get_new_serial_number(self, cert):
+    def _has_serial_number(self, serial):
+        query = {
+            "serial":serial,
+        }
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certificate;")
+            cursor.execute("SELECT serial_number FROM certificate WHERE serial_number=%(serial)s;", query)
+            result = cursor.fetchall()
+
+            if len(result) == 0:
+                return False
+            else:
+                return True
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't query database for serial number: %s\n" % (error.pgerror, ))
+            return None
+
+        # Never reached
+        return None
+
+    def _get_last_serial_number(self):
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT serial_number FROM certificate ORDER BY serial_number DESC LIMIT 1;")
+            result = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't lookup serial number from database: %s" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+    def _get_new_serial_number(self, cert):
+        new_serial = None
+
         if "serial_number" in self.__config["global"]:
             if self.__config["global"]["serial_number"] == "random":
-                pass
+                found = False
+                while not found:
+                    new_serial = random.randint(1, self._MAX_SERIAL_NUMBER)
+                    if self._has_serial_number(new_serial):
+                        found = False
+                    else:
+                        found = True
+
+            elif self.__config["global"]["serial_number"] == "increment":
+                new_serial = self._get_last_serial_number()
+                if new_serial:
+                    new_serial += 1
+
+        return new_serial
 
     def _store_extension(self, extlist):
         result = []
@@ -163,30 +214,26 @@ class PostgreSQL(Backend):
 
         return csr_pkey
 
-    def store_certificate(self, cert, csr=None, revoked=None):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False):
         data = self._extract_data(cert, csr, revoked)
 
         # check if serial_number already exist
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT COUNT(serial_number) FROM certificate WHERE serial_number=%(serial)s;", data)
-            result = cursor.fetchall()
-            cursor.close()
-            self.__db.commit()
-            if result[0][0] > 0:
-                sys.stderr.write("Error: A certificate with serial number %s (0x%x) already exist\n" %
-                                 (data["serial"], data["serial"]))
-                return None
-
-            cursor.close()
-            self.__db.commit()
-        except psycopg2.Error as error:
-            sys.stderr.write("Error: Can't look up serial number: %s\n" % (error.pgerror, ))
-            self.__db.rollback()
-
-        try:
-            cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE certificate")
+
+            if self._has_serial_number(data["serial"]):
+                # if the data will not be replaced (the default), return an error if serial number already exists
+                if not replace:
+                    sys.stderr.write("Error: A certificate with serial number %s (0x%x) already exist\n" %
+                                     (data["serial"], data["serial"]))
+                    return None
+
+                # data will be replaced
+                else:
+                    # delete old dataset
+                    cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", data)
+
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
                            "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, "
                            "signature_algorithm_id, keysize) VALUES "
@@ -291,3 +338,49 @@ class PostgreSQL(Backend):
         statistics["signature_algorithm"] = signature_algorithm_statistics
 
         return statistics
+
+    def _insert_empty_cert_data(self, serial, subject):
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certificate;")
+
+            # insert empty data to "register" serial number until the
+            # signed certificate can be committed
+            dummy_data = {
+                "serial":serial,
+                "subject":subject,
+                "state":self._certificate_status_map["temporary"],
+            }
+            cursor.execute("INSERT INTO certificate (serial_number, subject, state) VALUES "
+                           "(%(serial)s, %(subject)s, %(state)s);", dummy_data)
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't insert new serial number into database: %s\n" % (error.pgerror, ))
+            self.__db.rollback()
+            sys.exit(3)
+            return None
+
+    def _get_digest(self):
+        if "digest" in self.__config["global"]:
+            return self.__config["global"]["digest"]
+        else:
+            return None
+
+    def remove_certificate(self, serial):
+        qdata = {
+            "serial":serial,
+        }
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certificate;")
+            cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't remove certificate from database: %s\n", qdata)
+            self.__db.rollback()
+
+        return None

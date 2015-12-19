@@ -99,16 +99,16 @@ def usage():
 
     print("""Usage: %s [-c <cfg>|--config=<cfg>] [-h|--help] <command> [<commandoptions>]
 
-  -c <cfg>              Use configuration file instead of the default
-  --config=<cfg>        Default: %s
+  -c <cfg>                      Use configuration file instead of the default
+  --config=<cfg>                Default: %s
 
-  -h                    This text
+  -h                            This text
   --help
 
   Commands:
-   expire               Checks all certificates in the database for expiration.
+   expire                       Checks all certificates in the database for expiration.
 
-   import               Import a certificate
+   import                       Import a certificate
 
      -c <csr>                   Certificate signing request used for certificate
      --csr=<csr>                creation. Optional.
@@ -118,26 +118,29 @@ def usage():
                                 string in the format YYYYMMDDhhmmssZ
                                 <reason> can be one of:
                                 unspecified, keyCompromise, CACompromise, affiliationChanged,
-                                superseded, cessationOfOperation, certificateHold
+                                superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
+                                removeFromCRL, aACompromise
 
    sign
 
-     -e <extdata>           X509 extension. Can be repeated for multiple extensions.
-     --extension=<extdata>  Parameter <extdata> is a komma separated list of:
-                            <name> - Name of the X509 extension
-                            <critical> - Criticality flag. 0: False, 1: True
-                            <data> - data of the extension
+     -e <extdata>               X509 extension. Can be repeated for multiple extensions.
+     --extension=<extdata>      Parameter <extdata> is a komma separated list of:
+                                <name> - Name of the X509 extension
+                                <critical> - Criticality flag. 0: False, 1: True
+                                <subject> - Subject, is usually empty
+                                <issuer> - Issuer, is usually empty
+                                <data> - data of the extension
 
-     -s <start>             Start time for new certificate as Unix timestamp
-     --start=<start>        Default: now
+     -s <start>                 Start time for new certificate as Unix timestamp
+     --start=<start>            Default: now
 
-     -e <end>               End time for new certificate as Unix timestamp
-     --end=<end>            Default: start + <validity_period> days.
+     -e <end>                   End time for new certificate as Unix timestamp
+     --end=<end>                Default: start + <validity_period> days.
 
-     -o <out>               Write data to <outfile> instead of stdout
+     -o <out>                   Write data to <outfile> instead of stdout
      --output=<out>
 
-   statistics               Print small summary of stored certificates
+   statistics                   Print small summary of stored certificates
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
@@ -151,10 +154,12 @@ def sign(opts, config, backend):
     """
 
     output = None
-    san = []
+    extensions = []
     input = None
     start = None
     end = None
+
+    re_asn1_time_string = re.compile("^\d{14}Z$")
 
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
@@ -163,17 +168,57 @@ def sign(opts, config, backend):
         sys.exit(1)
 
     for (opt, val) in optval:
-        if opt in ("-S", "--san"):
-            san = val.split(",")
+        if opt in ("-E", "--extension"):
+            ext = val.split(",", 4)
+            if len(ext) != 5:
+                sys.stderr.write("Error: Illegal number of fields for extension (expect:%u got %u)\n" %(4, len(ext)))
+            name = None
+            subject = None
+            issuer = None
+            data = None
 
+            name = ext[0]
+            if ext[1] in ("1", "True"):
+                critical = True
+            else:
+                critical = False
+
+            if ext[2] == '':
+                subject = None
+            else:
+                subject = ext[2]
+
+            if ext[3] == '':
+                issuer = None
+            else:
+                issuer = ext[3]
+
+            data = ext[4]
+
+            # append new extension object
+            extensions.append(OpenSSL.crypto.X509Extension(name, critical, data, subject=subject, issuer=issuer))
         elif opt in ("-e", "--end"):
+            end = val
+
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(end):
+                # convert to UNIX timestamp
+                end = time.mktime(time.strptime(end, "%Y%m%d%H%M%SZ"))
+
             try:
                 end = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
+                sys.stderr.write("Error Can't parse end time %s: %s\n" % (val, error.message))
                 return 1
 
         elif opt in ("-s", "--start"):
+            start = val
+
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(start):
+                # convert to UNIX timestamp
+                start = time.mktime(time.strptime(start, "%Y%m%d%H%M%SZ"))
+
             try:
                 start = float(val)
             except ValueError as error:
@@ -232,10 +277,14 @@ def sign(opts, config, backend):
         pass
 
     # load private CA key
-    cakey = load_ca_key(config)
-
-    if not cakey:
+    ca_priv_key = load_ca_private_key(config)
+    if not ca_priv_key:
         sys.stderr.write("Error: Failed to load CA private key\n")
+        return 2
+
+    ca_pub_key = load_ca_public_key(config)
+    if not ca_pub_key:
+        sys.stderr.write("Error: Failed to load CA public key\n")
         return 2
 
     # set start and and time
@@ -248,26 +297,48 @@ def sign(opts, config, backend):
     asn1_start = time.strftime("%Y%m%d%H%M%S%z", time.localtime(start))
     asn1_end = time.strftime("%Y%m%d%H%M%S%z", time.localtime(end))
 
-    # create new X509 object
-    certificate = OpenSSL.crypto.X509()
+    # We do not pass the issuer of the CA, because only for root CA is issuer == subject
+    # Intermediate CAs will contain their issuing CA as issuer
+    newcert = backend.sign_request(csr, asn1_start, asn1_end, ca_priv_key, ca_pub_key.get_subject(), extensions)
 
-    # SSL version 3, Note: version starts at 0
-    certificate.set_version(2)
+    newcert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)
 
-    # copy subject from certificate signing request
-    certificate.set_subject(csr.get_subject())
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(newcert_pem)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't open output file %s for writing: %s\n" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(newcert_pem)
 
-    # copy public key from certificate signing request
-    certificate.set_pubkey(csr.get_pubkey())
+def load_ca_public_key(config):
+    """
+    Loads issuer from CA public key
+    :param config: configuration
+    :return: X509 object representing CA public key
+    """
 
-    # set start and end dates
-    certificate.set_notBefore(asn1_start)
-    certificate.set_notAfter(asn1_end)
+    result = None
+    try:
+        fd = open(config["global"]["ca_public_key"], "r")
+        data = fd.read()
+        fd.close()
+    except IOError as error:
+        sys.stderr.write("Error: Can't read CA public key: %s\n" % (error.strerror, ))
+        return None
 
-    # get new serial number for certificate
-#    serial = get_new_serial_number(config, certificate)
+    try:
+        ca_pubkey = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
+    except OpenSSL.crypto.Error as error:
+        sys.stderr.write("Error: Invalid CA public key: %s\n" % (error.message, ))
+        return None
 
-def load_ca_key(config):
+    return ca_pubkey
+
+def load_ca_private_key(config):
     """
     Load CA keyfile
     :param config: configuration

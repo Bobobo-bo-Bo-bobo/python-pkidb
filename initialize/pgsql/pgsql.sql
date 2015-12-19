@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   --
   -- use NUMERIC as data type, it is defined as:
   --
-  -- numeric  variable  user-specified precision, exact   up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
+  -- numeric  variable  user-specified precision, exact up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
   -- 
   -- serial_number is the primary key
   serial_number NUMERIC PRIMARY KEY CHECK(serial_number > 0),
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   --  2 - revoked: certificate has been revoked
   --  3 - expired: certificate has been expired
   --  4 - invalid: certificate is invalid (usually the validity period has not started yet)
-  state INTEGER NOT NULL CHECK(state >= 0),
+  state INTEGER NOT NULL CHECK(state >= -1),
 
   -- revocation_date, not NULL when certificate has been revoked
   revocation_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,

@@ -9,7 +9,16 @@ import OpenSSL
 __all__ = [ "pgsql"]
 class Backend(object):
 
+    # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
+    # must be:
+    #  * unique
+    #  * non-negative integer
+    #  * up to 20 octets (up to 2**160)
+    #  * not longer than 20 octets
+    _MAX_SERIAL_NUMBER = 0x7fffffffffffffff
+
     _certificate_status_reverse_map = {
+       -1:"temporary",
         0:"pending",
         1:"valid",
         2:"revoked",
@@ -18,6 +27,7 @@ class Backend(object):
     }
 
     _certificate_status_map = {
+        "temporary":-1,
         "pending":0,
         "valid":1,
         "revoked":2,
@@ -33,7 +43,24 @@ class Backend(object):
         """
         pass
 
-    def get_new_serial_number(self, cert):
+    def _has_serial_number(self, serial):
+        """
+        Check the backend for serial number
+        :param serial: serial number to check for
+        :return: True - if serial number was found
+                 False - if serial number was not found
+                 None - on error
+        """
+        return None
+
+    def _get_last_serial_number(self):
+        """
+        Returns the last serial number
+        :return: Last serial number
+        """
+        return None
+
+    def _get_new_serial_number(self, cert):
         """
         Generate a new serial number. To avoid clashes the serial number will be written to the backend.
         Stale data should be removed by the signal handler and/or by running the backendcheck handler.
@@ -49,16 +76,17 @@ class Backend(object):
         """
         pass
 
-    def store_certificate(self, cert, csr=None, revoked=None):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False):
         """
         Stores a certificate in the backend.
         :param cert: X509 object to store
         :param csr: Optional, X509Req object
         :param revoked: Tuple with revocation information (reason, revocationtime).
                         if not set to None it marks the certificate as revoked.
+        :param replace: Replace existing certificate, default is False
         :return: None
         """
-        pass
+        return None
 
     def _format_subject(self, subject):
         """
@@ -134,7 +162,7 @@ class Backend(object):
         :param csr: base64 encoded X509 data of certificate signing request
         :return: primary key of csr
         """
-        pass
+        return None
 
     def _store_signature_algorithm(self, cert):
         """
@@ -142,7 +170,7 @@ class Backend(object):
         :param cert: X509 object
         :return: primary key of signature algorithm in lookup table
         """
-        pass
+        return None
 
     def _extract_data(self, cert, csr=None, revoked=None):
         """
@@ -206,7 +234,7 @@ class Backend(object):
         Check validity of certificates stored in the backend and update certificate status.
         :return: None
         """
-        pass
+        return None
 
     def get_statistics(self):
         """
@@ -214,5 +242,85 @@ class Backend(object):
         :return: Dictionary of statistics.
         Keys:
         "state" - Dictionary of states with number of certificates in specific state
+        """
+        return None
+
+    def _get_digest(self):
+        """
+        Returns configured message digest
+        :return: digest (type string)
+        """
+        return None
+
+    def sign_request(self, csr, notBefore, notAfter, cakey, issuer, extensions):
+        """
+        Create a certificate from a certificate signing request,
+        :param csr: X509Request object of certificate signing request
+        :param notBefore: start of validity period as ASN1 GERNERALIZEDTIME string
+        :param notAfter: end of validity period as ASN1 GENERALIZEDTIME string
+        :param cakey: X509 object of CA signing key
+        :param issuer: X509Name object containing the subject of CA
+        :param extension: list of x509 extension
+        :return: signed certificate as X509 object
+        """
+        # create new X509 object
+        newcert = OpenSSL.crypto.X509()
+
+        # SSL version 3, count starts at 0
+        newcert.set_version(3-1)
+
+        # copy subject from signing request
+        newcert.set_subject(csr.get_subject())
+
+        # copy public key from signing request
+        newcert.set_pubkey(csr.get_pubkey())
+
+        # set validity period
+        newcert.set_notBefore(notBefore)
+        newcert.set_notAfter(notAfter)
+
+        newcert.set_issuer(issuer)
+
+        # obtain a new serial number
+        new_serial_number = self._get_new_serial_number(newcert)
+
+        if not new_serial_number:
+            return None
+
+        newcert.set_serial_number(new_serial_number)
+
+        # insert new serial number to database to lock serial
+        self._insert_empty_cert_data(new_serial_number, self._format_subject(newcert.get_subject().get_components()))
+        # handle extensions
+        if extensions and len(extensions) > 0:
+            newcert.add_extensions(extensions)
+
+        # sign new certificate
+        newcert.sign(cakey, self._get_digest())
+
+        if newcert:
+            # replace "locked" serial number with current certificate data
+            self.store_certificate(newcert, csr=csr, revoked=None, replace=True)
+
+        else:
+            # remove "locked" serial number because certificate signing failed
+            self.remove_certificate(new_serial_number)
+
+        return newcert
+
+    def remove_certificate(self, serial):
+        """
+        Removes certificate identified by it's serial number from the database
+        :param serial: serial number of the certificate which should be removed
+        :return: None
+        """
+        return None
+
+    def _insert_empty_cert_data(self, serial, subject):
+        """
+        Insert empty data to "lock" new serial number during certificate signing
+        :param serial: serial number
+        :param subject: subject string
+        :return: Nothing
         """
         return None

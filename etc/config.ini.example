@@ -9,10 +9,6 @@
 # pgsql - PostgreSQL
 backend = pgsql
 
-# x509 subjects must be unique or not
-# default: yes
-unique_subject = yes
-
 # path to public and private ca key
 # and the passphrase protecting it.
 ca_public_key = /path/to/public/ca/certificate
@@ -20,8 +16,8 @@ ca_private_key = /path/to/private/ca/certificate
 ca_passphrase = ItsSoFluffyImGonnaDie!
 
 # default message digest to use when signing certificates
-# see man 1ssl dgst for supported digest algorithm
-digest = sha256
+# see man 1 dgst for supported digest algorithm
+digest = sha512
 
 # use random serial number for certificates (random) or increment
 # the serial number (increment)

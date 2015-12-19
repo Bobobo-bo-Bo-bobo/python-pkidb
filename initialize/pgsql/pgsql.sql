@@ -11,8 +11,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   --
   -- numeric  variable  user-specified precision, exact   up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
   -- 
-  -- serial_number is NULL for certificates that are
-  -- not issued yet, therefore it can't be used as primary key
+  -- serial_number is the primary key
   serial_number NUMERIC PRIMARY KEY CHECK(serial_number > 0),
 
   -- SSL version (Note: SSL starts version at 0)
@@ -46,15 +45,17 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- it is NULL for pending certificates
   certificate TEXT UNIQUE CHECK(certificate <> ''),
 
+  -- signature algorithm, NULL is unknown signing algorithm
+  signature_algorithm_id INTEGER CHECK(signature_algorithm_id > 0),
+
   -- array of x509 extensions
   extension VARCHAR(128)[],
 
-  -- store original signing request, can be NULL if
-  -- original csr is missing.
+  -- store index of signing request, can be NULL
   -- Note: This is NOT unique, because the same csr can be
   -- used, e.g. for reissue a certificate when the old has been
   -- revoked
-  signing_request TEXT UNIQUE CHECK(signing_request <> ''),
+  signing_request VARCHAR(128) CHECK(signing_request <> ''),
 
   -- state is the current state of the certificate
   -- possible values are
@@ -87,6 +88,15 @@ CREATE INDEX certificate_fingerprint_sha1_idx ON certificate USING btree(fingerp
 CREATE INDEX certificate_state_idx ON certificate USING btree(state);
 CREATE INDEX certificate_issuer_idx ON certificate USING btree(issuer);
 
+-- table of certificate signing requests
+CREATE TABLE IF NOT EXISTS "signing_request" (
+  -- sha512 hash 
+  hash VARCHAR(128) PRIMARY KEY CHECK(hash <> ''),
+
+  -- certificate signinig request
+  request TEXT NOT NULL CHECK(request <> '')
+);
+
 -- table of x509 extensions
 CREATE TABLE IF NOT EXISTS "extension" (
 
@@ -103,4 +113,11 @@ CREATE TABLE IF NOT EXISTS "extension" (
   data TEXT NOT NULL CHECK(data <> '')
 );
 CREATE INDEX extension_name_idx ON extension USING btree(name);
+
+-- lookup table for signing algorithm
+CREATE TABLE IF NOT EXISTS "signature_algorithm" (
+  id SERIAL PRIMARY KEY,
+  algorithm VARCHAR NOT NULL CHECK(algorithm <> '')
+);
+
 

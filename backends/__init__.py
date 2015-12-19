@@ -128,6 +128,22 @@ class Backend(object):
         """
         return []
 
+    def _store_request(self, csr):
+        """
+        Stores certificate signing request
+        :param csr: base64 encoded X509 data of certificate signing request
+        :return: primary key of csr
+        """
+        pass
+
+    def _store_signature_algorithm(self, cert):
+        """
+        Stores signature algorithm
+        :param cert: X509 object
+        :return: primary key of signature algorithm in lookup table
+        """
+        pass
+
     def _extract_data(self, cert, csr=None, revoked=None):
         """
         Extract dictionary of data from X509 object and optional
@@ -152,6 +168,7 @@ class Backend(object):
             "fp_md5":hashlib.md5(certificate).hexdigest(),
             "fp_sha1":hashlib.sha1(certificate).hexdigest(),
             "keysize":cert.get_pubkey().bits(),
+            "signature_algorithm_id":self._store_signature_algorithm(cert),
         }
 
         # check expiration / validity
@@ -163,7 +180,7 @@ class Backend(object):
             dataset["state"] = self._certificate_status_map["valid"]
 
         if csr:
-            dataset["csr"] = base64.b64encode(OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_ASN1, csr))
+            dataset["csr"] = self._store_request(csr)
 
         if revoked:
             dataset["revreason"] = revoked[0]

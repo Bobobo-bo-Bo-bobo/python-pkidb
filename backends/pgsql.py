@@ -97,6 +97,72 @@ class PostgreSQL(Backend):
                 return None
         return result
 
+    def _store_signature_algorithm(self, cert):
+        algoid = None
+
+        algo = {
+            "algorithm":"undefined"
+        }
+
+        try:
+            algo["algorithm"] = cert.get_signature_algorithm()
+        except ValueError as error:
+            sys.stderr.write("Error: Undefined signature algorithm in certificate data")
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE signature_algorithm;")
+            cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=%(algorithm)s;", algo)
+            result = cursor.fetchall()
+
+            # no entry found?
+            if len(result) == 0:
+                cursor.execute("INSERT INTO signature_algorithm (algorithm) VALUES (%(algorithm)s);", algo)
+                cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=%(algorithm)s;", algo)
+                result = cursor.fetchall()
+
+                algoid = result[0][0]
+            algoid = result[0][0]
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't lookup signature algotithm in database: %s\n" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+        return algoid
+
+    def _store_request(self, csr):
+
+        # dump binary data of signing request
+        csr_rawdata = OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_ASN1, csr)
+        csr_pkey = hashlib.sha512(csr_rawdata).hexdigest()
+        csr_data = {
+            "pkey":csr_pkey,
+            "request":base64.b64encode(csr_rawdata),
+        }
+
+        # check if csr already exists
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE signing_request;")
+            cursor.execute("SELECT COUNT(hash) FROM signing_request WHERE hash='%s'" % (csr_pkey, ))
+            searchresult = cursor.fetchall()
+
+            # no entry found, insert data
+            if searchresult[0][0] == 0:
+                cursor.execute("INSERT INTO signing_request (hash, request) VALUES (%(pkey)s, %(request)s);", csr_data)
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't lookup signing request: %s" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+        return csr_pkey
+
     def store_certificate(self, cert, csr=None, revoked=None):
         data = self._extract_data(cert, csr, revoked)
 
@@ -122,10 +188,11 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE certificate")
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
-                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, keysize) VALUES "
+                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, "
+                           "signature_algorithm_id, keysize) VALUES "
                            "(%(serial)s, %(version)s, to_timestamp(%(start_date)s), "
                            "to_timestamp(%(end_date)s), %(subject)s, %(fp_md5)s, %(fp_sha1)s, "
-                           "%(pubkey)s, %(state)s, %(issuer)s, %(keysize)s);", data)
+                           "%(pubkey)s, %(state)s, %(issuer)s, %(signature_algorithm_id)s, %(keysize)s);", data)
 
             if "csr" in data:
                 cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", data)
@@ -187,6 +254,7 @@ class PostgreSQL(Backend):
             state_statistics[state] = 0
 
         keysize_statistics = {}
+        signature_algorithm_statistics = {}
 
         try:
             cursor = self.__db.cursor()
@@ -203,6 +271,14 @@ class PostgreSQL(Backend):
             for element in result:
                 keysize_statistics[element[0]] = element[1]
 
+            cursor.execute("SELECT algorithm, COUNT(algorithm) FROM signature_algorithm INNER JOIN "
+                           "certificate ON certificate.signature_algorithm_id=signature_algorithm.id "
+                           "GROUP BY algorithm;")
+            result = cursor.fetchall()
+
+            for element in result:
+                signature_algorithm_statistics[element[0]] = element[1]
+
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
@@ -212,5 +288,6 @@ class PostgreSQL(Backend):
 
         statistics["state"] = state_statistics
         statistics["keysize"] = keysize_statistics
+        statistics["signature_algorithm"] = signature_algorithm_statistics
 
         return statistics

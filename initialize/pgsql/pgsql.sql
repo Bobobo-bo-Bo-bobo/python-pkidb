@@ -87,6 +87,7 @@ CREATE INDEX certificate_fingerprint_md5_idx ON certificate USING btree(fingerpr
 CREATE INDEX certificate_fingerprint_sha1_idx ON certificate USING btree(fingerprint_sha1);
 CREATE INDEX certificate_state_idx ON certificate USING btree(state);
 CREATE INDEX certificate_issuer_idx ON certificate USING btree(issuer);
+CREATE INDEX certificate_subject_idx ON certificate USING btree(subject);
 
 -- table of certificate signing requests
 CREATE TABLE IF NOT EXISTS "signing_request" (

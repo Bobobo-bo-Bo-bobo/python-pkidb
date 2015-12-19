@@ -122,10 +122,10 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE certificate")
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
-                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer) VALUES "
+                           "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, keysize) VALUES "
                            "(%(serial)s, %(version)s, to_timestamp(%(start_date)s), "
                            "to_timestamp(%(end_date)s), %(subject)s, %(fp_md5)s, %(fp_sha1)s, "
-                           "%(pubkey)s, %(state)s, %(issuer)s);", data)
+                           "%(pubkey)s, %(state)s, %(issuer)s, %(keysize)s);", data)
 
             if "csr" in data:
                 cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", data)
@@ -186,6 +186,8 @@ class PostgreSQL(Backend):
         for state in self._certificate_status_map:
             state_statistics[state] = 0
 
+        keysize_statistics = {}
+
         try:
             cursor = self.__db.cursor()
 
@@ -195,12 +197,20 @@ class PostgreSQL(Backend):
             for element in result:
                 state_statistics[self._certificate_status_reverse_map[element[0]]] = element[1]
 
+            cursor.execute("SELECT keysize, COUNT(keysize) FROM certificate GROUP BY keysize;")
+            result = cursor.fetchall()
+
+            for element in result:
+                keysize_statistics[element[0]] = element[1]
+
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
             sys.stderr.write("Error: Can't read certifcate informations from database:%s\n" % (error.pgerror, ))
             self.__db.rollback()
             return None
+
         statistics["state"] = state_statistics
+        statistics["keysize"] = keysize_statistics
 
         return statistics

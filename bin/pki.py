@@ -419,9 +419,9 @@ def print_statistics(opts, config, backend):
 
     stats = backend.get_statistics()
 
-    if "state" in stats:
-        for key in stats["state"]:
-            print("%s:%u" % (key, stats["state"][key]))
+    for stat_type in stats:
+        for key in stats[stat_type]:
+            print("%s:%s:%u" % (stat_type, key, stats[stat_type][key]))
 
     return None
 

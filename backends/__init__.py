@@ -151,6 +151,7 @@ class Backend(object):
             "pubkey":base64.b64encode(certificate),
             "fp_md5":hashlib.md5(certificate).hexdigest(),
             "fp_sha1":hashlib.sha1(certificate).hexdigest(),
+            "keysize":cert.get_pubkey().bits(),
         }
 
         # check expiration / validity

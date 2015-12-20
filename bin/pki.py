@@ -19,7 +19,7 @@ shortoptions = {
     "main":"c:h",
     "sign":"o:s:e:E:",
     "import":"c:r:",
-    "expire":"",
+    "housekeeping":"",
     "statistics":"",
     "gencrl":"o:"
 }
@@ -28,7 +28,7 @@ longoptions = {
     "main":["config=", "help"],
     "sign":["output=", "start=", "end=", "extension="],
     "import":["csr=", "revoked="],
-    "expire":[],
+    "housekeeping":[],
     "statistics":[],
     "gencrl":["output="],
 }
@@ -90,13 +90,15 @@ def usage():
   --help
 
   Commands:
-   expire                       Checks all certificates in the database for expiration.
-                                This should be run at regular intervals.
 
    gencrl                       Generate certificate revocation list from revoked certificates.
 
      -o <output>                Write revocation list to <output> instead of standard output.
      --output=<output>
+
+   housekeeping                 Generale "housekeeping. Checking all certificates in the database
+                                for expiration, renew autorenewable certificates, ...
+                                This should be run at regular intervals.
 
    import                       Import a certificate
 
@@ -510,16 +512,16 @@ def import_certificate(opts, config, backend):
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
     backend.store_certificate(cert, csr, revoked)
 
-def check_expiration(opts, config, backend):
+def housekeeping(opts, config, backend):
     """
-    Check certificates in the backend for expiration.
+    Check certificates in the backend for expiration, auto renew autorenewable certificates.
     :param opts: options for import
     :param config: parsed configuration file
     :param backend: backend object
     :return: None
     """
     try:
-        (optval, trailing) = getopt.getopt(opts, shortoptions["expire"], longoptions["expire"])
+        (optval, trailing) = getopt.getopt(opts, shortoptions["housekeeping"], longoptions["housekeeping"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         return 1
@@ -539,7 +541,7 @@ def print_statistics(opts, config, backend):
     :return: None
     """
     try:
-        (optval, trailing) = getopt.getopt(opts, shortoptions["expire"], longoptions["expire"])
+        (optval, trailing) = getopt.getopt(opts, shortoptions["statistics"], longoptions["statistics"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         return 1
@@ -603,8 +605,8 @@ if __name__ == "__main__":
         sys.exit(0)
     elif command == "import":
         import_certificate(trailing[1:], options, backend)
-    elif command == "expire":
-        check_expiration(trailing[1:], options, backend)
+    elif command == "housekeeping":
+        housekeeping(trailing[1:], options, backend)
     elif command == "statistics":
         print_statistics(trailing[1:], options, backend)
     elif command == "gencrl":

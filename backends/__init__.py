@@ -35,6 +35,34 @@ class Backend(object):
         "invalid":4,
     }
 
+    _revocation_reason_map = {
+        "unspecified":0,
+        "keycompromise":1,
+        "cacompromise":2,
+        "affiliationchanged":3,
+        "superseded":4,
+        "cessationofoperation":5,
+        "certificatehold":6,
+        "unspecified (not used as defined in RFC5280)":7,
+        "removefromcrl":8,
+        "privilegewithdrawn":9,
+        "aacompromise":10,
+    }
+
+    _revocation_reason_reverse_map = {
+        0:"unspecified",
+        1:"keycompromise",
+        2:"cacompromise",
+        3:"affiliationchanged",
+        4:"superseded",
+        5:"cessationofoperation",
+        6:"certificatehold",
+        7:"unspecified (not used as defined in RFC5280)",
+        8:"removefromcrl",
+        9:"privilegewithdrawn",
+        10:"aacompromise",
+    }
+
     def __init__(self, config):
         """
         Constructor
@@ -322,5 +350,12 @@ class Backend(object):
         :param serial: serial number
         :param subject: subject string
         :return: Nothing
+        """
+        return None
+
+    def generate_revocation_list(self):
+        """
+        Generate certificate revocation list from revoked certificates
+        :return: CRL object
         """
         return None

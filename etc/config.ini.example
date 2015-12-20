@@ -32,6 +32,12 @@ crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
 crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
 crl_passphrase = AssembleTheMinions!
 
+# numver of days before the next crl is due
+crl_validity_period = 30
+
+# message digest to use for crl signing
+crl_digest = sha512
+
 # Backend configurations
 [pgsql]
 host = 127.0.0.1

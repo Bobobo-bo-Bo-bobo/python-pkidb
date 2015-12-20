@@ -386,3 +386,28 @@ class PostgreSQL(Backend):
             self.__db.rollback()
 
         return None
+
+    def generate_revocation_list(self):
+        crl = OpenSSL.crypto.CRL()
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT serial_number, revocation_reason, extract(EPOCH from revocation_date) "
+                           "FROM certificate WHERE state=%d" % (self._certificate_status_map["revoked"]))
+
+            result = cursor.fetchall()
+            for revoked in result:
+                revcert = OpenSSL.crypto.Revoked()
+                revcert.set_serial("%x" % (revoked[0], ))
+                revcert.set_reason(self._revocation_reason_reverse_map[revoked[1]])
+                revcert.set_rev_date(self._unix_timestamp_to_asn1_time(revoked[2]))
+
+                crl.add_revoked(revcert)
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't fetch revoked certificates from backend: %s\n" % (error.pgerror, ))
+            return None
+        except OpenSSL.crypto.Error as x509error:
+            sys.stderr.write("Error: Can't build revocation list: %s\n" % (x509error.message, ))
+            return None
+
+        return crl

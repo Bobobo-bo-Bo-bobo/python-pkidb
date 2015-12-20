@@ -21,6 +21,7 @@ shortoptions = {
     "import":"c:r:",
     "expire":"",
     "statistics":"",
+    "gencrl":"o:"
 }
 
 longoptions = {
@@ -29,24 +30,7 @@ longoptions = {
     "import":["csr=", "revoked="],
     "expire":[],
     "statistics":[],
-}
-
-# map revocation reasons to numeric codes
-# reasonFlag is defined in RFC 5280, 5.3.1. Reason Code
-global revocation_reason_map
-
-revocation_reason_map = {
-    "unspecified":0,
-    "keycompromise":1,
-    "cacompromise":2,
-    "affiliationchanged":3,
-    "superseded":4,
-    "cessationofoperation":5,
-    "certificatehold":6,
-    "unspecified (not used as defined in RFC5280)":7,
-    "removefromcrl":8,
-    "privilegewithdrawn":9,
-    "aacompromise":10,
+    "gencrl":["output="],
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -107,6 +91,12 @@ def usage():
 
   Commands:
    expire                       Checks all certificates in the database for expiration.
+                                This should be run at regular intervals.
+
+   gencrl                       Generate certificate revocation list from revoked certificates.
+
+     -o <output>                Write revocation list to <output> instead of standard output.
+     --output=<output>
 
    import                       Import a certificate
 
@@ -148,6 +138,67 @@ def usage():
    statistics                   Print small summary of stored certificates
 
   """ % (os.path.basename(sys.argv[0]), configfile))
+
+def gencrl(opts, config, backend):
+    """
+    Generate certificate revocation list
+    :param opts: options
+    :param config: configurationd
+    :param backend: backend
+    :return: None
+    """
+
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["gencrl"], longoptions["gencrl"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-o", "--output"):
+            output = val
+        else:
+            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            sys.exit(1)
+
+    # load CRL signing keys
+    crl_pub_key = load_public_key(config, "crl_public_key")
+    crl_priv_key = load_private_key(config, "crl_private_key", "crl_passphrase")
+
+    crl = backend.generate_revocation_list()
+
+    crl_period = None
+    if "crl_validity_period" in config["global"]:
+        crl_period = long(config["global"]["crl_validity_period"])
+
+    crl_data = None
+
+    # CRL.export() parameter digest is available in pyopenssl 0.15
+    if OpenSSL.__version__ >= "0.15":
+
+        crl_digest = None
+        if "crl_digest" in config["global"]:
+            crl_digest = config["global"]["crl_digest"]
+
+            crl_data = crl.export(crl_pub_key, crl_priv_key, type=OpenSSL.crypto.FILETYPE_PEM,
+                                  days=crl_period, digest=crl_digest)
+
+    else:
+        crl_data = crl.export(crl_pub_key, crl_priv_key, type=OpenSSL.crypto.FILETYPE_PEM,
+                              days=crl_period)
+
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(crl_data)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write CRL data to output file %s: %s\n" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(crl_data)
 
 def sign(opts, config, backend):
     """
@@ -282,12 +333,12 @@ def sign(opts, config, backend):
         pass
 
     # load private CA key
-    ca_priv_key = load_ca_private_key(config)
+    ca_priv_key = load_private_key(config, "ca_private_key", "ca_passphrase")
     if not ca_priv_key:
         sys.stderr.write("Error: Failed to load CA private key\n")
         return 2
 
-    ca_pub_key = load_ca_public_key(config)
+    ca_pub_key = load_public_key(config, "ca_public_key")
     if not ca_pub_key:
         sys.stderr.write("Error: Failed to load CA public key\n")
         return 2
@@ -319,52 +370,55 @@ def sign(opts, config, backend):
     else:
         sys.stdout.write(newcert_pem)
 
-def load_ca_public_key(config):
+def load_public_key(config, keyname):
     """
     Loads issuer from CA public key
     :param config: configuration
+    :param keyname: name of public key in [global] section
     :return: X509 object representing CA public key
     """
 
     result = None
     try:
-        fd = open(config["global"]["ca_public_key"], "r")
+        fd = open(config["global"][keyname], "r")
         data = fd.read()
         fd.close()
     except IOError as error:
-        sys.stderr.write("Error: Can't read CA public key: %s\n" % (error.strerror, ))
+        sys.stderr.write("Error: Can't read public key %s: %s\n" % (config["global"][keyname], error.strerror, ))
         return None
 
     try:
-        ca_pubkey = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
+        pubkey = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
     except OpenSSL.crypto.Error as error:
-        sys.stderr.write("Error: Invalid CA public key: %s\n" % (error.message, ))
+        sys.stderr.write("Error: Invalid public key: %s\n" % (error.message, ))
         return None
 
-    return ca_pubkey
+    return pubkey
 
-def load_ca_private_key(config):
+def load_private_key(config, keyname, passphrase):
     """
     Load CA keyfile
     :param config: configuration
+    :param keyname: name of private key in [global] section
+    :param passphrase: name of passphrase variable in [global] section
     :return: private CA key as PKey object or None
     """
 
     result = None
-    ca_passphrase = config["global"]["ca_passphrase"]
+    key_passphrase = config["global"][passphrase]
 
     try:
-        fd = open(config["global"]["ca_private_key"], "r")
+        fd = open(config["global"][keyname], "r")
         data = fd.read()
         fd.close()
     except IOError as error:
-        sys.stderr.write("Error: Can't read CA private key: %s\n" % (error.strerror, ))
+        sys.stderr.write("Error: Can't read private key %s: %s\n" % (config["global"][keyname], error.strerror, ))
         return None
 
     try:
-        result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=ca_passphrase)
+        result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=key_passphrase)
     except OpenSSL.crypto.Error as error:
-        sys.stderr.write("Error: Can't load CA private key: %s\n" % (error.message, ))
+        sys.stderr.write("Error: Can't load private key: %s\n" % (error.message, ))
         return None
 
     return result
@@ -420,8 +474,8 @@ def import_certificate(opts, config, backend):
                 reason = "unspecified"
 
             # check reason string
-            if reason.lower() in revocation_reason_map:
-                revoked = (revocation_reason_map[reason.lower()], revtime)
+            if reason.lower() in backend._revocation_reason_map:
+                revoked = (backend._revocation_reason_map[reason.lower()], revtime)
             else:
                 sys.stderr.write("Error: Unknown revocation reason %s\n" % (reason, ))
                 return 1
@@ -553,6 +607,8 @@ if __name__ == "__main__":
         check_expiration(trailing[1:], options, backend)
     elif command == "statistics":
         print_statistics(trailing[1:], options, backend)
+    elif command == "gencrl":
+        gencrl(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

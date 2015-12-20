@@ -25,7 +25,7 @@ shortoptions = {
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "exension="],
+    "sign":["output=", "start=", "end=", "extension="],
     "import":["csr=", "revoked="],
     "expire":[],
     "statistics":[],
@@ -123,13 +123,18 @@ def usage():
 
    sign
 
-     -e <extdata>               X509 extension. Can be repeated for multiple extensions.
+     -E <extdata>               X509 extension. Can be repeated for multiple extensions.
      --extension=<extdata>      Parameter <extdata> is a komma separated list of:
                                 <name> - Name of the X509 extension
                                 <critical> - Criticality flag. 0: False, 1: True
                                 <subject> - Subject, is usually empty
                                 <issuer> - Issuer, is usually empty
                                 <data> - data of the extension
+
+     -S <san>                   subjectAltName extension
+     --san=<san>                This is the same as --extension=subjectAltName,0,,,<san>
+                                but as using the subjectAltName extension is the
+                                most common extension this is an extra option.
 
      -s <start>                 Start time for new certificate as Unix timestamp
      --start=<start>            Default: now
@@ -237,7 +242,7 @@ def sign(opts, config, backend):
         start = time.time()
 
     if not end:
-        end = start + long(config["global"]["validity_period"])
+        end = start + long(config["global"]["validity_period"])*86400.
 
     if start >= end:
         sys.stderr.write("Error: Start time (%f) is >= end time (%f)\n" % (start, end))

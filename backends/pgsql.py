@@ -46,8 +46,8 @@ class PostgreSQL(Backend):
 
             try:
                 dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port)
-            except psycopg2.DatabaseError as error:
-                sys.stderr.write("Error: Can't connect to database: %s\n" % (error.message))
+            except psycopg2.Error as error:
+                sys.stderr.write("Error: Can't connect to database: %s\n" % (error.message,))
                 return None
         return dbconn
 
@@ -55,6 +55,8 @@ class PostgreSQL(Backend):
         super(PostgreSQL, self).__init__(config)
         self.__config = config
         self.__db = self.__connect(config)
+        if not self.__db:
+            sys.exit(4)
 
     def __del__(self):
         super(PostgreSQL, self).__del__()

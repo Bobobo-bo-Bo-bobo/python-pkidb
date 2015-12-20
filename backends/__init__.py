@@ -359,3 +359,13 @@ class Backend(object):
         :return: CRL object
         """
         return None
+
+    def revoke_certificate(self, serial, reason, revocation_date):
+        """
+        Revoke certificate identified by serial number
+        :param serial: serial number
+        :param reason: revocation reason
+        :param revocation_date: revocation date as UNIX timestamp
+        :return: None
+        """
+        return None

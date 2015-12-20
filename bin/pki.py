@@ -12,8 +12,8 @@ import OpenSSL
 global configfile
 configfile = "/etc/pki/config.ini"
 
-global shortoptions
 global longoptions
+global shortoptions
 
 shortoptions = {
     "main":"c:h",
@@ -21,7 +21,8 @@ shortoptions = {
     "import":"c:r:",
     "housekeeping":"",
     "statistics":"",
-    "gencrl":"o:"
+    "gencrl":"o:",
+    "revoke":"r:R:",
 }
 
 longoptions = {
@@ -31,6 +32,7 @@ longoptions = {
     "housekeeping":[],
     "statistics":[],
     "gencrl":["output="],
+    "revoke":["reason=", "revocation-date="],
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -92,6 +94,8 @@ def usage():
   Commands:
 
    gencrl                       Generate certificate revocation list from revoked certificates.
+                                The certificate revocation list will be written to standard output
+                                or to a file if -o is used.
 
      -o <output>                Write revocation list to <output> instead of standard output.
      --output=<output>
@@ -100,7 +104,11 @@ def usage():
                                 for expiration, renew autorenewable certificates, ...
                                 This should be run at regular intervals.
 
-   import                       Import a certificate
+   import                       Import a certificate. If a file name is given it will be read
+                                from the file, otherwise it will be read from stdin.
+
+     -a                         Mark certificate as autorenwable.
+     --autorenew                The "housekeeping" command will take care of this
 
      -c <csr>                   Certificate signing request used for certificate
      --csr=<csr>                creation. Optional.
@@ -113,7 +121,28 @@ def usage():
                                 superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
                                 removeFromCRL, aACompromise
 
-   sign
+   revoke                       Revoke a certificate. Serial number of the certificate to revoke must
+                                be used. If given not given on the command line it will be read from
+                                stdin.
+
+     -r <reason>                Set revocation reason for certificate.
+     --reason=<reason>          <reason> can be one of:
+                                unspecified, keyCompromise, CACompromise, affiliationChanged,
+                                superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
+                                removeFromCRL, aACompromise
+                                If no reasen is given, the default "unspecified" is used.
+
+     -R <date>                  Set revocation date for certificate.
+     --revocation-date=<date>   <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                string in the format YYYYMMDDhhmmssZ.
+                                If not given, the current date will be used.
+
+   sign                         Sign a certificate signing request. If a file name is given it will be
+                                read, otherwise it will be read from stdin. Output will be written to
+                                stdout or to a file if -o option is used.
+
+     -a                         Mark certificate as autorenwable.
+     --autorenew                The "housekeeping" command will take care of this
 
      -E <extdata>               X509 extension. Can be repeated for multiple extensions.
      --extension=<extdata>      Parameter <extdata> is a komma separated list of:
@@ -137,11 +166,79 @@ def usage():
      -o <out>                   Write data to <outfile> instead of stdout
      --output=<out>
 
-   statistics                   Print small summary of stored certificates
+   statistics                   Print small summary of stored certificates. Output will be written to
+                                stdout.
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
-def gencrl(opts, config, backend):
+def revoke_certificate(opts, config, backend):
+    """
+    Generate certificate revocation list
+    :param opts: options
+    :param config: configurationd
+    :param backend: backend
+    :return: None
+    """
+
+    re_asn1_time_string = re.compile("^\d{14}Z$")
+    re_serial_is_hex = re.compile("0x[0-9a-f]+")
+
+    reason = "unspecified"
+    rev_date = time.time()
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["revoke"], longoptions["revoke"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-R", "--revocation-date"):
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(val):
+                # convert to UNIX timestamp
+                rev_date = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
+
+            try:
+                rev_date = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error Can't parse end time %s: %s\n" % (val, error.message))
+                return 1
+        elif opt in ("-r", "--reason"):
+            if val.lower() in backend._revocation_reason_map:
+                reason = val.lower()
+            else:
+                sys.stderr.write("Error: %s is not a valid revocation reason\n" % (val, ))
+                sys.exit(2)
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.exit(1)
+
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    # convert serial number to a number
+    try:
+        # check for 0x...
+        if re_serial_is_hex.match(serial):
+            serial = long(serial, 16)
+        # it contains ":" we assume it is hexadecimal
+        elif serial.find(":") >= 0:
+            serial = serial.replace(":", "")
+            serial = long(serial, 16)
+        # assuming decimal value
+        else:
+            serial = long(serial)
+
+    except ValueError as error:
+        sys.stderr.write("Error: Can't convert serial number %s: %s" % (serial, error.message))
+        sys.exit(2)
+
+    backend.revoke_certificate(serial, reason, rev_date)
+
+def generate_certificate_revocation_list(opts, config, backend):
     """
     Generate certificate revocation list
     :param opts: options
@@ -202,12 +299,12 @@ def gencrl(opts, config, backend):
     else:
         sys.stdout.write(crl_data)
 
-def sign(opts, config, backend):
+def sign_certificate(opts, config, backend):
     """
     Sign a certificate signing request.
     :param opts: array with options
     :param config: parsed configuration file
-    :param back: backend object
+    :param backend: backend object
     :return: 0 on success or !=0 otherwise
     """
 
@@ -599,7 +696,7 @@ if __name__ == "__main__":
 
     command = trailing[0]
     if command == "sign":
-        sign(trailing[1:], options, backend)
+        sign_certificate(trailing[1:], options, backend)
     elif command == "help":
         usage()
         sys.exit(0)
@@ -610,7 +707,9 @@ if __name__ == "__main__":
     elif command == "statistics":
         print_statistics(trailing[1:], options, backend)
     elif command == "gencrl":
-        gencrl(trailing[1:], options, backend)
+        generate_certificate_revocation_list(trailing[1:], options, backend)
+    elif command == "revoke":
+        revoke_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

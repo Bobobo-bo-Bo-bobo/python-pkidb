@@ -403,11 +403,36 @@ class PostgreSQL(Backend):
                 revcert.set_rev_date(self._unix_timestamp_to_asn1_time(revoked[2]))
 
                 crl.add_revoked(revcert)
+
+            cursor.close()
+            self.__db.commit()
         except psycopg2.Error as error:
             sys.stderr.write("Error: Can't fetch revoked certificates from backend: %s\n" % (error.pgerror, ))
+            self.__db.rollback()
             return None
         except OpenSSL.crypto.Error as x509error:
             sys.stderr.write("Error: Can't build revocation list: %s\n" % (x509error.message, ))
             return None
 
         return crl
+
+    def revoke_certificate(self, serial, reason, revocation_date):
+        try:
+            qdata = {
+                "serial":serial,
+                "reason":self._revocation_reason_map[reason],
+                "date":revocation_date,
+                "state":self._certificate_status_map["revoked"],
+            }
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certificate;")
+            cursor.execute("UPDATE certificate SET state=%(state)s, revocation_date=to_timestamp(%(date)s), "
+                           "revocation_reason=%(reason)s WHERE serial_number=%(serial)s;", qdata)
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't update certifcate in backend: %s\n" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+        return None

@@ -216,7 +216,7 @@ class PostgreSQL(Backend):
 
         return csr_pkey
 
-    def store_certificate(self, cert, csr=None, revoked=None, replace=False):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None):
         data = self._extract_data(cert, csr, revoked)
 
         # check if serial_number already exist

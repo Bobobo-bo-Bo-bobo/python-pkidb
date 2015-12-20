@@ -104,7 +104,7 @@ class Backend(object):
         """
         pass
 
-    def store_certificate(self, cert, csr=None, revoked=None, replace=False):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None):
         """
         Stores a certificate in the backend.
         :param cert: X509 object to store
@@ -112,6 +112,7 @@ class Backend(object):
         :param revoked: Tuple with revocation information (reason, revocationtime).
                         if not set to None it marks the certificate as revoked.
         :param replace: Replace existing certificate, default is False
+        :param autorenew: dictionary with autorenew information if the certificate is an auto renewable certificate
         :return: None
         """
         return None

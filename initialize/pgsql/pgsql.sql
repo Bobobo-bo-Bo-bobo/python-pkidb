@@ -26,6 +26,16 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- it is NOT unique as it may occur for current and revoked certificates
   subject TEXT NOT NULL CHECK(subject <> ''),
 
+  -- auto renewable certificate?
+  auto_renewable BOOLEAN NOT NULL DEFAULT False,
+  
+  -- auto renew autorenewable certificates if there is less than auto_renew_start_period days
+  -- left before expiration
+  auto_renew_start_period REAL DEFAULT NULL CHECK(auto_renew_start_period > 0),
+
+  -- auto renewable certificates will be renewed for auto_renew_validity_period days
+  auto_renew_validity_period REAL DEFAULT NULL CHECK(auto_renew_validity_period >0),
+
   -- issuer of the certificate
   -- issuer can be NULL for signing requests
   issuer TEXT CHECK(issuer <> ''),

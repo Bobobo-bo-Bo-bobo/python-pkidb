@@ -24,7 +24,13 @@ digest = sha512
 serial_number = random
 
 # default validity period for new certificates
-validity_period = 3650
+validity_period = 1095
+
+# path to crl signing certificarte and private
+# key and the passphrase protecting it
+crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
+crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
+crl_passphrase = AssembleTheMinions!
 
 # Backend configurations
 [pgsql]

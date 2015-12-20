@@ -304,6 +304,7 @@ class PostgreSQL(Backend):
 
         keysize_statistics = {}
         signature_algorithm_statistics = {}
+        revocation_statistics = {}
 
         try:
             cursor = self.__db.cursor()
@@ -328,6 +329,14 @@ class PostgreSQL(Backend):
             for element in result:
                 signature_algorithm_statistics[element[0]] = element[1]
 
+            cursor.execute("SELECT revocation_reason, COUNT(revocation_reason) FROM certificate "
+                           "WHERE state=%u GROUP BY revocation_reason;" % (self._certificate_status_map["revoked"]))
+            result = cursor.fetchall()
+
+            for revoked in result:
+                reason = self._revocation_reason_reverse_map[revoked[0]]
+                revocation_statistics[reason] = revoked[1]
+
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
@@ -338,6 +347,7 @@ class PostgreSQL(Backend):
         statistics["state"] = state_statistics
         statistics["keysize"] = keysize_statistics
         statistics["signature_algorithm"] = signature_algorithm_statistics
+        statistics["revoked"] = revocation_statistics
 
         return statistics
 

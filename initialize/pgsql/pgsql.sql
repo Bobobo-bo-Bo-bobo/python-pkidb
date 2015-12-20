@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- revocation_date, not NULL when certificate has been revoked
   revocation_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   -- revocation_reason reason for revocation
+  -- reasonFlag is defined in RFC 5280, 5.3.1. Reason Code
   -- possible values are
   --  0 - unspecified
   --  1 - keyCompromise
@@ -78,6 +79,10 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   --  4 - superseded
   --  5 - cessationOfOperation
   --  6 - certificateHold
+  --  7 - unused
+  --  8 - removeFromCRL
+  --  9 - privilegeWithdrawn
+  -- 10 - aACompromise
   revocation_reason INTEGER DEFAULT NULL CHECK(revocation_reason >= 0)
 );
 

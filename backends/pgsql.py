@@ -299,9 +299,6 @@ class PostgreSQL(Backend):
         statistics = {}
 
         state_statistics = {}
-        for state in self._certificate_status_map:
-            state_statistics[state] = 0
-
         keysize_statistics = {}
         signature_algorithm_statistics = {}
         revocation_statistics = {}

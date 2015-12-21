@@ -460,3 +460,10 @@ class Backend(object):
         :return: X509 object with renewed certificate
         """
         return None
+
+    def dump_database(self):
+        """
+        Dumps content of the backend database as JSON output
+        :return: database dump
+        """
+        return None

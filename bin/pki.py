@@ -2,6 +2,7 @@
 
 import backends
 import getopt
+import json
 import logging
 import logging.handlers
 import os
@@ -24,6 +25,8 @@ shortoptions = {
     "renew":"o:p:",
     "export":"o:",
     "remove":"",
+    "backup":"o:",
+
 }
 
 longoptions = {
@@ -37,6 +40,7 @@ longoptions = {
     "renew":["output=", "period="],
     "export":["output="],
     "remove":[],
+    "backup":["output="],
 }
 
 # initialize logging subsystem
@@ -109,6 +113,15 @@ def usage():
   --help
 
   Commands:
+
+   backup                       Dumps the content of the backend database in JSON format.
+                                This can be used to backup the PKI database and is the only
+                                supported migrate between different backend types.
+                                If no output file (option -o) has been given it will be written
+                                to standard output.
+
+     -o <output>                Write new certificate to <output> instead of standard out
+     --output=<output>
 
    export                       Dumps base64 encoded X509 data of a certificate (aka PEM format).
                                 The serial number of the certificate must be given.
@@ -216,6 +229,42 @@ def usage():
                                 stdout.
 
   """ % (os.path.basename(sys.argv[0]), configfile))
+
+def backup_database(opts, config, backend):
+    """
+    Exports the database backend as JSON
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["backup"], longoptions["backup"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-o", "--output"):
+            output = val
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.exit(1)
+
+    dump = backend.dump_database()
+    json_dump = json.dumps(dump)
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(json_dump)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(json_dump+"\n")
 
 def export_certificate(opts, config, backend):
     """
@@ -957,6 +1006,8 @@ if __name__ == "__main__":
         renew_certificate(trailing[1:], options, backend)
     elif command == "export":
         export_certificate(trailing[1:], options, backend)
+    elif command == "backup":
+        backup_database(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

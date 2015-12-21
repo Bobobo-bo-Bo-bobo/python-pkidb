@@ -712,3 +712,115 @@ class PostgreSQL(Backend):
             sys.stderr.write("Error: Can't read certificate from database: %s\n" % (error.pgerror, ))
             self.__logger.error("Can't read certificate from database: %s" % (error.pgerror, ))
             return None
+
+    def dump_database(self):
+        self.__logger.info("Dumping backend database")
+        dump = {}
+
+        try:
+            cursor = self.__db.cursor()
+            self.__logger.info("Dumping certificate table")
+
+            # dumping certificates
+            certdump = []
+            cursor.execute("LOCK TABLE certificate;")
+            cursor.execute("SELECT serial_number, version, extract(EPOCH FROM start_date), "
+                           "extract(EPOCH FROM end_date), subject, auto_renewable, "
+                           "extract(EPOCH FROM auto_renew_start_period), "
+                           "extract(EPOCH FROM auto_renew_validity_period), issuer, keysize, fingerprint_md5, "
+                           "fingerprint_sha1, certificate, signature_algorithm_id, extension, signing_request, "
+                           "state, extract(EPOCH FROM revocation_date), revocation_reason FROM certificate;")
+            result = cursor.fetchall()
+            self.__logger.info("Dumping %u certificates" % (len(result), ))
+
+            if len(result) > 0:
+                for res in result:
+                    self.__logger.info("Dumping certificate with serial number 0x%x" % (res[0], ))
+                    entry = {
+                        "serial_number":str(res[0]),
+                        "version":res[1],
+                        "start_date":res[2],
+                        "end_date":res[3],
+                        "subject":res[4],
+                        "auto_renewable":res[5],
+                        "auto_renew_start_period":res[6],
+                        "auto_renew_validity_period":res[7],
+                        "issuer":res[8],
+                        "keysize":res[9],
+                        "fingerprint_md5":res[10],
+                        "fingerprint_sha1":res[11],
+                        "certificate":res[12],
+                        "signature_algorithm_id":res[13],
+                        "extension":res[14],
+                        "signing_request":res[15],
+                        "state":res[16],
+                        "revocation_date":res[17],
+                        "revocation_reason":res[18],
+                    }
+                    certdump.append(entry)
+            dump["certificate"] = certdump
+
+            # dumping x509 extensions
+            extdump = []
+            cursor.execute("LOCK TABLE extension;")
+            cursor.execute("SELECT hash, name, criticality, data FROM extension;")
+            result = cursor.fetchall()
+            self.__logger.info("Dumping %u extensions" % (len(result), ))
+            if len(result) > 0:
+                for res in result:
+                    self.__logger.info("Dumping extension with key id %s" % (res[0], ))
+                    entry = {
+                        "hash":res[0],
+                        "name":res[1],
+                        "criticality":res[2],
+                        "data":res[3],
+                    }
+                    extdump.append(entry)
+            dump["extension"] = extdump
+
+            # dumping signature algorithms
+            self.__logger.info("Dumping list of signature algorithms")
+
+            algodump = []
+            cursor.execute("LOCK TABLE signature_algorithm;")
+            cursor.execute("SELECT id, algorithm FROM signature_algorithm;")
+            result = cursor.fetchall()
+            self.__logger.info("Dumping %u signature algorithms" % (len(result), ))
+
+            if len(result)>0:
+                for res in result:
+                    self.__logger.info("Dumping signing algorithm %s with id %u" % (res[1], res[0]))
+                    entry = {
+                        "id":res[0],
+                        "signature_algorithm":res[1],
+                    }
+                    algodump.append(entry)
+            dump["signature_algorithm"] = algodump
+
+            # dumping certificate signing requests
+            csrdump = []
+            cursor.execute("LOCK TABLE signing_request;")
+            cursor.execute("SELECT hash, request FROM signing_request;")
+            result = cursor.fetchall()
+
+            self.__logger.info("Dumping %u certificate signing requests" % (len(result), ))
+            if len(result)>0:
+                for res in result:
+                    self.__logger.info("Dumping signing request %s" % (res[0], ))
+                    entry = {
+                        "hash":res[0],
+                        "request":res[1],
+                    }
+                    csrdump.append(entry)
+
+            dump["signing_request"] = csrdump
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't read from backend database: %s\n" % (error.pgerror, ))
+            self.__logger.error("Can't read from backend database: %s" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+        return dump

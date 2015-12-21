@@ -23,7 +23,8 @@ shortoptions = {
     "statistics":"",
     "gencrl":"o:",
     "revoke":"r:R:",
-    "renew":"o:p:"
+    "renew":"o:p:",
+    "export":"o:",
 }
 
 longoptions = {
@@ -34,7 +35,8 @@ longoptions = {
     "statistics":[],
     "gencrl":["output="],
     "revoke":["reason=", "revocation-date="],
-    "renew":["output=", "period="]
+    "renew":["output=", "period="],
+    "export":["output="],
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -95,6 +97,15 @@ def usage():
 
   Commands:
 
+   export                       Dumps base64 encoded X509 data of a certificate (aka PEM format).
+                                The serial number of the certificate must be given.
+                                If not given it will be read from the standard input.
+                                The new certificate will be written to standard output or to a file if
+                                the -o option is used.
+
+     -o <output>                Write new certificate to <output> instead of standard out
+     --output=<output>
+
    gencrl                       Generate certificate revocation list from revoked certificates.
                                 The certificate revocation list will be written to standard output
                                 or to a file if -o is used.
@@ -105,6 +116,10 @@ def usage():
    housekeeping                 Generale "housekeeping. Checking all certificates in the database
                                 for expiration, renew autorenewable certificates, ...
                                 This should be run at regular intervals.
+
+     -N                         Don't renew auto renawable certificates that will expire.
+     --no-autorenew             This option can be used to when run as a cronjob and the CA key
+                                should not be used (e.g. they are stored offline).
 
    import                       Import a certificate. If a file name is given it will be read
                                 from the file, otherwise it will be read from stdin.
@@ -184,11 +199,60 @@ def usage():
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
+def export_certificate(opts, config, backend):
+    """
+    Export a certificate identified by the serial number
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["export"], longoptions["export"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-o", "--output"):
+            output = val
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.exit(1)
+
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+    cert = backend.get_certificate(serial)
+
+    if not cert:
+        sys.stderr.write("Error: No certificate with serial number %s found.\n" % (serial, ))
+        sys.exit(2)
+
+    pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(pem_data)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(pem_data)
+
 def renew_certificate(opts, config, backend):
     """
     Renew a certificate identified by the serial number
     :param opts: options
-    :param config: configurationd
+    :param config: configuration
     :param backend: backend
     :return: None
     """
@@ -804,6 +868,8 @@ if __name__ == "__main__":
         revoke_certificate(trailing[1:], options, backend)
     elif command == "renew":
         renew_certificate(trailing[1:], options, backend)
+    elif command == "export":
+        export_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

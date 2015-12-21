@@ -71,6 +71,65 @@ class Backend(object):
         """
         pass
 
+    def _get_state(self, serial):
+        """
+        Returns the state of a certificate identified by serial number
+        :param serial: serial number
+        :return: state
+        """
+        return None
+
+    def _is_expired(self, serial):
+        """
+        Check if a certificate is expired
+        :param serial: serial number
+        :return: True if certificate is expired.
+                 False if certificate is expired.
+                 None if certifcate can not be found.
+        """
+        state = self._get_state(serial)
+        if state:
+            if state == self._certificate_status_map["expired"]:
+                return True
+            else:
+                return False
+        else:
+            return None
+
+    def _is_valid(self, serial):
+        """
+        Check if a certificate is valid
+        :param serial: serial number
+        :return: True if certificate is valid.
+                 False if certificate is valid.
+                 None if certifcate can not be found.
+        """
+        state = self._get_state(serial)
+        if state:
+            if state == self._certificate_status_map["valid"]:
+                return True
+            else:
+                return False
+        else:
+            return None
+
+    def _is_revoked(self, serial):
+        """
+        Check if a certificate was been revoked
+        :param serial: serial number
+        :return: True if certificate has been revoked.
+                 False if certificate has not been revoked.
+                 None if certifcate can not be found.
+        """
+        state = self._get_state(serial)
+        if state:
+            if state == self._certificate_status_map["revoked"]:
+                return True
+            else:
+                return False
+        else:
+            return None
+
     def _has_serial_number(self, serial):
         """
         Check the backend for serial number

@@ -477,8 +477,14 @@ class PostgreSQL(Backend):
         return cert
 
     def renew_certificate(self, serial, notBefore, notAfter, cakey):
+        # check if the certificate has been revoked
+        if self._is_revoked(serial):
+            sys.stderr.write("Error: Certificate with serial number %s can't be renewed, it has been revoked" % (serial, ))
+            return None
+
         newcert = self.get_certificate(serial)
         if newcert:
+
             # set new validity dates
             newcert.set_notBefore(notBefore)
             newcert.set_notAfter(notAfter)
@@ -490,3 +496,24 @@ class PostgreSQL(Backend):
             self.store_certificate(newcert, replace=True)
 
         return newcert
+
+    def _get_state(self, serial):
+        try:
+            qdata = {
+                "serial":serial,
+            }
+
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT state FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            result = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            if len(result) > 0:
+                return result[0][0]
+            else:
+                return None
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't read certificate from database: %s\n" % (error.pgerror, ))
+            return None
+

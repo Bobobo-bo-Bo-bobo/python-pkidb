@@ -63,6 +63,13 @@ class Backend(object):
         10:"aacompromise",
     }
 
+    def __init_logger(self):
+        """
+        Initialize logging.
+        :return: Nothing
+        """
+        return None
+
     def __init__(self, config):
         """
         Constructor

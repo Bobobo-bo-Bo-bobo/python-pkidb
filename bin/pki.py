@@ -2,18 +2,16 @@
 
 import backends
 import getopt
-import re
+import logging
+import logging.handlers
 import os
+import re
 import sys
 import time
 import OpenSSL
 
 # default configuration file
-global configfile
 configfile = "/etc/pki/config.ini"
-
-global longoptions
-global shortoptions
 
 shortoptions = {
     "main":"c:h",
@@ -40,6 +38,19 @@ longoptions = {
     "export":["output="],
     "remove":[],
 }
+
+# initialize logging subsystem
+__logger = logging.getLogger(__name__)
+__logger.setLevel(logging.INFO)
+
+address = '/dev/log'
+handler = logging.handlers.SysLogHandler(address=address)
+handler.setLevel(logging.INFO)
+name = os.path.basename(sys.argv[0])
+format = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
+handler.setFormatter(format)
+
+__logger.addHandler(handler)
 
 # Python 3 renamed ConfigParser to configparser
 if sys.version_info[0] < 3:
@@ -825,8 +836,10 @@ def housekeeping(opts, config, backend):
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse autorenew period option %s: %s\n" % (val, error.message))
                 sys.exit(2)
+    if not autorenew:
+        autorenew_period = None
 
-    backend.housekeeping(autorenew=autorenew)
+    backend.housekeeping(autorenew=autorenew, validity_period=autorenew_period)
 
     return None
 
@@ -923,6 +936,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     command = trailing[0]
+    start = time.time()
+
     if command == "sign":
         sign_certificate(trailing[1:], options, backend)
     elif command == "help":
@@ -946,4 +961,7 @@ if __name__ == "__main__":
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()
         sys.exit(1)
+
+    stop = time.time()
+    __logger.info("Command %s finished after %f seconds" % (command, (stop - start)))
     sys.exit(0)

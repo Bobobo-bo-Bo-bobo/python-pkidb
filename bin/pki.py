@@ -18,25 +18,27 @@ global shortoptions
 shortoptions = {
     "main":"c:h",
     "sign":"o:s:e:E:",
-    "import":"c:r:",
-    "housekeeping":"N",
+    "import":"c:r:a:p:d:",
+    "housekeeping":"ap:",
     "statistics":"",
     "gencrl":"o:",
     "revoke":"r:R:",
     "renew":"o:p:",
     "export":"o:",
+    "remove":"",
 }
 
 longoptions = {
     "main":["config=", "help"],
     "sign":["output=", "start=", "end=", "extension="],
-    "import":["csr=", "revoked="],
-    "housekeeping":["no-housekeeping"],
+    "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
+    "housekeeping":["autorenew", "period="],
     "statistics":[],
     "gencrl":["output="],
     "revoke":["reason=", "revocation-date="],
     "renew":["output=", "period="],
     "export":["output="],
+    "remove":[],
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -114,12 +116,14 @@ def usage():
      --output=<output>
 
    housekeeping                 Generale "housekeeping. Checking all certificates in the database
-                                for expiration, renew autorenewable certificates, ...
+                                for expiration, renew autorenewable certificates (if option -A is used), ...
                                 This should be run at regular intervals.
 
-     -N                         Don't renew auto renawable certificates that will expire.
-     --no-autorenew             This option can be used to when run as a cronjob and the CA key
-                                should not be used (e.g. they are stored offline).
+     -a                         Renew auto renawable certificates that will expire.
+     --autorenew
+
+     -p <period>                New validity period for auto renewed certificate.
+     --period=<period>          Default is the value given on import that has been stored in the backend.
 
    import                       Import a certificate. If a file name is given it will be read
                                 from the file, otherwise it will be read from stdin.
@@ -129,6 +133,9 @@ def usage():
 
      -c <csr>                   Certificate signing request used for certificate
      --csr=<csr>                creation. Optional.
+
+     -p <period>                New validity period for auto renewed certificate.
+     --period=<period>          Default is the value given in the configuration file as validity_period.
 
      -r <reason>,<time>         Mark certificate as revoked. Optional.
      --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
@@ -696,6 +703,9 @@ def import_certificate(opts, config, backend):
 
     csr = None
     revoked = None
+    autorenewable = False
+    autorenew_period = float(config["global"]["validity_period"])
+    autorenew_delta = float(config["global"]["autorenew_delta"])
 
     for (opt, val) in optval:
         if opt in ("-c", "--csr"):
@@ -708,6 +718,7 @@ def import_certificate(opts, config, backend):
                 return error.errno
 
             csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csrdata)
+
         elif opt in ("-r", "--revoked"):
             # format: <reason>,<revocation_stamp>
             (reason, revtime) = val.split(',')
@@ -731,11 +742,34 @@ def import_certificate(opts, config, backend):
             # check reason string
             if reason.lower() in backend._revocation_reason_map:
                 revoked = (backend._revocation_reason_map[reason.lower()], revtime)
+
+            elif opt in ("-a", "--autorenew"):
+                autorenewable = True
+
+        elif opt in ("-p", "--period"):
+            try:
+                autorenew_period = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
+                sys.exit(2)
+
+        elif opt in ("-d", "--delta"):
+            try:
+                autorenew_delta = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error: Can't parse delta period option %s: %s\n" % (val, error.message))
+                sys.exit(2)
+
             else:
                 sys.stderr.write("Error: Unknown revocation reason %s\n" % (reason, ))
                 return 1
 
     input = None
+
+    # discard autorenew_period if imported certificate is not marked as autorenewable
+    if not autorenewable:
+        autorenew_period = None
+        autorenew_delta = None
 
     if len(trailing) == 0:
         input = sys.stdin
@@ -763,7 +797,7 @@ def import_certificate(opts, config, backend):
 
     # assuming PEM input
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
-    backend.store_certificate(cert, csr, revoked)
+    backend.store_certificate(cert, csr, revoked, autorenew=autorenewable, autorenew_period=autorenew_delta)
 
 def housekeeping(opts, config, backend):
     """
@@ -779,11 +813,49 @@ def housekeeping(opts, config, backend):
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         return 1
 
+    autorenew = False
+    autorenew_period = None
+
+    for (opt, val) in optval:
+        if opt in ("-a", "--autorenew"):
+            autorenew = True
+        elif opt in ("-p", "--period"):
+            try:
+                autorenew_period = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error: Can't parse autorenew period option %s: %s\n" % (val, error.message))
+                sys.exit(2)
+
+    backend.housekeeping(autorenew=autorenew)
+
+    return None
+
+def remove_certificate(opts, config, backend):
+    """
+    Remove certificate identified by the serial number.
+    :param opts: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: None
+    """
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["remove"], longoptions["remove"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        return 1
+
     for (opt, val) in optval:
         pass
 
-    backend.validate_certficates()
-    return None
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+
+    stats = backend.remove_certificate(serial)
 
 def print_statistics(opts, config, backend):
     """

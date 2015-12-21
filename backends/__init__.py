@@ -163,7 +163,7 @@ class Backend(object):
         """
         pass
 
-    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None, validity_period=None):
         """
         Stores a certificate in the backend.
         :param cert: X509 object to store
@@ -172,6 +172,7 @@ class Backend(object):
                         if not set to None it marks the certificate as revoked.
         :param replace: Replace existing certificate, default is False
         :param autorenew: dictionary with autorenew information if the certificate is an auto renewable certificate
+        :param validity_period: validity period for automatically renewed certificates
         :return: None
         """
         return None
@@ -325,9 +326,12 @@ class Backend(object):
 
         return dataset
 
-    def validate_certficates(self):
+    def housekeeping(self, autorenew=True, validity_period=None, cakey=None):
         """
         Check validity of certificates stored in the backend and update certificate status.
+        :param autorenew: Renew autorenewable certificates
+        :param autorenew_period: Set new validity period for autorenewable certificates
+        :param cakey: CA private key for signing renewed certificates
         :return: None
         """
         return None

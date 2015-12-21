@@ -216,7 +216,7 @@ class PostgreSQL(Backend):
 
         return csr_pkey
 
-    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None):
+    def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None, validity_period=None):
         data = self._extract_data(cert, csr, revoked)
 
         # check if serial_number already exist
@@ -263,8 +263,7 @@ class PostgreSQL(Backend):
             self.__db.rollback()
             return None
 
-    def validate_certficates(self):
-
+    def housekeeping(self, autorenew=True, validity_period=None, cakey=None):
         try:
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE certificate;")
@@ -275,6 +274,22 @@ class PostgreSQL(Backend):
                 "expired":self._certificate_status_map["expired"],
                 "now":time.time(),
             }
+
+            # if auto renew has been requested get list
+            # look for certificates that has been marked as autorenewable
+            # and (notAfter - now) < auto_renew_start_period
+            if autorenew:
+                # update autorenew_period was given check this instead
+                cursor.execute("SELECT serial_number, extract(EPOCH FROM auto_renew_validity_period) FROM "
+                               "certificate WHERE (end_date - now())<auto_renew_start_period AND "
+                               "auto_renewable=True AND state=%(valid)s;", qdata)
+
+                result = cursor.fetchall()
+                if len(result) > 0:
+                    for sn in result:
+                        new_start = self._unix_timestamp_to_asn1_time(time.time())
+                        new_end = self._unix_timestamp_to_asn1_time(time.time() + sn[1])
+                        self.renew_certificate(sn[0], new_start, new_end, cakey)
 
             # set all invalid certificates to valid if notBefore < now and notAfter > now
             cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=%(invalid)s AND "

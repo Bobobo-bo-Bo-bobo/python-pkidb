@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   
   -- auto renew autorenewable certificates if there is less than auto_renew_start_period days
   -- left before expiration
-  auto_renew_start_period REAL DEFAULT NULL CHECK(auto_renew_start_period > 0),
+  auto_renew_start_period INTERVAL DEFAULT NULL,
 
   -- auto renewable certificates will be renewed for auto_renew_validity_period days
-  auto_renew_validity_period REAL DEFAULT NULL CHECK(auto_renew_validity_period >0),
+  auto_renew_validity_period INTERVAL DEFAULT NULL,
 
   -- issuer of the certificate
   -- issuer can be NULL for signing requests

@@ -26,6 +26,9 @@ serial_number = random
 # default validity period for new certificates
 validity_period = 1095
 
+# renew autorenwable certificates if less than autorenew_delta days left
+autorenew_delta = 1
+
 # path to crl signing certificarte and private
 # key and the passphrase protecting it
 crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem

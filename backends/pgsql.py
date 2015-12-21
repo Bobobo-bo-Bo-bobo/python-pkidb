@@ -446,3 +446,47 @@ class PostgreSQL(Backend):
             return None
 
         return None
+
+    def get_certificate(self, serial):
+        cert = None
+
+        qdata = {
+            "serial":serial,
+        }
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT certificate FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            result = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            if len(result) == 0:
+                return None
+            else:
+                try:
+                    asn1_data = base64.b64decode(result[0][0])
+                    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, asn1_data)
+                except OpenSSL.crypto.Error as error:
+                    sys.stderr.write("Error: Can't parse ASN1 data: %s\n" % (error.message, ))
+                    return None
+        except psycopg2.Error as error:
+            sys.stderr.write("Error: Can't read certificate data from database: %s\n" % (error.pgerror, ))
+            return None
+
+        return cert
+
+    def renew_certificate(self, serial, notBefore, notAfter, cakey):
+        newcert = self.get_certificate(serial)
+        if newcert:
+            # set new validity dates
+            newcert.set_notBefore(notBefore)
+            newcert.set_notAfter(notAfter)
+
+            # resign certificate using the same signature algorithm
+            newcert.sign(cakey, newcert.get_signature_algorithm())
+
+            # commit new certificate
+            self.store_certificate(newcert, replace=True)
+
+        return newcert

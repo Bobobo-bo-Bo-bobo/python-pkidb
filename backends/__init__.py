@@ -173,6 +173,14 @@ class Backend(object):
 
         return timestamp
 
+    def get_certificate(self, serial):
+        """
+        Returns a X509 object of a certificate identified by serial number
+        :param serial: serial number
+        :return: X509 object of certiticate
+        """
+        return None
+
     def _store_extension(self, extlist):
         """
         Stores list of X509 extensions into the backend.
@@ -292,6 +300,7 @@ class Backend(object):
         :param extension: list of x509 extension
         :return: signed certificate as X509 object
         """
+
         # create new X509 object
         newcert = OpenSSL.crypto.X509()
 
@@ -368,5 +377,16 @@ class Backend(object):
         :param reason: revocation reason
         :param revocation_date: revocation date as UNIX timestamp
         :return: None
+        """
+        return None
+
+    def renew_certificate(self, serial, notBefore, notAfter, cakey):
+        """
+        Renew a certificate identified by serial number
+        :param serial: serial number
+        :param notBefore: start of validity period as ASN1 GERNERALIZEDTIME string
+        :param notAfter: end of validity period as ASN1 GENERALIZEDTIME string
+        :param cakey: X509 object of CA signing key
+        :return: X509 object with renewed certificate
         """
         return None

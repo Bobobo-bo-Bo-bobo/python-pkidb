@@ -23,6 +23,7 @@ shortoptions = {
     "statistics":"",
     "gencrl":"o:",
     "revoke":"r:R:",
+    "renew":"o:p:"
 }
 
 longoptions = {
@@ -33,6 +34,7 @@ longoptions = {
     "statistics":[],
     "gencrl":["output="],
     "revoke":["reason=", "revocation-date="],
+    "renew":["output=", "period="]
 }
 
 # Python 3 renamed ConfigParser to configparser
@@ -121,6 +123,17 @@ def usage():
                                 superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
                                 removeFromCRL, aACompromise
 
+   renew                        Renew a cerificate. The serial number of the certificate must be given.
+                                If not given it will be read from the standard input.
+                                The new certificate will be written to standard output or to a file if
+                                the -o option is used.
+
+     -o <output>                Write new certificate to <output> instead of standard out
+     --output=<output>
+
+     -p <period>                New validity period for renewed certificate.
+     --period=<period>          Default <validity_period> from configuration file.
+
    revoke                       Revoke a certificate. Serial number of the certificate to revoke must
                                 be used. If given not given on the command line it will be read from
                                 stdin.
@@ -171,9 +184,104 @@ def usage():
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
+def renew_certificate(opts, config, backend):
+    """
+    Renew a certificate identified by the serial number
+    :param opts: options
+    :param config: configurationd
+    :param backend: backend
+    :return: None
+    """
+
+    validity_period = long(config["global"]["validity_period"])
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["renew"], longoptions["renew"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-p", "--period"):
+            try:
+                validity_period = float(val)
+            except ValueError as error:
+                sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
+                sys.exit(2)
+        elif opt in ("-o", "--output"):
+            output = val
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.exit(1)
+
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+
+    notbefore = time.time()
+    notafter = notbefore + 86400. * validity_period
+
+    notbefore = backend._unix_timestamp_to_asn1_time(notbefore)
+    notafter = backend._unix_timestamp_to_asn1_time(notafter)
+
+    ca_key = load_private_key(config, "ca_private_key", "ca_passphrase")
+
+    newcert = backend.renew_certificate(serial, notbefore, notafter, ca_key)
+
+    if not newcert:
+        sys.stderr.write("Error: Can't find a certificate with serial number %s\n" % (serial, ))
+        sys.exit(2)
+
+    pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(pem_data)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            return error.errno
+    else:
+        sys.stdout.write(pem_data)
+
+    return None
+
+def serial_to_number(serial):
+    """
+    Convert a string to the decimal value of serial number
+    String can be a decimal number or hexadecimal (0x...)
+    or hexadecimal separated by ":" (ca:fe:ba:be)
+    :param serial: string containing serial number
+    :return: decimal value of serial number string
+    """
+    re_serial_is_hex = re.compile("0x[0-9a-f]+")
+
+    # convert serial number to a number
+    try:
+        # check for 0x...
+        if re_serial_is_hex.match(serial):
+            serial = long(serial, 16)
+        # it contains ":" we assume it is hexadecimal
+        elif serial.find(":") >= 0:
+            serial = serial.replace(":", "")
+            serial = long(serial, 16)
+        # assuming decimal value
+        else:
+            serial = long(serial)
+    except ValueError as error:
+        sys.stderr.write("Error: Can't convert serial number %s: %s" % (serial, error.message))
+        sys.exit(2)
+
+    return serial
+
 def revoke_certificate(opts, config, backend):
     """
-    Generate certificate revocation list
+    Revoke a certificate identified by the serial number
     :param opts: options
     :param config: configurationd
     :param backend: backend
@@ -181,7 +289,6 @@ def revoke_certificate(opts, config, backend):
     """
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
-    re_serial_is_hex = re.compile("0x[0-9a-f]+")
 
     reason = "unspecified"
     rev_date = time.time()
@@ -219,22 +326,7 @@ def revoke_certificate(opts, config, backend):
     else:
         serial = trailing[0]
 
-    # convert serial number to a number
-    try:
-        # check for 0x...
-        if re_serial_is_hex.match(serial):
-            serial = long(serial, 16)
-        # it contains ":" we assume it is hexadecimal
-        elif serial.find(":") >= 0:
-            serial = serial.replace(":", "")
-            serial = long(serial, 16)
-        # assuming decimal value
-        else:
-            serial = long(serial)
-
-    except ValueError as error:
-        sys.stderr.write("Error: Can't convert serial number %s: %s" % (serial, error.message))
-        sys.exit(2)
+    serial = serial_to_number(serial)
 
     backend.revoke_certificate(serial, reason, rev_date)
 
@@ -710,6 +802,8 @@ if __name__ == "__main__":
         generate_certificate_revocation_list(trailing[1:], options, backend)
     elif command == "revoke":
         revoke_certificate(trailing[1:], options, backend)
+    elif command == "renew":
+        renew_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

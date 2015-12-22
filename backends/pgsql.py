@@ -122,10 +122,9 @@ class PostgreSQL(Backend):
             cursor.execute("SELECT serial_number FROM certificate ORDER BY serial_number DESC LIMIT 1;")
             result = cursor.fetchall()
             if len(result) == 0:
-                sys.stderr.write("Error: No serial number found in database\n")
-                self.__logger.error("No serial number found in database")
-
-            serial = result[0][0]
+                serial = 0
+            else:
+                serial = result[0][0]
 
             cursor.close()
             self.__db.commit()

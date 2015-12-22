@@ -6,7 +6,7 @@ import time
 import re
 import OpenSSL
 
-__all__ = [ "pgsql"]
+__all__ = [ "pgsql", "sqlite"]
 class Backend(object):
 
     # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number

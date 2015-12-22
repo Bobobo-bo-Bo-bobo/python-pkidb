@@ -1,8 +1,10 @@
 Requirements:
   * python-openssl
+  * python-pysqlite2
 
 Backends:
   * PostgreSQL
+  * SQLite3
 
 Backend (PostgreSQL):
   * Tables:

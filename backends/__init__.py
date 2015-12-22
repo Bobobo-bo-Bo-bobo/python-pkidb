@@ -467,3 +467,11 @@ class Backend(object):
         :return: database dump
         """
         return None
+
+    def list_serial_number_by_state(self, state):
+        """
+        Fetch all serial numbers with a given state or all if state is None
+        :param state: state or None
+        :return: List of serial numbers
+        """
+        return None

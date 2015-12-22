@@ -824,3 +824,47 @@ class PostgreSQL(Backend):
             return None
 
         return dump
+
+    def list_serial_number_by_state(self, state):
+        sn_list =  []
+
+        if state:
+            qdata = {
+                "state":self._certificate_status_map[state],
+            }
+
+            self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"], ))
+            try:
+                cursor = self.__db.cursor()
+                cursor.execute("SELECT serial_number FROM certificate WHERE state=%(state)s;", qdata)
+
+                result = cursor.fetchall()
+                for res in result:
+                    self.__logger.info("Adding serial number 0x%x to result list" % (res[0], ))
+                    sn_list.append(str(res[0]))
+
+                cursor.close()
+                self.__db.commit()
+            except psycopg2.Error as error:
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.pgerror, ))
+                sys.stderr.write("Error: Can't get list of serial numbers: %s" % (error.pgerror, ))
+                return None
+        else:
+            self.__logger.info("Getting all serial numbers")
+            try:
+                cursor = self.__db.cursor()
+                cursor.execute("SELECT serial_number FROM certificate;")
+
+                result = cursor.fetchall()
+                for res in result:
+                    self.__logger.info("Adding serial number 0x%x to result list" % (res[0], ))
+                    sn_list.append(str(res[0]))
+
+                cursor.close()
+                self.__db.commit()
+            except psycopg2.Error as error:
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.pgerror, ))
+                sys.stderr.write("Error: Can't get list of serial numbers: %s" % (error.pgerror, ))
+                return None
+
+        return sn_list

@@ -26,7 +26,7 @@ shortoptions = {
     "export":"o:",
     "remove":"",
     "backup":"o:",
-
+    "list":"eiho:rtv",
 }
 
 longoptions = {
@@ -41,6 +41,7 @@ longoptions = {
     "export":["output="],
     "remove":[],
     "backup":["output="],
+    "list":["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
 }
 
 # initialize logging subsystem
@@ -169,6 +170,33 @@ def usage():
                                 superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
                                 removeFromCRL, aACompromise
 
+   list                         List serial numbers of certificates.
+                                The list will be written to standard out if the option -o is not used.
+
+     -e                         List serial numbers of expired certificates.
+     --expired
+
+     -i                         List serial numbers of invalid certificates.
+     --invalid                  Certficates are considered invalid if their notBefore time is in the future.
+
+     -h                         Print serial number as hexadecimal number
+     --hex
+
+     -o <output>                Write serial numbers of listed certificate to <output> instead of standard out
+     --output=<output>
+
+     -r                         List serial numbers of revoked certificates.
+     --revoked
+
+     -t                         List "certificates" marked as temporary
+     --temporary                Temporary certficates are dummy settings used to "lock" serial numbers
+                                during signing of a certificate signing request.
+
+     -v                         List serial numbers of valid certificates.
+     --valid                    Certificates are considered valid if they are not temporary, not revoked
+                                and the validity period (notBefore .. notAfter) has been started and the
+                                certificates is not expired.
+
    renew                        Renew a cerificate. The serial number of the certificate must be given.
                                 If not given it will be read from the standard input.
                                 The new certificate will be written to standard output or to a file if
@@ -230,6 +258,78 @@ def usage():
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
+# uniqify a list but preserve the order
+# http://www.peterbe.com/plog/uniqifiers-benchmark
+def remove_duplicates(list):
+    ordered = []
+
+    for entry in list:
+      if entry not in ordered:
+        ordered.append(entry)
+
+    return ordered
+
+def list_certificates(opts, config, backend):
+    """
+    List certificates from backend
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    output = None
+    snfilter = []
+    hexadecimal = False
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["list"], longoptions["list"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-o", "--output"):
+            output = val
+        elif opt in ("-e", "--expired"):
+            snfilter.append("expired")
+        elif opt in ("-i", "--invalid"):
+            snfilter.append("invalid")
+        elif opt in ("-h", "--hex"):
+            hexadecimal = True
+        elif opt in ("-r", "--revoked"):
+            snfilter.append("revoked")
+        elif opt in ("-t", "--temporary"):
+            snfilter.append("temporary")
+        elif opt in ("-v", "--valid"):
+            snfilter.append("valid")
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.exit(1)
+
+    serials = []
+    if len(snfilter) == 0:
+        serials = backend.list_serial_number_by_state(None)
+    else:
+        for state in snfilter:
+            serials += backend.list_serial_number_by_state(state)
+
+    serials = remove_duplicates(serials)
+    if hexadecimal:
+        for i in range(len(serials)):
+            serials[i] = "0x%.02x" % (long(serials[i]), )
+
+    sn_dump = '\n'.join(serials)
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(sn_dump)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(sn_dump+'\n')
+
 def backup_database(opts, config, backend):
     """
     Exports the database backend as JSON
@@ -254,6 +354,11 @@ def backup_database(opts, config, backend):
             sys.exit(1)
 
     dump = backend.dump_database()
+    if not dump:
+        sys.stderr.write("Warning: Database dump is empty")
+        __logger.warning("Database dump is empty")
+        return None
+
     json_dump = json.dumps(dump)
     if output:
         try:
@@ -1008,6 +1113,8 @@ if __name__ == "__main__":
         export_certificate(trailing[1:], options, backend)
     elif command == "backup":
         backup_database(trailing[1:], options, backend)
+    elif command == "list":
+        list_certificates(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

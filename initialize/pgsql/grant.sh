@@ -16,6 +16,7 @@ db=$1
 user=$2
 
 for table in ${ACCESSTO}; do
+  psql -c "ALTER TABLE ${table} OWNER TO ${user};" ${db}
   psql -c "GRANT ALL PRIVILEGES ON TABLE ${table} TO ${user};" ${db}
 done
 

@@ -27,6 +27,7 @@ shortoptions = {
     "remove":"",
     "backup":"o:",
     "list":"eiho:rtv",
+    "restore":"",
 }
 
 longoptions = {
@@ -42,6 +43,7 @@ longoptions = {
     "remove":[],
     "backup":["output="],
     "list":["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
+    "restore":[],
 }
 
 # initialize logging subsystem
@@ -370,6 +372,51 @@ def backup_database(opts, config, backend):
             sys.exit(error.errno)
     else:
         sys.stdout.write(json_dump+"\n")
+
+def restore_database(opts, config, backend):
+    """
+    Restore a database from JSON dump
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    input = None
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["restore"], longoptions["restore"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        pass
+
+    if len(trailing) == 1:
+        input = trailing[0]
+
+    json_data = None
+    if input:
+        try:
+            fd = open(input, "r")
+            json_data = fd.read()
+            fd.close()
+        except IOError as error:
+            __logger.error("Can't read from input file %s: %s" % (input, error.strerror))
+            sys.stderr.write("Error: Can't read from input file %s: %s\n" % (input, error.strerror))
+            sys.exit(error.errno)
+    else:
+        json_data = sys.stdin.read()
+
+    # convert JSON to data strucuture
+    if json_data:
+        try:
+            data = json.loads(json_data)
+        except ValueError as error:
+            __logger.error("Input is not valid JSON format: %s" % (error.message, ))
+            sys.stderr.write("Error: Input is not valid JSON format: %s\n" % (error.message, ))
+            sys.exit(4)
+
+        backend.restore_database(data)
 
 def export_certificate(opts, config, backend):
     """
@@ -962,7 +1009,7 @@ def import_certificate(opts, config, backend):
 
     # assuming PEM input
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
-    backend.store_certificate(cert, csr, revoked, autorenew=autorenewable, autorenew_period=autorenew_delta)
+    backend.store_certificate(cert, csr, revoked, autorenew=autorenewable, validity_period=autorenew_delta)
 
 def housekeeping(opts, config, backend):
     """
@@ -1115,6 +1162,8 @@ if __name__ == "__main__":
         backup_database(trailing[1:], options, backend)
     elif command == "list":
         list_certificates(trailing[1:], options, backend)
+    elif command == "restore":
+        restore_database(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command,))
         usage()

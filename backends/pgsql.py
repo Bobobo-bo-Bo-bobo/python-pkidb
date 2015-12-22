@@ -190,14 +190,14 @@ class PostgreSQL(Backend):
                 cursor.close()
                 self.__db.commit()
                 result.append(pkey)
-                self.__logger.info("X509 extension stored in 0x%x" % (pkey, ))
+                self.__logger.info("X509 extension stored in 0x%s" % (pkey, ))
             except psycopg2.Error as error:
                 sys.stderr.write("Error: Can't look for extension in database: %s\n" % (error.pgerror, ))
                 self.__logger.error("Can't look for extension in database: %s" % (error.pgerror, ))
                 self.__db.rollback()
                 return None
 
-        sys.__logger.info("%u X509 extensions are had been stored in the backend")
+        self.__logger.info("%u X509 extensions are had been stored in the backend")
         return result
 
     def _store_signature_algorithm(self, cert):
@@ -207,7 +207,7 @@ class PostgreSQL(Backend):
             "algorithm":"undefined"
         }
 
-        sys.__logger.info("Storing signature algorithm in database")
+        self.__logger.info("Storing signature algorithm in database")
         try:
             algo["algorithm"] = cert.get_signature_algorithm()
         except ValueError as error:
@@ -327,7 +327,7 @@ class PostgreSQL(Backend):
                     data["extkey"] = extkeys
                     cursor.execute("UPDATE certificate SET extension=%(extkey)s WHERE serial_number=%(serial)s;", data)
                     for ekey in extkeys:
-                        self.__logger.info("Linking X509 extension 0x%x to certificate with serial number 0x%x"
+                        self.__logger.info("Linking X509 extension 0x%s to certificate with serial number 0x%s"
                                            % (ekey, data["serial"]))
             cursor.close()
             self.__db.commit()
@@ -791,8 +791,8 @@ class PostgreSQL(Backend):
                 for res in result:
                     self.__logger.info("Dumping signing algorithm %s with id %u" % (res[1], res[0]))
                     entry = {
-                        "id":res[0],
-                        "signature_algorithm":res[1],
+                        "id":str(res[0]),
+                        "algorithm":res[1],
                     }
                     algodump.append(entry)
             dump["signature_algorithm"] = algodump
@@ -868,3 +868,78 @@ class PostgreSQL(Backend):
                 return None
 
         return sn_list
+
+    def restore_database(self, dump):
+        try:
+            cursor = self.__db.cursor()
+            # restore certificate table
+            self.__logger.info("Restoring certificate table")
+            for cert in dump["certificate"]:
+                cursor.execute("INSERT INTO certificate (serial_number, version, start_date, "
+                               "end_date, subject, auto_renewable, "
+                               "auto_renew_start_period, "
+                               "auto_renew_validity_period, issuer, keysize, fingerprint_md5, "
+                               "fingerprint_sha1, certificate, signature_algorithm_id, extension, signing_request, "
+                               "state, revocation_date, revocation_reason) "
+                               "VALUES(%(serial_number)s, %(version)s, to_timestamp(%(start_date)s), "
+                               "to_timestamp(%(end_date)s), %(subject)s, %(auto_renewable)s, "
+                               "%(auto_renew_start_period)s::interval, "
+                               "%(auto_renew_validity_period)s::interval, %(issuer)s, %(keysize)s, "
+                               "%(fingerprint_md5)s, %(fingerprint_sha1)s, %(certificate)s, "
+                               "%(signature_algorithm_id)s, %(extension)s, %(signing_request)s, "
+                               "%(state)s, to_timestamp(%(revocation_date)s), %(revocation_reason)s);", cert)
+
+            self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]), ))
+            self.__logger.info("Forcing reindexing on certificate table")
+            cursor.execute("REINDEX TABLE certificate FORCE;")
+
+            # restore extension table
+            self.__logger.info("Restoring extension table")
+            for ext in dump["extension"]:
+                cursor.execute("INSERT INTO extension (hash, name, criticality, data) VALUES "
+                               "(%(hash)s, %(name)s, %(criticality)s, %(data)s);", ext)
+            self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]), ))
+            self.__logger.info("Forcing reindexing on table extension")
+            cursor.execute("REINDEX TABLE extension FORCE;")
+
+            # restore signing_request table
+            self.__logger.info("Restoring signing_request table")
+            for csr in dump["signing_request"]:
+                cursor.execute("INSERT INTO signing_request (hash, request) VALUES "
+                               "(%(hash)s, %(request)s);", csr)
+            self.__logger.info("%u rows restored for signing_request table" % (len(dump["signing_request"]), ))
+
+            self.__logger.info("Forcing reindexing on table signing_request")
+            cursor.execute("REINDEX TABLE signing_request FORCE;")
+
+            # restore signature_algorithm
+            self.__logger.info("Restoring signature_algorithm table")
+            cursor.execute("LOCK TABLE signature_algorithm;")
+            for sigalgo in dump["signature_algorithm"]:
+                cursor.execute("INSERT INTO signature_algorithm (id, algorithm) "
+                                "VALUES (%(id)s, %(algorithm)s);", sigalgo)
+            self.__logger.info("%u rows restored for signature_algorithm table" % (len(dump["signature_algorithm"]), ))
+
+            # fetch last sequence number
+            cursor.execute("SELECT id FROM signature_algorithm ORDER BY id DESC LIMIT 1;")
+            result = cursor.fetchall()
+            # if table is empty start at 1
+            if len(result) == 0:
+                newsequence = 1
+            else:
+                newsequence = long(result[0][0]) + 1
+
+            self.__logger.info("Readjusing primary key counter to %u" % (newsequence, ))
+            cursor.execute("ALTER SEQUENCE signature_algorithm_id_seq RESTART WITH %u;" % (newsequence, ))
+
+            self.__logger.info("Forcing reindexing on table signature_algorithm")
+            cursor.execute("REINDEX TABLE signature_algorithm FORCE;")
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            self.__logger.error("Can't restore database from dump: %s" % (error.pgerror, ))
+            sys.stderr.write("Error: Can't restore database from dump: %s\n" % (error.pgerror, ))
+            return False
+
+        return True

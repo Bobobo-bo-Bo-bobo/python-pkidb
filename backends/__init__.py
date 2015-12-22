@@ -468,6 +468,14 @@ class Backend(object):
         """
         return None
 
+    def restore_database(self, dump):
+        """
+        Restores a database from dump
+        :param dump: dump
+        :return: True on success, False on failure
+        """
+        return None
+
     def list_serial_number_by_state(self, state):
         """
         Fetch all serial numbers with a given state or all if state is None

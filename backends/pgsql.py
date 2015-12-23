@@ -551,8 +551,8 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            sys.stderr.write("Error: Can't remove certificate from database: %s\n" % (serial, ))
-            self.__logger.error("Can't remove certificate from database: %s" % (serial, ))
+            sys.stderr.write("Error: Can't remove certificate from database: %s\n" % (error.pgerror, ))
+            self.__logger.error("Can't remove certificate from database: %s" % (error.pgerror, ))
             self.__db.rollback()
 
         return None

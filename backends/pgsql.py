@@ -654,35 +654,6 @@ class PostgreSQL(Backend):
 
         return cert
 
-    def renew_certificate(self, serial, notBefore, notAfter, cakey):
-        self.__logger.info("Renewing certificate with serial number 0x%x" % (serial, ))
-
-        # check if the certificate has been revoked
-        if self._is_revoked(serial):
-            sys.stderr.write("Error: Certificate with serial number %s can't be renewed, "
-                             "it has been revoked\n" % (serial, ))
-            self.__logger.error("Certificate with serial number 0x%x can't be renewed, "
-                                "it has been revoked" % (serial, ))
-            return None
-
-        newcert = self.get_certificate(serial)
-        if newcert:
-
-            # set new validity dates
-            newcert.set_notBefore(notBefore)
-            newcert.set_notAfter(notAfter)
-
-            # resign certificate using the same signature algorithm
-            newcert.sign(cakey, newcert.get_signature_algorithm())
-
-            self.__logger.info("Certificate with serial number 0x%x is now valid from %s til %s" %
-                               (serial, notBefore, notAfter))
-
-            # commit new certificate
-            self.store_certificate(newcert, replace=True)
-
-        return newcert
-
     def _get_state(self, serial):
         try:
             qdata = {

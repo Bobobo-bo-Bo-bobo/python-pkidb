@@ -308,7 +308,7 @@ class PostgreSQL(Backend):
 
             if "csr" in data:
                 self.__logger.info("Certificate signing request found, linking certificate with serial "
-                                   "number 0x%x to signing request 0x%x" % (data["serial"], data["csr"]))
+                                   "number 0x%x to signing request 0x%s" % (data["serial"], data["csr"]))
                 cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", data)
 
             if "revreason" in data:

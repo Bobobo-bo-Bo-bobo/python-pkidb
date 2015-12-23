@@ -127,7 +127,7 @@ CREATE INDEX extension_name_idx ON extension (name);
 
 -- lookup table for signing algorithm
 CREATE TABLE IF NOT EXISTS "signature_algorithm" (
-  id SERIAL PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   algorithm VARCHAR NOT NULL CHECK(algorithm <> '')
 );
 

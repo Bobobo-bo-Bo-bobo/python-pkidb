@@ -86,7 +86,7 @@ class SQLite(Backend):
 
 
     def _has_serial_number(self, serial):
-            query = (serial, )
+        query = (serial, )
 
         self.__logger.info("Looking for serial number 0x%x in database" % (serial, ))
 
@@ -173,7 +173,7 @@ class SQLite(Backend):
                 # no entry found, insert data
                 if searchresult[0][0] == 0:
                     cursor.execute("INSERT INTO extension (hash, name, criticality, data) "
-                                   "VALUES (%(hash)s, %(name)s, %(critical)s, %(data)s);", extdata)
+                                   "VALUES (?, ?, ?, ?);", extdata)
 
                 cursor.close()
                 self.__db.commit()
@@ -287,10 +287,10 @@ class SQLite(Backend):
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
                            "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, "
                            "signature_algorithm_id, keysize) VALUES "
-                           "(?, ?, ?), "
+                           "(?, ?, ?, "
                            "?, ?, ?, ?, "
                            "?, ?, ?, ?, ?);",
-                           (data["serial"], data["version"], data["start_data"], data["end_date"], data["subject"],
+                           (data["serial"], data["version"], data["start_date"], data["end_date"], data["subject"],
                             data["fp_md5"], data["fp_sha1"], data["pubkey"], data["state"], data["issuer"],
                             data["signature_algorithm_id"], data["keysize"]))
 
@@ -324,7 +324,7 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             sys.stderr.write("Error: Can't update certificate data in database: %s\n" % (error.message, ))
-            self.__logger.error("Error: Can't update certificate data in database: %s" % (error.message, ))
+            self.__logger.error("Can't update certificate data in database: %s" % (error.message, ))
             self.__db.rollback()
             return None
 
@@ -354,7 +354,7 @@ class SQLite(Backend):
                                "auto_renewable=True AND state=?;", (qdata["valid"], ))
 
                 result = cursor.fetchall()
-                self.__logger.info("Found %u certificates eligible for auto renewal")
+                self.__logger.info("Found %u certificates eligible for auto renewal" % (result[0][0]))
 
                 if len(result) > 0:
                     for sn in result:
@@ -384,9 +384,9 @@ class SQLite(Backend):
                     self.__logger.info("Certificate with serial number 0x%x changed from invalid to valid because "
                                        "(%f < %f) AND (%f > %f)" % (res[0], res[1], qdata["now"], res[2], qdata["now"]))
 
-            cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=? AND "
+            cursor.execute("UPDATE certificate SET state=? WHERE state=? AND "
                            "(start_date < ?) AND (end_date > ?);",
-                           (qdata["invalid"], qdata["now"], qdata["now"]))
+                           (qdata["valid"], qdata["invalid"], qdata["now"], qdata["now"]))
 
             # set all valid certificates to invalid if notBefore >= now
             self.__logger.info("Set all valid certificates to invalid if notBefore >= now")
@@ -400,8 +400,8 @@ class SQLite(Backend):
                     self.__logger.info("Certificate with serial number 0x%x changed from valid to invalid because "
                                        "(%f >= %f)" % (res[0], res[1], qdata["now"]))
 
-            cursor.execute("UPDATE certificate SET state=%(invalid)s WHERE state=? AND "
-                           "(start_date >= ?);", (qdata["valid"], qdata["now"]))
+            cursor.execute("UPDATE certificate SET state=? WHERE state=? AND "
+                           "(start_date >= ?);", (qdata["invalid"], qdata["valid"], qdata["now"]))
 
             # set all valid certificates to expired if notAfter <= now
             self.__logger.info("Set all valid certificates to expired if notAfter <= now")
@@ -415,8 +415,8 @@ class SQLite(Backend):
                     self.__logger.info("Certificate with serial number 0x%x changed from valid to expired because "
                                        "(%f <= %f)" % (res[0], res[1], qdata["now"]))
 
-            cursor.execute("UPDATE certificate SET state=%(expired)s WHERE state=? AND "
-                           "(end_date <= ?);", (qdata["valid"], qdata["now"]))
+            cursor.execute("UPDATE certificate SET state=? WHERE state=? AND "
+                           "(end_date <= ?);", (qdata["expired"], qdata["valid"], qdata["now"]))
 
             cursor.close()
             self.__db.commit()
@@ -551,7 +551,7 @@ class SQLite(Backend):
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number, revocation_reason, extract(EPOCH from revocation_date) "
+            cursor.execute("SELECT serial_number, revocation_reason, revocation_date "
                            "FROM certificate WHERE state=%d" % (self._certificate_status_map["revoked"]))
 
             result = cursor.fetchall()
@@ -663,27 +663,61 @@ class SQLite(Backend):
             if len(result) > 0:
                 for res in result:
                     self.__logger.info("Dumping certificate with serial number 0x%x" % (res[0], ))
-                    entry = {
-                        "serial_number":str(res[0]),
-                        "version":res[1],
-                        "start_date":res[2],
-                        "end_date":res[3],
-                        "subject":res[4],
-                        "auto_renewable":res[5],
-                        "auto_renew_start_period":res[6],
-                        "auto_renew_validity_period":res[7],
-                        "issuer":res[8],
-                        "keysize":res[9],
-                        "fingerprint_md5":res[10],
-                        "fingerprint_sha1":res[11],
-                        "certificate":res[12],
-                        "signature_algorithm_id":res[13],
-                        "extension":res[14],
-                        "signing_request":res[15],
-                        "state":res[16],
-                        "revocation_date":res[17],
-                        "revocation_reason":res[18],
-                    }
+                    # check if extension row is not empty
+                    if res[14]:
+                        entry = {
+                            "serial_number":str(res[0]),
+                            "version":res[1],
+                            "start_date":res[2],
+                            "end_date":res[3],
+                            "subject":res[4],
+                            "auto_renewable":res[5],
+                            "auto_renew_start_period":res[6],
+                            "auto_renew_validity_period":res[7],
+                            "issuer":res[8],
+                            "keysize":res[9],
+                            "fingerprint_md5":res[10],
+                            "fingerprint_sha1":res[11],
+                            "certificate":res[12],
+                            "signature_algorithm_id":res[13],
+
+                            # split comma separated string of extensions into an array
+                            "extension":res[14].split(","),
+
+                            "signing_request":res[15],
+                            "state":res[16],
+                            "revocation_date":res[17],
+                            "revocation_reason":res[18],
+                        }
+                    else:
+                        entry = {
+                            "serial_number":str(res[0]),
+                            "version":res[1],
+                            "start_date":res[2],
+                            "end_date":res[3],
+                            "subject":res[4],
+                            "auto_renewable":res[5],
+                            "auto_renew_start_period":res[6],
+                            "auto_renew_validity_period":res[7],
+                            "issuer":res[8],
+                            "keysize":res[9],
+                            "fingerprint_md5":res[10],
+                            "fingerprint_sha1":res[11],
+                            "certificate":res[12],
+                            "signature_algorithm_id":res[13],
+                            "extension":res[14],
+                            "signing_request":res[15],
+                            "state":res[16],
+                            "revocation_date":res[17],
+                            "revocation_reason":res[18],
+                        }
+
+                    # convert "boolean" from SQLite into REAL booleans
+                    if entry["auto_renewable"] == 0:
+                        entry["auto_renewable"] = False
+                    elif entry["auto_renewable"] == 1:
+                        entry["auto_renewable"] = True
+
                     certdump.append(entry)
             dump["certificate"] = certdump
 
@@ -701,6 +735,13 @@ class SQLite(Backend):
                         "criticality":res[2],
                         "data":res[3],
                     }
+
+                    # convert "boolean" from SQLite into REAL booleans
+                    if entry["criticality"] == 0:
+                        entry["criticality"] = False
+                    elif entry["criticality"] == 1:
+                        entry["criticality"] = True
+
                     extdump.append(entry)
             dump["extension"] = extdump
 
@@ -799,6 +840,10 @@ class SQLite(Backend):
             # restore certificate table
             self.__logger.info("Restoring certificate table")
             for cert in dump["certificate"]:
+                # SQLite3 can't handle arrays so we create a commma separated string from the array
+                if cert["extension"]:
+                    cert["extension"] = ",".join(cert["extension"])
+
                 cursor.execute("INSERT INTO certificate (serial_number, version, start_date, "
                                "end_date, subject, auto_renewable, "
                                "auto_renew_start_period, "
@@ -816,7 +861,7 @@ class SQLite(Backend):
                                 cert["subject"], cert["auto_renewable"], cert["auto_renew_start_period"],
                                 cert["auto_renew_validity_period"], cert["issuer"], cert["keysize"],
                                 cert["fingerprint_md5"], cert["fingerprint_sha1"], cert["certificate"],
-                                cert["signature_algorithm_id"], ','.join(cert["extension"]), cert["signing_request"],
+                                cert["signature_algorithm_id"], cert["extension"], cert["signing_request"],
                                 cert["state"], cert["revocation_date"], cert["revocation_reason"]))
 
             self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]), ))
@@ -859,8 +904,7 @@ class SQLite(Backend):
                 newsequence = long(result[0][0]) + 1
 
             self.__logger.info("Readjusing primary key counter to %u" % (newsequence, ))
-            cursor.execute("UPDATE sqlite_sequence SET seq=%u WHERE table='signature_algorithm';")
-
+            cursor.execute("UPDATE sqlite_sequence SET seq=%u WHERE name='signature_algorithm';" % (newsequence, ))
             self.__logger.info("Forcing reindexing on table signature_algorithm")
             cursor.execute("REINDEX signature_algorithm;")
 

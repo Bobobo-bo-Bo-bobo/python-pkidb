@@ -63,12 +63,21 @@ class Backend(object):
         10:"aacompromise",
     }
 
+    __logger = None
+
     def __init_logger(self):
-        """
-        Initialize logging.
-        :return: Nothing
-        """
-        return None
+        # setup logging first
+        self.__logger = logging.getLogger(__name__)
+        self.__logger.setLevel(logging.INFO)
+
+        address = '/dev/log'
+        handler = logging.handlers.SysLogHandler(address=address)
+        handler.setLevel(logging.INFO)
+        name = os.path.basename(sys.argv[0])
+        format = logging.Formatter(name + " %(name)s:%(funcName)s:%(lineno)d %(levelname)s: %(message)s")
+        handler.setFormatter(format)
+
+        self.__logger.addHandler(handler)
 
     def __init__(self, config):
         """
@@ -459,7 +468,33 @@ class Backend(object):
         :param cakey: X509 object of CA signing key
         :return: X509 object with renewed certificate
         """
-        return None
+        self.__logger.info("Renewing certificate with serial number 0x%x" % (serial, ))
+
+        # check if the certificate has been revoked
+        if self._is_revoked(serial):
+            sys.stderr.write("Error: Certificate with serial number %s can't be renewed, "
+                             "it has been revoked\n" % (serial, ))
+            self.__logger.error("Certificate with serial number 0x%x can't be renewed, "
+                                "it has been revoked" % (serial, ))
+            return None
+
+        newcert = self.get_certificate(serial)
+        if newcert:
+
+            # set new validity dates
+            newcert.set_notBefore(notBefore)
+            newcert.set_notAfter(notAfter)
+
+            # resign certificate using the same signature algorithm
+            newcert.sign(cakey, newcert.get_signature_algorithm())
+
+            self.__logger.info("Certificate with serial number 0x%x is now valid from %s til %s" %
+                               (serial, notBefore, notAfter))
+
+            # commit new certificate
+            self.store_certificate(newcert, replace=True)
+
+        return newcert
 
     def dump_database(self):
         """

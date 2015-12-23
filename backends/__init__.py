@@ -63,12 +63,25 @@ class Backend(object):
         10:"aacompromise",
     }
 
+    __logger = None
+
     def __init_logger(self):
         """
         Initialize logging.
         :return: Nothing
         """
-        return None
+        # setup logging first
+        self.__logger = logging.getLogger(__name__)
+        self.__logger.setLevel(logging.INFO)
+
+        address = '/dev/log'
+        handler = logging.handlers.SysLogHandler(address=address)
+        handler.setLevel(logging.INFO)
+        name = os.path.basename(sys.argv[0])
+        format = logging.Formatter(name + " %(name)s:%(funcName)s:%(lineno)d %(levelname)s: %(message)s")
+        handler.setFormatter(format)
+
+        self.__logger.addHandler(handler)
 
     def __init__(self, config):
         """

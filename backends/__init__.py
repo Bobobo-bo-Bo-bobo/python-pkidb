@@ -89,6 +89,7 @@ class Backend(object):
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
+	self.__init_logger()
         pass
 
     def _get_state(self, serial):

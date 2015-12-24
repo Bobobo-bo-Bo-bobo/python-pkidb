@@ -1129,7 +1129,9 @@ if __name__ == "__main__":
         if options["global"]["backend"] == "pgsql":
             import backends.pgsql
             backend = backends.pgsql.PostgreSQL(options)
-
+        elif options["global"]["backend"] == "sqlite3":
+            import backends.sqlite
+            backend = backends.sqlite.SQLite(options)
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")
         usage()

@@ -2,11 +2,14 @@
 
 import base64
 import hashlib
+import logging
+import os
+import sys
 import time
 import re
 import OpenSSL
 
-__all__ = [ "pgsql"]
+__all__ = [ "pgsql", "sqlite"]
 class Backend(object):
 
     # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
@@ -89,7 +92,7 @@ class Backend(object):
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
-	self.__init_logger()
+        self.__init_logger()
         pass
 
     def _get_state(self, serial):

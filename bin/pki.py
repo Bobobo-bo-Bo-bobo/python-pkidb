@@ -517,7 +517,6 @@ def renew_certificate(opts, config, backend):
     newcert = backend.renew_certificate(serial, notbefore, notafter, ca_key)
 
     if not newcert:
-        sys.stderr.write("Error: Can't find a certificate with serial number %s\n" % (serial, ))
         sys.exit(2)
 
     pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)

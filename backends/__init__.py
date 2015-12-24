@@ -2,6 +2,9 @@
 
 import base64
 import hashlib
+import logging
+import os
+import sys
 import time
 import re
 import OpenSSL
@@ -51,7 +54,7 @@ class Backend(object):
 
     _revocation_reason_reverse_map = {
         0:"unspecified",
-        1:"keycompromise",
+-        1:"keycompromise",
         2:"cacompromise",
         3:"affiliationchanged",
         4:"superseded",
@@ -85,6 +88,7 @@ class Backend(object):
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
+        self.__init_logger()
         pass
 
     def _get_state(self, serial):

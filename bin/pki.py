@@ -310,6 +310,7 @@ def list_certificates(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["list"], longoptions["list"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        __logger.error("Can't parse command line: %s" % (error.msg))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -329,6 +330,7 @@ def list_certificates(opts, config, backend):
             snfilter.append("valid")
         else:
             sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     serials = []
@@ -351,6 +353,7 @@ def list_certificates(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
             sys.exit(error.errno)
     else:
         sys.stdout.write(sn_dump+'\n')
@@ -369,6 +372,7 @@ def backup_database(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["backup"], longoptions["backup"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        __logger.error("Can't parse command line: %s" % (error.msg))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -376,6 +380,7 @@ def backup_database(opts, config, backend):
             output = val
         else:
             sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     dump = backend.dump_database()
@@ -392,6 +397,7 @@ def backup_database(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
             sys.exit(error.errno)
     else:
         sys.stdout.write(json_dump+"\n")
@@ -409,6 +415,7 @@ def restore_database(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["restore"], longoptions["restore"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        __logger.error("Can't parse command line: %s" % (error.msg))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -454,7 +461,8 @@ def export_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["export"], longoptions["export"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -462,6 +470,7 @@ def export_certificate(opts, config, backend):
             output = val
         else:
             sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     serial = None
@@ -474,7 +483,8 @@ def export_certificate(opts, config, backend):
     cert = backend.get_certificate(serial)
 
     if not cert:
-        sys.stderr.write("Error: No certificate with serial number %s found.\n" % (serial, ))
+        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
+        __logger.error("No certificate with serial number %s found" % (serial, ))
         sys.exit(2)
 
     pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
@@ -486,6 +496,7 @@ def export_certificate(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
             sys.exit(error.errno)
     else:
         sys.stdout.write(pem_data)
@@ -505,7 +516,8 @@ def renew_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["renew"], longoptions["renew"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -514,11 +526,13 @@ def renew_certificate(opts, config, backend):
                 validity_period = float(val)
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse validity period option %s: %s" % (val, error.message))
                 sys.exit(2)
         elif opt in ("-o", "--output"):
             output = val
         else:
             sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     serial = None
@@ -550,6 +564,7 @@ def renew_certificate(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
             return error.errno
     else:
         sys.stdout.write(pem_data)
@@ -579,7 +594,8 @@ def serial_to_number(serial):
         else:
             serial = long(serial)
     except ValueError as error:
-        sys.stderr.write("Error: Can't convert serial number %s: %s" % (serial, error.message))
+        sys.stderr.write("Error: Can't convert serial number %s: %s\n" % (serial, error.message))
+        __logger.error("Can't convert serial number %s: %s" % (serial, error.message))
         sys.exit(2)
 
     return serial
@@ -614,16 +630,19 @@ def revoke_certificate(opts, config, backend):
             try:
                 rev_date = float(val)
             except ValueError as error:
-                sys.stderr.write("Error Can't parse end time %s: %s\n" % (val, error.message))
+                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse end time %s: %s" % (val, error.message))
                 return 1
         elif opt in ("-r", "--reason"):
             if val.lower() in backend._revocation_reason_map:
                 reason = val.lower()
             else:
                 sys.stderr.write("Error: %s is not a valid revocation reason\n" % (val, ))
+                __logger.error("%s is not a valid revocation reason" % (val, ))
                 sys.exit(2)
         else:
             sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     if len(trailing) == 0:
@@ -649,14 +668,16 @@ def generate_certificate_revocation_list(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["gencrl"], longoptions["gencrl"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Error: Unknown option %s" % (opt,))
             sys.exit(1)
 
     # load CRL signing keys
@@ -692,6 +713,7 @@ def generate_certificate_revocation_list(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't write CRL data to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write CRL data to output file %s: %s" % (output, error.strerror))
             sys.exit(error.errno)
     else:
         sys.stdout.write(crl_data)
@@ -718,7 +740,8 @@ def sign_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -726,6 +749,9 @@ def sign_certificate(opts, config, backend):
             ext = val.split(",", 4)
             if len(ext) != 5:
                 sys.stderr.write("Error: Illegal number of fields for extension (expect:%u got %u)\n" %(4, len(ext)))
+                __logger.error("Illegal number of fields for extension (expect:%u got %u)" %(4, len(ext)))
+                sys.exit(2)
+
             name = None
             subject = None
             issuer = None
@@ -831,7 +857,8 @@ def sign_certificate(opts, config, backend):
             try:
                 end = float(val)
             except ValueError as error:
-                sys.stderr.write("Error Can't parse end time %s: %s\n" % (val, error.message))
+                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse end time %s: %s" % (val, error.message))
                 return 1
 
         elif opt in ("-s", "--start"):
@@ -845,14 +872,16 @@ def sign_certificate(opts, config, backend):
             try:
                 start = float(val)
             except ValueError as error:
-                sys.stderr.write("Error Can't parse start time %s: %s\n" % (val, error.message))
+                sys.stderr.write("Error: Can't parse start time %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse start time %s: %s" % (val, error.message))
                 return 1
 
         elif opt in ("-o", "--output"):
             output = val
 
         else:
-            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
     # basic validation of options
@@ -864,6 +893,7 @@ def sign_certificate(opts, config, backend):
 
     if start >= end:
         sys.stderr.write("Error: Start time (%f) is >= end time (%f)\n" % (start, end))
+        __logger.error("Start time (%f) is >= end time (%f)" % (start, end))
         return 1
 
     if len(trailing) == 0:
@@ -873,18 +903,21 @@ def sign_certificate(opts, config, backend):
         try:
             input = open(trailing[0], "r")
         except IOError as error:
-            sys.stderr.write("Error: Can't open %s for reading: %s" %(trailing[0], error.strerror))
+            sys.stderr.write("Error: Can't open %s for reading: %s\n" %(trailing[0], error.strerror))
+            __logger.error("Can't open %s for reading: %s" %(trailing[0], error.strerror))
             return error.errno
 
     else:
         sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
+        __logger.error("Too much arguments. Expect zero or one, got %u instead" % (len(trailing),))
         return 1
 
     # csr read data from input
     try:
         data = input.read()
     except IOError as error:
-        sys.stderr.write("Error: Read from %s failed: %s" % (input.name, error.strerror))
+        sys.stderr.write("Error: Read from %s failed: %s\n" % (input.name, error.strerror))
+        __logger.error("Read from %s failed: %s" % (input.name, error.strerror))
         return error.errno
 
     # close non stdin input
@@ -903,11 +936,13 @@ def sign_certificate(opts, config, backend):
     ca_priv_key = load_private_key(config, "ca_private_key", "ca_passphrase")
     if not ca_priv_key:
         sys.stderr.write("Error: Failed to load CA private key\n")
+        __logger.error("Failed to load CA private key")
         return 2
 
     ca_pub_key = load_public_key(config, "ca_public_key")
     if not ca_pub_key:
         sys.stderr.write("Error: Failed to load CA public key\n")
+        __logger.error("Failed to load CA public key")
         return 2
 
     # set start and and time
@@ -933,6 +968,7 @@ def sign_certificate(opts, config, backend):
             fd.close()
         except IOError as error:
             sys.stderr.write("Error: Can't open output file %s for writing: %s\n" % (output, error.strerror))
+            __logger.error("Can't open output file %s for writing: %s" % (output, error.strerror))
             sys.exit(error.errno)
     else:
         sys.stdout.write(newcert_pem)
@@ -952,12 +988,14 @@ def load_public_key(config, keyname):
         fd.close()
     except IOError as error:
         sys.stderr.write("Error: Can't read public key %s: %s\n" % (config["global"][keyname], error.strerror, ))
+        __logger.error("Can't read public key %s: %s" % (config["global"][keyname], error.strerror, ))
         return None
 
     try:
         pubkey = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
     except OpenSSL.crypto.Error as error:
         sys.stderr.write("Error: Invalid public key: %s\n" % (error.message, ))
+        __logger.error("Invalid public key: %s" % (error.message, ))
         return None
 
     return pubkey
@@ -980,12 +1018,14 @@ def load_private_key(config, keyname, passphrase):
         fd.close()
     except IOError as error:
         sys.stderr.write("Error: Can't read private key %s: %s\n" % (config["global"][keyname], error.strerror, ))
+        __logger.error("Can't read private key %s: %s" % (config["global"][keyname], error.strerror, ))
         return None
 
     try:
         result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=key_passphrase)
     except OpenSSL.crypto.Error as error:
         sys.stderr.write("Error: Can't load private key: %s\n" % (error.message, ))
+        __logger.error("Can't load private key: %s" % (error.message, ))
         return None
 
     return result
@@ -1004,6 +1044,7 @@ def import_certificate(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["import"], longoptions["import"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         return 1
 
     csr = None
@@ -1020,6 +1061,7 @@ def import_certificate(opts, config, backend):
                 fd.close()
             except IOError as error:
                 sys.stderr.write("Error: Can't read certificate signing request from %s: %s\n" % (val, error.strerror))
+                __logger.error("Can't read certificate signing request from %s: %s" % (val, error.strerror))
                 return error.errno
 
             csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csrdata)
@@ -1038,6 +1080,7 @@ def import_certificate(opts, config, backend):
                 revtime = float(revtime)
             except ValueError as error:
                 sys.stderr.write("Error: Illegal timestamp %s\n" % (revtime, ))
+                __logger.error("Illegal timestamp %s" % (revtime, ))
                 return 1
 
             # treat no reason as unspecified
@@ -1056,6 +1099,7 @@ def import_certificate(opts, config, backend):
                 autorenew_period = float(val)
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse validity period option %s: %s" % (val, error.message))
                 sys.exit(2)
 
         elif opt in ("-d", "--delta"):
@@ -1063,10 +1107,12 @@ def import_certificate(opts, config, backend):
                 autorenew_delta = float(val)
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse delta period option %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse delta period option %s: %s" % (val, error.message))
                 sys.exit(2)
 
             else:
                 sys.stderr.write("Error: Unknown revocation reason %s\n" % (reason, ))
+                __logger.error("Unknown revocation reason %s" % (reason, ))
                 return 1
 
     input = None
@@ -1084,16 +1130,19 @@ def import_certificate(opts, config, backend):
             input = open(trailing[0], "r")
         except IOError as error:
             sys.stderr.write("Error: Can't open %s for reading: %s\n" %(trailing[0], error.strerror))
+            __logger.error("Can't open %s for reading: %s" %(trailing[0], error.strerror))
             return error.errno
 
     else:
         sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
+        __logger.error("Too much arguments. Expect zero or one, got %u instead" % (len(trailing),))
         return 1
 
     try:
         data = input.read()
     except IOError as error:
         sys.stderr.write("Error: Read from %s failed: %s\n" % (input.name, error.strerror))
+        __logger.error("Read from %s failed: %s" % (input.name, error.strerror))
         return error.errno
 
     # close non stdin input
@@ -1116,6 +1165,7 @@ def housekeeping(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["housekeeping"], longoptions["housekeeping"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         return 1
 
     autorenew = False
@@ -1129,6 +1179,7 @@ def housekeeping(opts, config, backend):
                 autorenew_period = float(val)
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse autorenew period option %s: %s\n" % (val, error.message))
+                __logger.error("Can't parse autorenew period option %s: %s" % (val, error.message))
                 sys.exit(2)
     if not autorenew:
         autorenew_period = None
@@ -1149,6 +1200,7 @@ def remove_certificate(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["remove"], longoptions["remove"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         return 1
 
     for (opt, val) in optval:
@@ -1176,6 +1228,7 @@ def print_statistics(opts, config, backend):
         (optval, trailing) = getopt.getopt(opts, shortoptions["statistics"], longoptions["statistics"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         return 1
 
     for (opt, val) in optval:
@@ -1195,7 +1248,8 @@ if __name__ == "__main__":
     try:
         (optval, trailing) = getopt.getopt(sys.argv[1:], shortoptions["main"], longoptions["main"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -1205,11 +1259,13 @@ if __name__ == "__main__":
         elif opt in ("-c", "--config"):
             configfile = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            sys.stderr.write("Error: Unknown option %s" % (opt,))
+            __logger.error("Unknown option %s" % (opt, ))
             sys.exit(1)
 
     if not os.access(configfile, os.R_OK):
         sys.stderr.write("Error: Can't open configuration file %s for reading\n" % (configfile, ))
+        __logger.error("Can't open configuration file %s for reading" % (configfile, ))
         sys.exit(1)
 
     options = parseoptions(configfile)
@@ -1229,9 +1285,14 @@ if __name__ == "__main__":
         elif options["global"]["backend"] == "mysql":
             import backends.mysql
             backend = backends.mysql.MySQL(options)
+        else:
+            __logger.error("Unknown backend type %s" % (options["global"]["backend"], ))
+            sys.stderr.write("Error: Unknown backend type %s\n" % (options["global"]["backend"], ))
+            sys.exit(1)
 
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")
+        __logger.error("Missing command")
         usage()
         sys.exit(1)
 
@@ -1264,7 +1325,8 @@ if __name__ == "__main__":
     elif command == "restore":
         restore_database(trailing[1:], options, backend)
     else:
-        sys.stderr.write("Error: Unknown command %s\n" % (command,))
+        sys.stderr.write("Error: Unknown command %s\n" % (command, ))
+        __logger.error("Unknown command %s" % (command, ))
         usage()
         sys.exit(1)
 

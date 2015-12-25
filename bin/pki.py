@@ -16,7 +16,7 @@ configfile = "/etc/pki/config.ini"
 
 shortoptions = {
     "main":"c:h",
-    "sign":"o:s:e:E:S:k:K:",
+    "sign":"b:o:s:e:E:S:k:K:",
     "import":"c:r:a:p:d:",
     "housekeeping":"ap:",
     "statistics":"",
@@ -32,7 +32,7 @@ shortoptions = {
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage="],
+    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint="],
     "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
     "housekeeping":["autorenew", "period="],
     "statistics":[],
@@ -258,6 +258,10 @@ def usage():
 
      -a                                     Mark certificate as auto renewable.
      --autorenew                            The "housekeeping" command will take care of this
+
+     -b critical:<data>                     Set basic constraints Prefix critical: can be used to set the critical
+     --basic-constraint=critical:]<data>    flag on the basic constraints, e.g. -b critical:CA:TRUE,pathlen:1 for
+                                            a CA certificate with a maximal path length of 1.
 
      -e <end>                               End time for new certificate as Unix timestamp
      --end=<end>                            Default: start + <validity_period> days.
@@ -709,6 +713,7 @@ def sign_certificate(opts, config, backend):
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
     re_oid = re.compile("[0-9\.]+")
+    re_ca_flag = re.compile("CA:([A-Za-z]+)(.*)")
 
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
@@ -790,7 +795,31 @@ def sign_certificate(opts, config, backend):
 
             value = ",".join(usagelist)
             extensions.append(OpenSSL.crypto.X509Extension("keyUsage", critical, value))
+        elif opt in ("-b", "--basic-constraint"):
+            basic = val
+            critical = False
+            if basic.split(":", 1)[0].lower() == "critical":
+                critical = True
+                basic = basic.split(":", 1)[1]
 
+            # ASN1 expects boolean as FALSE or TRUE (not False, True, true, ...)
+            # so for the sake of sanity check and convert flag to uppercase
+            if re_ca_flag.match(basic):
+                flag = re_ca_flag.match(basic).groups()[0]
+                remainder = re_ca_flag.match(basic).groups()[1]
+                if flag.lower() == "true":
+                    flag = "TRUE"
+                elif flag.lower() == "false":
+                    flag = "FALSE"
+                else:
+                    __logger.error("%s is not a valid boolean flag" % (flag, ))
+                    sys.stderr.write("Error: %s is not a valid boolean flag\n" % (flag, ))
+                    sys.exit(7)
+
+                # put them together again
+                basic = "CA:%s%s" % (flag, remainder)
+
+            extensions.append(OpenSSL.crypto.X509Extension("basicConstraints", critical, basic))
         elif opt in ("-e", "--end"):
             end = val
 

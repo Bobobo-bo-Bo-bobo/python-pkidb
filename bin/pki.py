@@ -16,7 +16,7 @@ configfile = "/etc/pki/config.ini"
 
 shortoptions = {
     "main":"c:h",
-    "sign":"o:s:e:E:",
+    "sign":"o:s:e:E:S:",
     "import":"c:r:a:p:d:",
     "housekeeping":"ap:",
     "statistics":"",
@@ -32,7 +32,7 @@ shortoptions = {
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "extension="],
+    "sign":["output=", "start=", "end=", "extension=", "san="],
     "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
     "housekeeping":["autorenew", "period="],
     "statistics":[],
@@ -726,6 +726,9 @@ def sign_certificate(opts, config, backend):
 
             # append new extension object
             extensions.append(OpenSSL.crypto.X509Extension(name, critical, data, subject=subject, issuer=issuer))
+        elif opt in ("-S", "--san"):
+            san = val
+            extensions.append(OpenSSL.crypto.X509Extension("subjectAltName", False, san))
         elif opt in ("-e", "--end"):
             end = val
 

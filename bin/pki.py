@@ -1132,6 +1132,10 @@ if __name__ == "__main__":
         elif options["global"]["backend"] == "sqlite3":
             import backends.sqlite
             backend = backends.sqlite.SQLite(options)
+        elif options["global"]["backend"] == "mysql":
+            import backends.mysql
+            backend = backends.mysql.MySQL(options)
+
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")
         usage()

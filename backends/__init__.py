@@ -66,6 +66,31 @@ class Backend(object):
         10:"aacompromise",
     }
 
+    _keyusage_list = [
+        "digitalsignature",
+        "nonrepudiation",
+        "keyencipherment",
+        "dataencipherment",
+        "keyagreement",
+        "keycertsign",
+        "crlsign",
+        "encipheronly",
+        "decipheronly",
+    ]
+
+    _extended_keyusage_list = [
+        "serverauth",
+        "clientauth",
+        "codesigning",
+        "emailprotection",
+        "timestamping",
+        "mscodeind",
+        "mscodecom",
+        "msctlsign",
+        "mssgc",
+        "msefs",
+        "nssgc",
+    ]
     __logger = None
 
     def __init_logger(self):

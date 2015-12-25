@@ -16,7 +16,7 @@ configfile = "/etc/pki/config.ini"
 
 shortoptions = {
     "main":"c:h",
-    "sign":"o:s:e:E:S:",
+    "sign":"o:s:e:E:S:k:K:",
     "import":"c:r:a:p:d:",
     "housekeeping":"ap:",
     "statistics":"",
@@ -32,7 +32,7 @@ shortoptions = {
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "extension=", "san="],
+    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage="],
     "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
     "housekeeping":["autorenew", "period="],
     "statistics":[],
@@ -109,154 +109,173 @@ def usage():
 
     print("""Usage: %s [-c <cfg>|--config=<cfg>] [-h|--help] <command> [<commandoptions>]
 
-  -c <cfg>                      Use configuration file instead of the default
-  --config=<cfg>                Default: %s
+  -c <cfg>                                  Use configuration file instead of the default
+  --config=<cfg>                            Default: %s
 
-  -h                            This text
+  -h                                        This text
   --help
 
   Commands:
 
-   backup                       Dumps the content of the backend database in JSON format.
-                                This can be used to backup the PKI database and is the only
-                                supported migrate between different backend types.
-                                If no output file (option -o) has been given it will be written
-                                to standard output.
+   backup                                   Dumps the content of the backend database in JSON format.
+                                            This can be used to backup the PKI database and is the only
+                                            supported way to migrate between different backend types.
+                                            If no output file (option -o) has been given it will be written
+                                            to standard output.
 
-     -o <output>                Write new certificate to <output> instead of standard out
+     -o <output>                            Write new certificate to <output> instead of standard out
      --output=<output>
 
-   export                       Dumps base64 encoded X509 data of a certificate (aka PEM format).
-                                The serial number of the certificate must be given.
-                                If not given it will be read from the standard input.
-                                The new certificate will be written to standard output or to a file if
-                                the -o option is used.
+   export                                   Dumps base64 encoded X509 data of a certificate (aka PEM format).
+                                            The serial number of the certificate must be given.
+                                            If not given it will be read from the standard input.
+                                            The new certificate will be written to standard output or to a file if
+                                            the -o option is used.
 
-     -o <output>                Write new certificate to <output> instead of standard out
+     -o <output>                            Write new certificate to <output> instead of standard out
      --output=<output>
 
-   gencrl                       Generate certificate revocation list from revoked certificates.
-                                The certificate revocation list will be written to standard output
-                                or to a file if -o is used.
+   gencrl                                   Generate certificate revocation list from revoked certificates.
+                                            The certificate revocation list will be written to standard output
+                                            or to a file if -o is used.
 
-     -o <output>                Write revocation list to <output> instead of standard output.
+     -o <output>                            Write revocation list to <output> instead of standard output.
      --output=<output>
 
-   housekeeping                 Generale "housekeeping. Checking all certificates in the database
-                                for expiration, renew autorenewable certificates (if option -A is used), ...
-                                This should be run at regular intervals.
+   housekeeping                             General "housekeeping. Checking all certificates in the database
+                                            for expiration, renew auto renewable certificates (if option -A is used).
+                                            This should be run at regular intervals.
 
-     -a                         Renew auto renawable certificates that will expire.
+     -a                                     Renew auto renawable certificates that will expire.
      --autorenew
 
-     -p <period>                New validity period for auto renewed certificate.
-     --period=<period>          Default is the value given on import that has been stored in the backend.
+     -p <period>                            New validity period for auto renewed certificate.
+     --period=<period>                      Default is the value given on import that has been stored in the backend.
 
-   import                       Import a certificate. If a file name is given it will be read
-                                from the file, otherwise it will be read from stdin.
+   import                                   Import a certificate. If a file name is given it will be read
+                                            from the file, otherwise it will be read from stdin.
 
-     -a                         Mark certificate as autorenwable.
-     --autorenew                The "housekeeping" command will take care of this
+     -a                                     Mark certificate as autorenwable.
+     --autorenew                            The "housekeeping" command will take care of this
 
-     -c <csr>                   Certificate signing request used for certificate
-     --csr=<csr>                creation. Optional.
+     -c <csr>                               Certificate signing request used for certificate
+     --csr=<csr>                            creation. Optional.
 
-     -p <period>                New validity period for auto renewed certificate.
-     --period=<period>          Default is the value given in the configuration file as validity_period.
+     -p <period>                            New validity period for auto renewed certificate.
+     --period=<period>                      Default is the value given in the configuration file as validity_period.
 
-     -r <reason>,<time>         Mark certificate as revoked. Optional.
-     --revoked=<reason>,<time>  <time> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
-                                string in the format YYYYMMDDhhmmssZ
-                                <reason> can be one of:
-                                unspecified, keyCompromise, CACompromise, affiliationChanged,
-                                superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
-                                removeFromCRL, aACompromise
+     -r <reason>,<time>                     Mark certificate as revoked. Optional.
+     --revoked=<reason>,<time>              <time> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                            string in the format YYYYMMDDhhmmssZ
+                                            <reason> can be one of:
+                                            unspecified, keyCompromise, CACompromise, affiliationChanged,
+                                            superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
+                                            removeFromCRL, aACompromise
 
-   list                         List serial numbers of certificates.
-                                The list will be written to standard out if the option -o is not used.
+   list                                     List serial numbers of certificates.
+                                            The list will be written to standard out if the option -o is not used.
 
-     -e                         List serial numbers of expired certificates.
+     -e                                     List serial numbers of expired certificates.
      --expired
 
-     -i                         List serial numbers of invalid certificates.
-     --invalid                  Certficates are considered invalid if their notBefore time is in the future.
+     -i                                     List serial numbers of invalid certificates.
+     --invalid                              Certficates are considered invalid if their notBefore time is in the future.
 
-     -h                         Print serial number as hexadecimal number
+     -h                                     Print serial number as hexadecimal number
      --hex
 
-     -o <output>                Write serial numbers of listed certificate to <output> instead of standard out
+     -o <output>                            Write serial numbers of listed certificate to <output> instead of stdout
      --output=<output>
 
-     -r                         List serial numbers of revoked certificates.
+     -r                                     List serial numbers of revoked certificates.
      --revoked
 
-     -t                         List "certificates" marked as temporary
-     --temporary                Temporary certficates are dummy settings used to "lock" serial numbers
-                                during signing of a certificate signing request.
+     -t                                     List "certificates" marked as temporary
+     --temporary                            Temporary certficates are dummy settings used to "lock" serial numbers
+                                            during signing of a certificate signing request.
 
-     -v                         List serial numbers of valid certificates.
-     --valid                    Certificates are considered valid if they are not temporary, not revoked
-                                and the validity period (notBefore .. notAfter) has been started and the
-                                certificates is not expired.
+     -v                                     List serial numbers of valid certificates.
+     --valid                                Certificates are considered valid if they are not temporary, not revoked
+                                            and the validity period (notBefore .. notAfter) has been started and the
+                                            certificates is not expired.
 
-   renew                        Renew a cerificate. The serial number of the certificate must be given.
-                                If not given it will be read from the standard input.
-                                The new certificate will be written to standard output or to a file if
-                                the -o option is used.
+   renew                                    Renew a cerificate. The serial number of the certificate must be given.
+                                            If not given it will be read from the standard input.
+                                            The new certificate will be written to standard output or to a file if
+                                            the -o option is used.
 
-     -o <output>                Write new certificate to <output> instead of standard out
+     -o <output>                            Write new certificate to <output> instead of standard out
      --output=<output>
 
-     -p <period>                New validity period for renewed certificate.
-     --period=<period>          Default <validity_period> from configuration file.
+     -p <period>                            New validity period for renewed certificate.
+     --period=<period>                      Default <validity_period> from configuration file.
 
-   revoke                       Revoke a certificate. Serial number of the certificate to revoke must
-                                be used. If given not given on the command line it will be read from
-                                stdin.
+   restore                                  Restores database from a JSON file generated with the backup command.
+                                            If the filename of the input data is given on the command line it
+                                            will be read, otherwise input will be read from standard input
 
-     -r <reason>                Set revocation reason for certificate.
-     --reason=<reason>          <reason> can be one of:
-                                unspecified, keyCompromise, CACompromise, affiliationChanged,
-                                superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
-                                removeFromCRL, aACompromise
-                                If no reasen is given, the default "unspecified" is used.
+   revoke                                   Revoke a certificate. Serial number of the certificate to revoke must
+                                            be used. If given not given on the command line it will be read from
+                                            stdin.
 
-     -R <date>                  Set revocation date for certificate.
-     --revocation-date=<date>   <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
-                                string in the format YYYYMMDDhhmmssZ.
-                                If not given, the current date will be used.
+     -r <reason>                            Set revocation reason for certificate.
+     --reason=<reason>                      <reason> can be one of:
+                                            unspecified, keyCompromise, CACompromise, affiliationChanged,
+                                            superseded, cessationOfOperation, certificateHold, privilegeWithdrawn,
+                                            removeFromCRL, aACompromise
+                                            If no reasen is given, the default "unspecified" is used.
 
-   sign                         Sign a certificate signing request. If a file name is given it will be
-                                read, otherwise it will be read from stdin. Output will be written to
-                                stdout or to a file if -o option is used.
+     -R <date>                              Set revocation date for certificate.
+     --revocation-date=<date>               <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                            string in the format YYYYMMDDhhmmssZ.
+                                            If not given, the current date will be used.
 
-     -a                         Mark certificate as autorenwable.
-     --autorenew                The "housekeeping" command will take care of this
+   sign                                     Sign a certificate signing request. If a file name is given it will be
+                                            read, otherwise it will be read from stdin. Output will be written to
+                                            stdout or to a file if -o option is used.
 
-     -E <extdata>               X509 extension. Can be repeated for multiple extensions.
-     --extension=<extdata>      Parameter <extdata> is a komma separated list of:
-                                <name> - Name of the X509 extension
-                                <critical> - Criticality flag. 0: False, 1: True
-                                <subject> - Subject, is usually empty
-                                <issuer> - Issuer, is usually empty
-                                <data> - data of the extension
+     -E <extdata>                           X509 extension. Can be repeated for multiple extensions.
+     --extension=<extdata>                  Parameter <extdata> is a comma separated list of:
+                                            <name> - Name of the X509 extension
+                                            <critical> - Critical flag. 0: False, 1: True
+                                            <subject> - Subject, is usually empty
+                                            <issuer> - Issuer, is usually empty
+                                            <data> - data of the extension
 
-     -S <san>                   subjectAltName extension
-     --san=<san>                This is the same as --extension=subjectAltName,0,,,<san>
-                                but as using the subjectAltName extension is the
-                                most common extension this is an extra option.
+     -K [critical:]:<flags>                 Comma separated list of extended key usage bits.
+     --extended-keyusage=[critical:]<flags> Prefix critical: can be used to set the critical flag.
+                                            Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5
+                                            Known extended key usage bits are (defined in RFC 55280):
+                                            serverAuth, clientAuth, codeSigning, emailProtection, timeStamping,
+                                            msCodeInd, msCodeCom, msCTLSign, msSGC, msEFS, nsSGC
 
-     -s <start>                 Start time for new certificate as Unix timestamp
-     --start=<start>            Default: now
 
-     -e <end>                   End time for new certificate as Unix timestamp
-     --end=<end>                Default: start + <validity_period> days.
+     -S [critical:]<san>                    subjectAltName extension. Prefix critical: can be used to set the critical
+     --san=[critical:]<san>                 flag on the alternate name list (default: False).
+                                            This is the same as --extension=subjectAltName,[0|1],,,<san>
+                                            but as using the subjectAltName extension is the
+                                            most common extension this is an extra option.
 
-     -o <out>                   Write data to <outfile> instead of stdout
+     -a                                     Mark certificate as auto renewable.
+     --autorenew                            The "housekeeping" command will take care of this
+
+     -e <end>                               End time for new certificate as Unix timestamp
+     --end=<end>                            Default: start + <validity_period> days.
+
+     -k [critical:]<flags>                  Comma separated list of keyUsage bits. Prefix critical: can be used to set the
+     --keyusage=[critical:]<flags>          critical flag. Known keyUsage bits according to RFC 5280 are:
+                                            digitalSignature, nonRepudiation (or contentCommitment), keyEncipherment,
+                                            dataEncipherment, keyAgreement, keyCertSign, cRLSign, encipherOnly, decipherOnly
+                                            (see RFC 5280, Section 4.2.1.3 "Key Usage" for futher details).
+
+     -o <out>                               Write data to <outfile> instead of stdout
      --output=<out>
 
-   statistics                   Print small summary of stored certificates. Output will be written to
-                                stdout.
+     -s <start>                             Start time for new certificate as Unix timestamp
+     --start=<start>                        Default: now
+
+   statistics                               Print small summary of stored certificates. Output will be written to
+                                            stdout.
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
@@ -689,6 +708,7 @@ def sign_certificate(opts, config, backend):
     end = None
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
+    re_oid = re.compile("[0-9\.]+")
 
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
@@ -728,7 +748,49 @@ def sign_certificate(opts, config, backend):
             extensions.append(OpenSSL.crypto.X509Extension(name, critical, data, subject=subject, issuer=issuer))
         elif opt in ("-S", "--san"):
             san = val
-            extensions.append(OpenSSL.crypto.X509Extension("subjectAltName", False, san))
+            critical = False
+            if san.split(":", 1)[0].lower() == "critical":
+                critical = True
+                san = san.split(":", 1)[1]
+            extensions.append(OpenSSL.crypto.X509Extension("subjectAltName", critical, san))
+        elif opt in ("-K", "--extended-keyusage"):
+            extusage = val
+            critical = False
+            if extusage.split(":", 1)[0].lower() == "critical":
+                critical = True
+                extusage = extusage.split(":", 1)[1]
+
+            extusagelist = extusage.split(",")
+            for eusage in extusagelist:
+                if not eusage.strip().lower() in backend._extended_keyusage_list:
+                   if not re_oid.match(eusage.strip()):
+                        __logger.error("Invalid extended key usage %s" % (eusage, ))
+                        sys.stderr.write("Error: Invalid extended key usage %s\n" % (eusage, ))
+                        sys.exit(6)
+
+
+            value = ",".join(extusagelist)
+            extensions.append(OpenSSL.crypto.X509Extension("extendedKeyUsage", critical, value))
+
+        elif opt in ("-k", "--keyusage"):
+            keyusage = val
+            critical = False
+            if keyusage.split(":", 1)[0].lower() == "critical":
+                critical = True
+                keyusage = keyusage.split(":", 1)[1]
+
+            # map usage list to bit values as defined in RFC 5280
+            usagelist = keyusage.split(",")
+
+            for usage in usagelist:
+                if not usage.strip().lower() in backend._keyusage_list:
+                    __logger.error("%s is not a valid key usage" % (usage, ))
+                    sys.stderr.write("Error: %s is not a valid key usage\n" % (usage, ))
+                    sys.exit(4)
+
+            value = ",".join(usagelist)
+            extensions.append(OpenSSL.crypto.X509Extension("keyUsage", critical, value))
+
         elif opt in ("-e", "--end"):
             end = val
 

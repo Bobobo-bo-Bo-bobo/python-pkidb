@@ -9,7 +9,7 @@ import time
 import re
 import OpenSSL
 
-__all__ = [ "pgsql", "sqlite"]
+__all__ = [ "pgsql", "sqlite", "mysql" ]
 class Backend(object):
 
     # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
@@ -74,7 +74,7 @@ class Backend(object):
         :return: Nothing
         """
         # setup logging first
-        self.__logger = logging.getLogger(__name__)
+        self.__logger = logging.getLogger("__init__")
         self.__logger.setLevel(logging.INFO)
 
         address = '/dev/log'
@@ -92,7 +92,8 @@ class Backend(object):
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
-        self.__init_logger()
+        if not self.__logger:
+            self.__init_logger()
         pass
 
     def _get_state(self, serial):

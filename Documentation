@@ -16,11 +16,11 @@ Configuration:
 # file as it contains critical informations!
 
 [global]
-# backend - LDAP (ldap) or PostgreSQL (pgsql)
-backend = ldap
-
-# x509 subjects must be unique (yes) or not (no)
-unique_subject = yes
+# backend:
+#  psql - PostgreSQL
+#  mysql - MySQL
+#  sqlite3 - SQLite3
+backend = psql
 
 # path to public and private ca key
 # and the passphrase protecting it.
@@ -36,6 +36,24 @@ digest = sha256
 # the serial number (increment)
 serial_number = random
 
+# default validity period for new certificates
+validity_period = 1095
+
+# renew autorenwable certificates if less than autorenew_delta days left
+autorenew_delta = 1
+
+# path to crl signing certificarte and private
+# key and the passphrase protecting it
+crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
+crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
+crl_passphrase = AssembleTheMinions!
+
+# numver of days before the next crl is due
+crl_validity_period = 30
+
+# message digest to use for crl signing
+crl_digest = sha512
+
 # Backend configurations
 [pgsql]
 host = 127.0.0.1
@@ -44,11 +62,15 @@ user = dbuser
 passphrase = DoesThisCountAsAnnoying?
 database = pkidb
 
-[ldap]
+[sqlite3]
+database = pkidb
+
+[mysql]
 host = 127.0.0.1
-port = 389
-user = cn=admin,dc=organisation,dc=org
-passphrase = AssembleTheMinions!
+port = 5432
+user = dbuser
+passphrase = DoesThisCountAsAnnoying?
+database = pkidb
 
 Getting started:
   * create database user, e.g.
@@ -57,22 +79,45 @@ Getting started:
 
 createuser --encrypted --no-inherit --no-createrole --no-superuser --no-createdb --pwprompt <username>)
 
+    * MySQL:
+      * as MySQL administrator:
+
+CREATE USER '<username>'@'<host>' IDENTIFIED BY '<password>'
+
+    * SQLite3: -
+
   * create empty database and assign ownership to <username>
     * PostgreSQL:
 
 createdb --owner=<username> --encoding=UTF8 <database>
+
+    * SQLite3: -
+
+    * MySQL:
+      * as MySQL administrator:
+
+CREATE DATABASE <database>;
 
   * initialize database:
     * PostgreSQL:
 
 pgsql <database> < /path/to/installation/initialize/pgsql/pgsql.sql
 
+    * SQLite3:
+
+sqlite3 <database> < /path/to/installation/initialize/sqlite/sqlite.sql
+
   * grant access right to created user <username>:
     * PostgreSQL:
 
 /path/to/installation/initialize/pgsql/grant.sh <database> <username>
 
-Store:
+    * SQLite3:
+chown <username> <database>
+
+    * MySQL:
+      * as MySQL administrator:
+GRANT ALL ON '<database>'.* TO '<username>'.'<host>';
 
 Commands:
  sign - sign csr

@@ -19,7 +19,7 @@ class SQLite(Backend):
 
     def __init_logger(self):
         # setup logging first
-        self.__logger = logging.getLogger(__name__)
+        self.__logger = logging.getLogger("__sqlite__")
         self.__logger.setLevel(logging.INFO)
 
         address = '/dev/log'
@@ -44,7 +44,9 @@ class SQLite(Backend):
     def __init__(self, config):
         super(SQLite, self).__init__(config)
 
-        self.__init_logger()
+        if not self.__logger:
+            self.__init_logger()
+
         self.__config = config
         self.__db = self.__connect(config)
         if not self.__db:
@@ -96,10 +98,10 @@ class SQLite(Backend):
             result = cursor.fetchall()
 
             if len(result) == 0:
-                self.__logger.info("Serial number 0x%x was not found in the database")
+                self.__logger.info("Serial number 0x%x was not found in the database" % (serial, ))
                 return False
             else:
-                self.__logger.info("Serial number 0x%x was found in the database")
+                self.__logger.info("Serial number 0x%x was found in the database" % (serial, ))
                 return True
 
         except sqlite3.Error as error:
@@ -185,7 +187,7 @@ class SQLite(Backend):
                 self.__db.rollback()
                 return None
 
-        self.__logger.info("%u X509 extensions are had been stored in the backend")
+        self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist), ))
         return result
 
     def _store_signature_algorithm(self, cert):
@@ -903,7 +905,7 @@ class SQLite(Backend):
             else:
                 newsequence = long(result[0][0]) + 1
 
-            self.__logger.info("Readjusing primary key counter to %u" % (newsequence, ))
+            self.__logger.info("Readjusting primary key counter to %u" % (newsequence, ))
             cursor.execute("UPDATE sqlite_sequence SET seq=%u WHERE name='signature_algorithm';" % (newsequence, ))
             self.__logger.info("Forcing reindexing on table signature_algorithm")
             cursor.execute("REINDEX signature_algorithm;")

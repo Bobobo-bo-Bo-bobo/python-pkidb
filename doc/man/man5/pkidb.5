@@ -1,0 +1,620 @@
+.TH pkdib 1 "December 26th, 2015" "Version 0.8.0"
+.SH NAME
+pkidb - PKI system based on a SQL database backend
+
+.SH SYNOPSIS
+.B
+pkidb
+[
+.I
+options
+] 
+.I
+command [
+.I commandoptions
+]
+
+.SH DESCRIPTION
+
+pkidb is a PKI tool to issue and manage certificates and certificate livecycle
+
+.SH OPTIONS
+.B \-c \c
+.I configfile
+.br
+.B \-\-config=\c
+.I configfile
+.br
+.RS
+Use 
+.I configfile
+as configuration file instead of the default /etc/pki/config.ini
+.RE
+
+.SH COMMANDS
+
+." .BR <command>
+." .RS
+." .RS
+." <description>
+." <description>
+." .RE
+." 
+." .RS
+." .B \-o \c
+." .I outputfile
+." .br
+." .B \-\-output=\c
+." .I outputfile
+." .RS
+." Write new certificate to
+." .I outputfile
+." instead of standard output
+." .RE
+." .RE
+
+
+." Command: backup
+.BR backup
+.RS
+Dumps the content of the backend database in JSON format.
+This can be used to backup the PKI database and is the only supported way to migrate between different backend types.
+If no output file (option -o) has been given it will be written to standard output.
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+.RE
+
+." Command: export
+.BR export
+.RS
+Dumps base64 encoded X509 data of a certificate. The serial number of the certificate must be given. If not given it will be read from the standard input.
+The new certificate will be written to standard output or to a file if the -o option is used.
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+.RE
+
+.BR gencrl
+.RS
+Generate certificate revocation list from revoked certificates. The certificate revocation list will be written to standard output or to a file if the -o option is used.
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+
+.RE
+.BR housekeeping
+.RS
+General housekeeping. Checking all certificates in the database for expiration, renew auto renewable certificates (if option -a is used). This should be run at regular intervals.
+.br
+Certificates marked as auto renewable will never be renewed if they have been revoked.
+.RE
+
+.RS
+.B \-a
+.br
+.B \-\-auto-renew
+.RS
+Certificates marked as auto renewable will be renewed.
+.RE
+
+.B \-p \c
+.I period
+.br
+.B \-\-period=\c
+.I period
+.RS
+Certificates marked as auto renewable will be renewed for
+.I period
+day instead of the default validity period definde in the configuration file.
+.RE
+.RE
+
+.BR import
+.RS
+Import a certificate. If a file name is given it will be read from the file, otherwise it will be read from stdin.
+.RE
+
+.RS
+.B \-a
+.br
+.B \-\-auto-renew
+.RS
+Certificates marked as auto renewable will be renewed.
+.RE
+
+.B \-c \c
+.I csr_file
+.br
+.B \-\-csr=\c
+.I csr_file
+.RS
+Certificate signing request used for certificate.
+.RE
+
+.B \-p \c
+.I period
+.br
+.B \-\-period=\c
+.I period
+.RS
+Certificates marked as auto renewable will be renewed for
+.I period
+day instead of the default validity period definde in the configuration file.
+.RE
+
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+
+.B \-r \c
+.I reason\c
+,\c
+.I time
+.br
+.B \-\-revoked=\c
+.I reason\c
+,\c
+.I time
+.RS
+Mark certificate as revoked. \c
+.I reason \c
+can be one of:
+.RS
+.I unspecified
+.br
+.I keyCompromise
+.br
+.I CACompromise
+.br
+.I affiliationChanged
+.br
+.I superseded
+.br
+.I cessationOfOperation
+.br
+.I certificateHold
+.br
+.I privilegeWithdrawn
+.br
+.I removeFromCRL
+.br
+.I aACompromise
+
+.RE
+.I time \c
+is the UNIX epoch of the revocation or the ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
+.RE
+.RE
+
+.BR list
+.RS
+ List serial numbers of certificates. The list will be written to standard output if the option -o is not used.
+.RE
+
+.RS
+.B \-e \c
+.br
+.B \-\-expired\c
+.RS
+List serial numbers of expired certificates.
+.RE
+.RE
+
+.RS
+.B \-h \c
+.br
+.B \-\-hex\c
+.RS
+Print serial number as hexadecimal number.
+.RE
+.RE
+
+.RS
+.B \-i \c
+.br
+.B \-\-invalid\c
+.RS
+List serial numbers of invalid certificates. Certficates are considered invalid if their notBefore time is in the future.
+.RE
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+.RE
+
+.RS
+.B \-r \c
+.br
+.B \-\-revoked\c
+.RS
+List serial numbers of revoked certificates.
+.RE
+.RE
+.RS
+.B \-t \c
+.br
+.B \-\-temporary\c
+.RS
+List certificates marked as temporary. Temporary certficates are dummy settings used to lock serial numbers during signing of a certificate signing request.
+.RE
+.RE
+
+.RS
+.B \-v \c
+.br
+.B \-\-valid\c
+.RS
+List serial numbers of valid certificates. Certificates are considered valid if they are not temporary, not revoked and the validity period (notBefore .. notAfter) has been started and the certificate is not expired.
+.RE
+.RE
+
+.BR renew
+.RS
+Renew a cerificate. The serial number of the certificate must be given. If not given it will be read from the standard input. The new certificate will be written to standard output or to a file if the -o option is used.
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+.RE
+
+.RS
+.B \-p \c
+.I period
+.br
+.B \-\-period=\c
+.I period
+.RS
+New validity period for renewed certificate. Default is
+.I validity_period
+from configuration file.
+.RE
+.RE
+
+.BR restore
+.RS
+Restores database from a JSON file generated with the
+.B backup
+command. If the filename of the input data is given on the command line it will be read, otherwise input will be read from standard input
+.RE
+
+.BR revoke
+.RS
+Revoke a certificate. Serial number of the certificate to revoke must be used. If given not given on the command line it will be read from standard input.
+.RE
+
+.RS
+.B \-r \c
+.I reason
+.br
+.B \-\-reason=\c
+.I reason
+.RS
+Set revocation reason for certificate. \c
+.I reason \c
+can be one of:
+.RS
+.I unspecified
+.br
+.I keyCompromise
+.br
+.I CACompromise
+.br
+.I affiliationChanged
+.br
+.I superseded
+.br
+.I cessationOfOperation
+.br
+.I certificateHold
+.br
+.I privilegeWithdrawn
+.br
+.I removeFromCRL
+.br
+.I aACompromise
+.RE
+If no reasen is given, the default
+.I unspecified
+is used.
+.RE
+.RE
+
+.RS
+.B \-R \c
+.I revdate
+.br
+.B \-\-revocation-date=\c
+.I revdate
+.RS
+Set revocation date for certificate.
+.I revdate
+is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ. If not given, the current date will be used.
+.RE
+.RE
+
+.BR sign
+.RS
+Sign a certificate signing request. If a file name is given it will be read, otherwise it will be read from standard input, output will be written to standard output or to a file if -o option is used.
+.RE
+
+.RS
+.B \-E \c
+.I extdata
+.br
+.B \-\-extension=\c
+.I extdata
+.RS
+X509 extension to be included in new certificate. Can be repeated for multiple extensions. Parameter
+.I extdata
+is a comma separated list of:
+.RS
+.I name \c
+- Name of the X509 extension
+.br
+.I critical \c
+- Critical flag. 0: False, 1: True
+.br
+.I subject \c
+- Subject, is usually empty
+.br
+.I issuer \c
+- Issuer, is usually empty
+.br
+.I data \c
+- data of the extension
+.br
+.RE
+.RE
+.RE
+
+.RS
+.B \-K \c
+.I [critical:]:flags
+.br
+.B \-\-extended-keyusage=\c
+.I [critical:]:flags
+.RS
+Comma separated list of extended key usage bits. Prefix 
+.I critical: 
+can be used to set the critical flag. Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5. Known extended key usage bits are defined in RFC 55280:
+.RS
+.I serverAuth
+.br
+.I clientAuth
+.br
+.I codeSigning
+.br
+.I emailProtection
+.br
+.I timeStamping
+.br
+.I msCodeInd
+.br
+.I msCodeCom
+.br
+.I msCTLSign
+.br
+.I msSGC
+.br
+.I msEFS
+.br
+.I nsSGC
+.br
+.RE
+.RE
+.RE
+
+.RS
+.B \-S \c
+.I alternatename
+.br
+.B \-\-san=\c
+.I alternatename
+.RS
+subjectAltName extension. Prefix
+.I critical:
+can be used to set the critical flag on the alternate name list (default: False).
+.RE
+.RE
+
+.RS
+.B \-a \c
+.br
+.B \-\-auto-renew\c
+.RS
+Mark certificate as auto renewable. The
+.B housekeeping
+command (with the 
+.I -a
+option) will take care of this.
+.RE
+.RE
+
+.RS
+.B \-b \c
+.I [critical:]data
+.br
+.B \-\-basic-constraint=\c
+.I [critical:]data
+.RS
+Set basic constraints for the new certificate. Prefix
+.I critical:
+can be used to set the critical flag on the basic constraints.
+.RE
+.RE
+
+.RS
+.B \-e \c
+.I endtime
+.br
+.B \-\-end=\c
+.I endtime
+.RS
+End time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
+Default is
+.I start+validity_period
+days.
+.RE
+.RE
+
+.RS
+.B \-k \c
+.I [critical:]flags
+.br
+.B \-\-keyusage=\c
+.I [critical:]flags
+.RS
+Comma separated list of keyUsage bits. Prefix
+.I critical:
+can be used to set the critical flag. Known keyUsage bits according to RFC 5280 are:
+.RS
+.I digitalSignature
+.br
+.I nonRepudiation
+(or
+.I contentCommitment
+)
+.br
+.I keyEncipherment,
+.br
+.I dataEncipherment
+.br
+.I keyAgreement
+.br
+.I keyCertSign
+.br
+.I cRLSign
+.br
+.I encipherOnly
+.br
+.I decipherOnly
+.br
+.RE
+(see RFC 5280, Section 4.2.1.3 "Key Usage" for futher details).
+.RE
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate to
+.I outputfile
+instead of standard output
+.RE
+.RE
+
+.RS
+.B \-s \c
+.I startdate
+.br
+.B \-\-start=\c
+.I startdate
+.RS
+Start time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
+Default: now
+.RE
+.RE
+
+.RS
+.B \-t \c
+.I templatefile
+.br
+.B \-\-template=\c
+.I templatefile
+.RS
+Use a template file for certificate signing.
+.RE
+.RE
+
+.BR statistics
+.RS
+.RS
+Print small summary of stored certificates. Output will be written to standard output.
+.RE
+
+
+." .BR <command>
+." .RS
+." .RS
+." <description>
+." <description>
+." .RE
+." 
+." .RS
+." .B \-o \c
+." .I outputfile
+." .br
+." .B \-\-output=\c
+." .I outputfile
+." .RS
+." Write new certificate to
+." .I outputfile
+." instead of standard output
+." .RE
+." .RE
+.SH CONFIGFILE
+.SH TEMPLATEFILE
+
+.SH BUGS
+.SH AUTHOR
+.SH SEE ALSO

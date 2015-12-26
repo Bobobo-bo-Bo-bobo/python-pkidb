@@ -55,8 +55,8 @@ longoptions = {
     "main":["config=", "help"],
     "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint=",
             "template="],
-    "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
-    "housekeeping":["autorenew", "period="],
+    "import":["csr=", "revoked=", "auto-renew", "period=", "delta="],
+    "housekeeping":["auto-renew", "period="],
     "statistics":[],
     "gencrl":["output="],
     "revoke":["reason=", "revocation-date="],
@@ -169,7 +169,7 @@ def usage():
                                             This should be run at regular intervals.
 
      -a                                     Renew auto renawable certificates that will expire.
-     --autorenew
+     --auto-renew
 
      -p <period>                            New validity period for auto renewed certificate.
      --period=<period>                      Default is the value given on import that has been stored in the backend.
@@ -178,7 +178,7 @@ def usage():
                                             from the file, otherwise it will be read from stdin.
 
      -a                                     Mark certificate as autorenwable.
-     --autorenew                            The "housekeeping" command will take care of this
+     --auto-renew                           The "housekeeping" command will take care of this
 
      -c <csr>                               Certificate signing request used for certificate
      --csr=<csr>                            creation. Optional.
@@ -279,13 +279,13 @@ def usage():
                                             most common extension this is an extra option.
 
      -a                                     Mark certificate as auto renewable.
-     --autorenew                            The "housekeeping" command will take care of this
+     --auto-renew                           The "housekeeping" command will take care of this
 
      -b critical:<data>                     Set basic constraints Prefix critical: can be used to set the critical
      --basic-constraint=critical:]<data>    flag on the basic constraints, e.g. -b critical:CA:TRUE,pathlen:1 for
                                             a CA certificate with a maximal path length of 1.
 
-     -e <end>                               End time for new certificate as Unix timestamp
+     -e <end>                               End time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ.
      --end=<end>                            Default: start + <validity_period> days.
 
      -k [critical:]<flags>                  Comma separated list of keyUsage bits. Prefix critical: can be used to set the
@@ -297,7 +297,7 @@ def usage():
      -o <out>                               Write data to <outfile> instead of stdout
      --output=<out>
 
-     -s <start>                             Start time for new certificate as Unix timestamp
+     -s <start>                             Start time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ.
      --start=<start>                        Default: now
 
      -t <template>                          Use a template file for certificate signing.
@@ -1163,7 +1163,7 @@ def import_certificate(opts, config, backend):
             if reason.lower() in backend._revocation_reason_map:
                 revoked = (backend._revocation_reason_map[reason.lower()], revtime)
 
-            elif opt in ("-a", "--autorenew"):
+            elif opt in ("-a", "--auto-renew"):
                 autorenewable = True
 
         elif opt in ("-p", "--period"):
@@ -1244,7 +1244,7 @@ def housekeeping(opts, config, backend):
     autorenew_period = None
 
     for (opt, val) in optval:
-        if opt in ("-a", "--autorenew"):
+        if opt in ("-a", "--auto-renew"):
             autorenew = True
         elif opt in ("-p", "--period"):
             try:

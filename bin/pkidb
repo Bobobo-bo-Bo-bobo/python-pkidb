@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import backends
+import pkidbbackends
 import base64
 import getopt
 import json
@@ -1329,14 +1329,14 @@ if __name__ == "__main__":
     # create backend object
     if "backend" in options["global"]:
         if options["global"]["backend"] == "pgsql":
-            import backends.pgsql
-            backend = backends.pgsql.PostgreSQL(options)
+            import pkidbbackends.pgsql
+            backend = pkidbbackends.pgsql.PostgreSQL(options)
         elif options["global"]["backend"] == "sqlite3":
-            import backends.sqlite
-            backend = backends.sqlite.SQLite(options)
+            import pkidbbackends.sqlite
+            backend = pkidbbackends.sqlite.SQLite(options)
         elif options["global"]["backend"] == "mysql":
-            import backends.mysql
-            backend = backends.mysql.MySQL(options)
+            import pkidbbackends.mysql
+            backend = pkidbbackends.mysql.MySQL(options)
         else:
             __logger.error("Unknown backend type %s" % (options["global"]["backend"], ))
             sys.stderr.write("Error: Unknown backend type %s\n" % (options["global"]["backend"], ))

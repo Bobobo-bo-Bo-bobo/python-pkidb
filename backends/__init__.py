@@ -402,7 +402,7 @@ class Backend(object):
         """
         return None
 
-    def sign_request(self, csr, notBefore, notAfter, cakey, issuer, extensions):
+    def sign_request(self, csr, notBefore, notAfter, cakey, issuer, extensions, digest=None):
         """
         Create a certificate from a certificate signing request,
         :param csr: X509Request object of certificate signing request
@@ -411,6 +411,7 @@ class Backend(object):
         :param cakey: X509 object of CA signing key
         :param issuer: X509Name object containing the subject of CA
         :param extension: list of x509 extension
+        :param digest: digest for signing, if None it will be take from configuration
         :return: signed certificate as X509 object
         """
 
@@ -447,7 +448,12 @@ class Backend(object):
             newcert.add_extensions(extensions)
 
         # sign new certificate
-        newcert.sign(cakey, self._get_digest())
+        signdigest = None
+        if digest:
+            signdigest = digest
+        else:
+            signdigest = self._get_digest()
+        newcert.sign(cakey, signdigest)
 
         if newcert:
             # replace "locked" serial number with current certificate data

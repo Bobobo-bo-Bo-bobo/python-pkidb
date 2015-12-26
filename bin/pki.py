@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import backends
+import base64
 import getopt
 import json
 import logging
@@ -16,7 +17,7 @@ configfile = "/etc/pki/config.ini"
 
 shortoptions = {
     "main":"c:h",
-    "sign":"b:o:s:e:E:S:k:K:",
+    "sign":"b:o:s:e:E:S:k:K:t:",
     "import":"c:r:a:p:d:",
     "housekeeping":"ap:",
     "statistics":"",
@@ -32,7 +33,8 @@ shortoptions = {
 
 longoptions = {
     "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint="],
+    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint=",
+            "template="],
     "import":["csr=", "revoked=", "autorenew", "period=", "delta="],
     "housekeeping":["autorenew", "period="],
     "statistics":[],
@@ -277,6 +279,9 @@ def usage():
 
      -s <start>                             Start time for new certificate as Unix timestamp
      --start=<start>                        Default: now
+
+     -t <template>                          Use a template file for certificate signing.
+     --template=<template>
 
    statistics                               Print small summary of stored certificates. Output will be written to
                                             stdout.
@@ -732,6 +737,7 @@ def sign_certificate(opts, config, backend):
     input = None
     start = None
     end = None
+    templatedata = { "global":{}, "extension":[] }
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
     re_oid = re.compile("[0-9\.]+")
@@ -846,6 +852,7 @@ def sign_certificate(opts, config, backend):
                 basic = "CA:%s%s" % (flag, remainder)
 
             extensions.append(OpenSSL.crypto.X509Extension("basicConstraints", critical, basic))
+
         elif opt in ("-e", "--end"):
             end = val
 
@@ -876,6 +883,38 @@ def sign_certificate(opts, config, backend):
                 __logger.error("Can't parse start time %s: %s" % (val, error.message))
                 return 1
 
+        elif opt in ("-t", "--template"):
+            parsed = parseoptions(val)
+            for key in parsed.keys():
+                if key == "global":
+                    templatedata["global"] = parsed["global"]
+                else:
+                    (ext, name) = key.split(":", 1)
+                    if ext == "extension":
+                        critical = False
+                        if "critical" in parsed[key]:
+                            critical = True
+
+                        data = ''
+                        if "data" in parsed[key]:
+                            data = parsed[key]["data"]
+                        elif "data:base64" in parsed[key]:
+                            data = base64.b64decode(parsed[key]["data:base64"])
+                        else:
+                            __logger.error("No data found in extension section %s" % (key, ))
+                            sys.stderr.write("Error: No data found in extension section %s" % (key, ))
+
+                        subject = None
+                        if "subject" in parsed[key]:
+                            subject = parsed[key]["subject"]
+
+                        issuer = None
+                        if "issuer" in parsed[key]:
+                            issuer = parsed[key]["issued"]
+
+                        extdata = {"name":name, "critical":critical, "data":data, "subject":subject, "issuer":issuer}
+                        templatedata["extension"].append(extdata)
+
         elif opt in ("-o", "--output"):
             output = val
 
@@ -884,12 +923,25 @@ def sign_certificate(opts, config, backend):
             __logger.error("Unknown option %s" % (opt,))
             sys.exit(1)
 
+    # data from template override global settings
+    validity_period = long(config["global"]["validity_period"]) * 86400.
+    digest = None
+    if templatedata:
+        if "validity_period" in templatedata["global"]:
+            validity_period = long(templatedata["global"]["validity_period"]) * 86400.
+        if "digest" in templatedata["global"]:
+            digest = templatedata["global"]["digest"]
+
+    # add extensions from template
+    for ext in templatedata["extension"]:
+        extensions.append(OpenSSL.crypto.X509Extension(ext["name"], ext["critical"], ext["data"], ext["subject"], ext["issuer"]))
+
     # basic validation of options
     if not start:
         start = time.time()
 
     if not end:
-        end = start + long(config["global"]["validity_period"])*86400.
+        end = start + validity_period
 
     if start >= end:
         sys.stderr.write("Error: Start time (%f) is >= end time (%f)\n" % (start, end))
@@ -957,7 +1009,7 @@ def sign_certificate(opts, config, backend):
 
     # We do not pass the issuer of the CA, because only for root CA is issuer == subject
     # Intermediate CAs will contain their issuing CA as issuer
-    newcert = backend.sign_request(csr, asn1_start, asn1_end, ca_priv_key, ca_pub_key.get_subject(), extensions)
+    newcert = backend.sign_request(csr, asn1_start, asn1_end, ca_priv_key, ca_pub_key.get_subject(), extensions, digest)
 
     newcert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)
 

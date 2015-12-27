@@ -967,3 +967,100 @@ class MySQL(Backend):
 
         return True
 
+    def get_certificate_data(self, serial):
+        data = {
+            "serial_number":None,
+            "version":None,
+            "start_date":None,
+            "end_date":None,
+            "subject":None,
+            "auto_renewable":None,
+            "auto_renew_start_period":None,
+            "auto_renew_validity_period":None,
+            "issuer":None,
+            "keysize":None,
+            "fingerprint_md5":None,
+            "fingerprint_sha1":None,
+            "certificate":None,
+            "algorithm":None,
+            "extension":None,
+            "signing_request":None,
+            "state":None,
+            "revocation_date":None,
+            "revocation_reason":None,
+        }
+        qdata = { "serial":serial }
+
+        try:
+            cursor = self.__db.cursor()
+            # we can't do a second INNER JOIN on signing_request because it may be NULL
+            cursor.execute("SELECT serial_number, version, start_date, "
+                           "end_date, subject, auto_renewable, "
+                           "auto_renew_start_period, "
+                           "auto_renew_validity_period, issuer, keysize, fingerprint_md5, "
+                           "fingerprint_sha1, certificate, algorithm, extension, signing_request, "
+                           "state, revocation_date, revocation_reason "
+                           "FROM certificate INNER JOIN signature_algorithm ON signature_algorithm_id=id "
+                           "WHERE serial_number=%s;", (qdata["serial"], ))
+            result = cursor.fetchall()
+            if len(result) > 0:
+                data = {
+                    "serial_number":"%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "version":result[0][1] + 1,
+                    "start_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
+                    "end_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
+                    "subject":result[0][4],
+                    "auto_renewable":result[0][5],
+                    "issuer":result[0][8],
+                    "keysize":result[0][9],
+                    "fingerprint_md5":result[0][10],
+                    "fingerprint_sha1":result[0][11],
+                    "certificate":result[0][12],
+                    "algorithm":result[0][13],
+                    "extension":result[0][14],
+                    "signing_request":result[0][15],
+                    "state":self._certificate_status_reverse_map[result[0][16]],
+
+                }
+                if data["state"] == "revoked":
+                    data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
+                    data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
+
+                # convert 0/1 to real boolean False/True
+                if data["auto_renewable"] == 1:
+                    data["auto_renewable"] = True
+                    data["auto_renew_start_period"] = result[0][6]
+                    data["auto_renew_validity_period"] = result[0][7]
+                else:
+                    data["auto_renewable"] = False
+
+                if data["signing_request"]:
+                    cursor.execute("SELECT request FROM signing_request WHERE hash=%s;", (data["signing_request"], ))
+                    csr_result = cursor.fetchall()
+                    data["signing_request"] = csr_result[0][0]
+
+                if data["extension"]:
+                    extlist = []
+                    # convert comma separated list to an array
+                    data["extension"] = data["extension"].split(",")
+                    for ext in data["extension"]:
+                        qext = { "hash":ext }
+                        cursor.execute("SELECT name, criticality, data FROM extension WHERE hash=%s;", (qext["hash"], ))
+                        ext_result = cursor.fetchall()
+                        extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
+                    data["extension"] = extlist
+                else:
+                    data["extension"] = []
+            else:
+                data = None
+
+            cursor.close()
+            self.__db.commit()
+        except MySQLdb.Error as error:
+            self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
+                                % (serial, error.message))
+            sys.stderr.write("Error: Can't lookup certificate with serial number %s in database: %s"
+                             % (serial, error.message))
+            self.__db.rollback()
+            return None
+        return data

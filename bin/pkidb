@@ -24,6 +24,7 @@ import getopt
 import json
 import logging
 import logging.handlers
+import math
 import os
 import re
 import sys
@@ -50,6 +51,7 @@ shortoptions = {
     "list":"eiho:rtv",
     "restore":"",
     "delete":"",
+    "show":"o:",
 }
 
 longoptions = {
@@ -68,6 +70,7 @@ longoptions = {
     "list":["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
     "restore":[],
     "delete":[],
+    "show":["output="],
 }
 
 # initialize logging subsystem
@@ -257,6 +260,15 @@ def usage():
      --revocation-date=<date>               <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
                                             string in the format YYYYMMDDhhmmssZ.
                                             If not given, the current date will be used.
+
+   show                                     Shows information of a certificate identified by the serial number.
+                                            The serial number of the certificate must be given on the command line or
+                                            will be read from the standard input.
+                                            The certificate information will be written to standard output or to a
+                                            file if the -o option is used.
+
+     -o <output>                            Write new certificate information to <output> instead of standard output.
+     --output=<output>
 
    sign                                     Sign a certificate signing request. If a file name is given it will be
                                             read, otherwise it will be read from stdin. Output will be written to
@@ -531,6 +543,121 @@ def export_certificate(opts, config, backend):
             sys.exit(error.errno)
     else:
         sys.stdout.write(pem_data)
+
+def show_certificate(opts, config, backend):
+    """
+    Shows certificate information identified by the serial number
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["show"], longoptions["show"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-o", "--output"):
+            output = val
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
+            sys.exit(1)
+
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+    certdata = backend.get_certificate_data(serial)
+
+    if not certdata:
+        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
+        __logger.error("No certificate with serial number %s found" % (serial, ))
+        sys.exit(2)
+
+    string = _print_data(certdata)
+
+    if output:
+        try:
+            fd = open(output, "w")
+            fd.write(string)
+            fd.close()
+        except IOError as error:
+            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
+            __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
+            sys.exit(error.errno)
+    else:
+        sys.stdout.write(string)
+
+
+def _print_interval(interval):
+    """
+    Prints interval in seconds as string
+    :param interval: interval in seconds
+    :return: string
+    """
+    string = ""
+
+    days = math.floor(interval / 86400)
+    hours = math.floor((interval - 86400 * days) / 3600)
+    minutes = math.floor((interval - 86400 * days - 3600 * hours) / 60)
+    seconds = math.floor(interval - 86400 * days - 3600 * hours - 60 * minutes)
+
+    string = "%u days %u hours %u minutes %.2f seconds" % (days, hours, minutes, seconds)
+    return string
+
+def _print_data(data):
+    """
+    Prints certificate date obtained by get_certificate_data
+    :param data:
+    :return: string
+    """
+    revinfo = ""
+    if data["state"] == "revoked":
+        revinfo = "\n * Revoked on: %s\n * Revocation reason: %s" % (data["revocation_date"], data["revocation_reason"])
+
+    auto_renew_info = ""
+    if data["auto_renewable"]:
+        auto_renew_info = "\n * Auto renew starts before expiration: %s\n * Auto renew for: %s" %\
+                          (_print_interval(data["auto_renew_start_period"]),
+                                           _print_interval(data["auto_renew_validity_period"]))
+
+    ext_info = ""
+    if len(data["extension"]) > 0:
+        for i in range(len(data["extension"])):
+            ext_info += "\n * Extension: %u\n  * Name: %s\n  * Critical: %s\n  * Data: %s" %\
+                        (i+1, data["extension"][i]["name"], data["extension"][i]["critical"],
+                         data["extension"][i]["data"])
+
+    result = """Serial number: %s
+SSL version: %u
+Key size: %u
+Signature algorithm: %s
+State: %s%s
+Begins on: %s
+Ends on: %s
+Subject: %s
+Issuer: %s
+Fingerprint (MD5): %s
+Fingerprint (SHA1): %s
+Auto renewable: %s%s
+Extensions: %u%s
+Public key: %s
+Certificate signing request: %s
+""" % (data["serial_number"], data["version"], data["keysize"], data["algorithm"], data["state"], revinfo,
+       data["start_date"], data["end_date"], data["subject"], data["issuer"], data["fingerprint_md5"],
+       data["fingerprint_sha1"], data["auto_renewable"], auto_renew_info, len(data["extension"]), ext_info,
+       data["certificate"], data["signing_request"])
+
+    return result
 
 def delete_certificate(opts, config, backend):
     """
@@ -1440,6 +1567,8 @@ if __name__ == "__main__":
         restore_database(trailing[1:], options, backend)
     elif command == "delete":
         delete_certificate(trailing[1:], options, backend)
+    elif command == "show":
+        show_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command, ))
         __logger.error("Unknown command %s" % (command, ))

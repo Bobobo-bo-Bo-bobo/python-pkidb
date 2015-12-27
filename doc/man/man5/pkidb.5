@@ -393,6 +393,27 @@ is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the forma
 .RE
 .RE
 
+.BR show
+.RS
+.RS
+Shows information of a certificate identified by the serial number.  The serial number of the certificate must be given on the command line or will be read from the standard input.
+ The certificate information will be written to standard output or to a file if the
+.B -o
+option is used.
+.RE
+
+.RS
+.B \-o \c
+.I outputfile
+.br
+.B \-\-output=\c
+.I outputfile
+.RS
+Write new certificate information to
+.I outputfile
+instead of standard output.
+.RE
+
 .BR sign
 .RS
 Sign a certificate signing request. If a file name is given it will be read, otherwise it will be read from standard input, output will be written to standard output or to a file if -o option is used.
@@ -619,6 +640,7 @@ Print small summary of stored certificates. Output will be written to standard o
 ." .RE
 
 .SH CONFIGFILE
+
 .SH TEMPLATEFILE
 
 .SH BUGS

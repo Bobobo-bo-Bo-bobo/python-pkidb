@@ -576,3 +576,11 @@ class Backend(object):
         :return: List of serial numbers
         """
         return None
+
+    def get_certificate_data(self, serial):
+        """
+        Fetches certificate data from backend for certificate with serial number <serial>
+        :param serial: serial number
+        :return: certificate data
+        """
+        return None

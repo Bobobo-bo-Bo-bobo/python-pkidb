@@ -75,6 +75,11 @@ instead of standard output
 .RE
 .RE
 
+.BR delete
+.RS
+Deletes a certficiate identified by the serial number. If the serial number is not given on the command line it will be read from standard input.
+.RE
+
 ." Command: export
 .BR export
 .RS
@@ -612,9 +617,11 @@ Print small summary of stored certificates. Output will be written to standard o
 ." instead of standard output
 ." .RE
 ." .RE
+
 .SH CONFIGFILE
 .SH TEMPLATEFILE
 
 .SH BUGS
 .SH AUTHOR
+Andreas Maus <python-pkidb@ypbind.de>
 .SH SEE ALSO

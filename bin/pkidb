@@ -49,6 +49,7 @@ shortoptions = {
     "backup":"o:",
     "list":"eiho:rtv",
     "restore":"",
+    "delete":"",
 }
 
 longoptions = {
@@ -66,6 +67,7 @@ longoptions = {
     "backup":["output="],
     "list":["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
     "restore":[],
+    "delete":[],
 }
 
 # initialize logging subsystem
@@ -147,6 +149,10 @@ def usage():
 
      -o <output>                            Write new certificate to <output> instead of standard out
      --output=<output>
+
+   delete                                   Deletes a certficiate identified by the serial number.
+                                            If the serial number is not given on the command line it will be
+                                            read from standard input.
 
    export                                   Dumps base64 encoded X509 data of a certificate (aka PEM format).
                                             The serial number of the certificate must be given.
@@ -525,6 +531,42 @@ def export_certificate(opts, config, backend):
             sys.exit(error.errno)
     else:
         sys.stdout.write(pem_data)
+
+def delete_certificate(opts, config, backend):
+    """
+    Deletes a certificate identified by the serial number
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+    output = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["delete"], longoptions["delete"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        pass
+
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+    cert = backend.get_certificate(serial)
+
+    if not cert:
+        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
+        __logger.error("No certificate with serial number %s found" % (serial, ))
+        sys.exit(2)
+    else:
+        backend.remove_certificate(serial)
 
 def renew_certificate(opts, config, backend):
     """
@@ -1396,6 +1438,8 @@ if __name__ == "__main__":
         list_certificates(trailing[1:], options, backend)
     elif command == "restore":
         restore_database(trailing[1:], options, backend)
+    elif command == "delete":
+        delete_certificate(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command, ))
         __logger.error("Unknown command %s" % (command, ))

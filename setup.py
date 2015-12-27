@@ -3,15 +3,19 @@ from distutils.core import setup
 
 
 PKIDB_SETUP = {
-    'name' : 'pkidb',
-    'version' : '0.8.0',
-    'description' : 'PKI system based on a SQL database',
-    'long_description' : 'PKI system based on a SQL database',
-    'author_email' : 'ecbeb08bb9f1b8e8f421fbf4c28e3033ecb13bc0@ypbind.de',
-    'scripts' : ['bin/pkidb'],
-    'packages' : ['pkidbbackends'],
-    'package_data' : {'pkidbbackends' : ['pkidbbackends/*.py'], },
-    'license' : open('LICENSE').read()
+    "name" : "pkidb",
+    "version" : "0.8.1",
+    "description" : "PKI system based on a SQL database",
+    "long_description" : """PKI script for managing certificates.
+Certificates are stored in a database.
+Supported database backends are MySQL (via python-mysqldb), PostgreSQL (via python-psycopg2) and
+SQLite3 (via python-sqlite2)""",
+    "author": "Andreas Maus",
+    "author_email" : "python-pkidb@ypbind.de",
+    "scripts" : ["bin/pkidb"],
+    "packages" : ["pkidbbackends"],
+    "package_data" : {"pkidbbackends" : ["pkidbbackends/*.py"], },
+    "license" : open("LICENSE").read()
 }
 
 setup(**PKIDB_SETUP)

@@ -1022,6 +1022,7 @@ class MySQL(Backend):
                     "state":self._certificate_status_reverse_map[result[0][16]],
 
                 }
+
                 if data["state"] == "revoked":
                     data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
                     data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]

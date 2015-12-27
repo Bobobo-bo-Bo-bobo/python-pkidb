@@ -9,7 +9,7 @@ PKIDB_SETUP = {
     "long_description" : """PKI script for managing certificates.
 Certificates are stored in a database.
 Supported database backends are MySQL (via python-mysqldb), PostgreSQL (via python-psycopg2) and
-SQLite3 (via python-sqlite2)""",
+SQLite3 (via python-pysqlite2)""",
     "author": "Andreas Maus",
     "author_email" : "python-pkidb@ypbind.de",
     "scripts" : ["bin/pkidb"],

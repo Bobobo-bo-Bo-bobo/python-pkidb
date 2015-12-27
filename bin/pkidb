@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pki/config.ini"
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 shortoptions = {
     "main":"c:h",
@@ -596,7 +596,6 @@ def show_certificate(opts, config, backend):
             sys.exit(error.errno)
     else:
         sys.stdout.write(string)
-
 
 def _print_interval(interval):
     """

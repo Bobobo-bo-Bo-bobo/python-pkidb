@@ -619,6 +619,9 @@ Use a template file for certificate signing.
 .RE
 .RE
 
+.RE
+.RE
+
 .BR statistics
 .RS
 .RS
@@ -795,6 +798,9 @@ Changing the message digest algorithm for CRL list signing is only supported sin
 .RE
 .RE
 
+.RE
+.RE
+
 .BR mysql
 .RS
 .RS
@@ -846,10 +852,156 @@ of the database connection.
 .RE
 .RE
 
+.RE
+.RE
+
+.BR pgsql
+.RS
+.RS
+The 
+.B pgsql
+section contains configuration settings for the PostgreSQL backend.
+.I ALL
+options must be set.
+
+.RS
+.I host
+.br
+.RS
+The host or IP address to connect to.
+.RE
+.RE
+
+.RS
+.I port
+.br
+.RS
+The port postgres is running on (usually 5432).
+.RE
+.RE
+
+.RS
+.I database
+.br
+.RS
+Name of the database to connect to.
+.RE
+.RE
+
+.RS
+.I user
+.br
+.RS
+The user name for the database connection.
+.RE
+.RE
+
+.RS
+.I passphrase
+.br
+.RS
+The password for the 
+.I user
+of the database connection.
+.RE
+.RE
+
+.RE
+.RE
+
+.BR sqlite3
+.RS
+.RS
+The 
+.B pgsql
+section contains configuration settings for the PostgreSQL backend.
+.I ALL
+options must be set.
+
+.RS
+.I database
+.br
+.RS
+The absolute path to the SQLite3 database file
+.RE
+.RE
+
+.RE
+.RE
+
 .SH TEMPLATEFILE
+Template files can be used for specific settings for certificate signing (like specific keyUsage) and a more convenient and reproducable way to sign certificates.
+Like the configuration file it is in the INI format and contains one or more sections.
+
+.BR global
+.RS
+.RS
+The 
+.B global
+section contains general settings. If the section is not present, the values from the configuration file will be used instead. The following options can be used in a template file:
+.RE
+.RE
+
+.RS
+.I validity_period
+.br
+.RS
+The number of days to make a certificate valid.
+.RE
+.RE
+
+.RS
+.I digest
+.br
+.RS
+Default message digest to use for certificate signing. See 
+.IR dgst "(1)
+for a complete list of supported message digest algorithm of the current OpenSSL installation.
+.RE
+.RE
+
+.RE
+.RE
+
+.BR extension:<extensionname>
+.RS
+.RS
+Defines the content of a X509 certificate extension with the name
+.I <extensionname>
+.I Note:
+X509 extension names are
+.B case sensitive
+(for instance keyusage and keyUsage are two different extensions!).
+.I <extensionname>
+can be a string or a numeric OID value.
+.RE
+.RE
+
+.RS
+.I critical
+.br
+.RS
+The criticality of the extensions. If omitted the default of False is used.
+.RE
+.RE
+
+.RS
+.I data[:base64]
+.br
+.RS
+The data of the X509 extension. The optional parameter 
+.I :base64
+can be used to specify base64 encoded binary data.
+.RE
+.RE
+
+.RE
+.RE
 
 .SH EXAMPLES
 
+Configuration file:
+.RS
 .nf
 
 [global]
@@ -910,8 +1062,50 @@ user = dbuser
 passphrase = DoesThisCountAsAnnoying?
 
 .fi
+.RE
+
+Template file:
+
+.RS
+.nf
+; templates can be used to generate certificates with similar
+; characteristics
+
+; the global section defines general parameters for certificate signing:
+;  validity_period - validity period for certificates
+;  digest - message digest used to sign public key
+[global]
+validity_period=365
+digest=sha512
+
+; extensions to include in the certificates
+; section must be named [extension:<extensionname>]
+; (Attention: extension name is case _sensitive_
+; so keyusage and keyUsage are two different extensions!)
+;
+; and contain the following options:
+;
+; critical - True or False (the default), extension will be marked as critical
+; data[:base64] - data for the extension, the optional flag :base64
+;                 can be used to define base64 encoded binary data
+;                 that will be decoded and included in the extension
+; subject - optional subject for certificate extension
+; issuer - optional issuer for certificate extension
+[extension:keyUsage]
+critical=True
+data=digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment
+
+; [extension:1.2.3.4.5.6]
+; critcal = False
+; data:base64=SXQncyBzbyBmbHVmZnksIEknbSBnb25uYSBESUUh
+; subject=<subject>
+; issuer=<issuer>
+.fi
+.RE
 
 .SH BUGS
+I'm sure!
+
 .SH AUTHOR
 Andreas Maus <python-pkidb@ypbind.de>
 .SH SEE ALSO

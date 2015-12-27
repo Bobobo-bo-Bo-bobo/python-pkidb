@@ -896,6 +896,10 @@ def generate_certificate_revocation_list(opts, config, backend):
                                   days=crl_period, digest=crl_digest)
 
     else:
+        __logger.warning("Using an other digest for CRL signing than MD5 supported since version 0.15 of "
+                         "pyOpenSSL (but this is %s). Falling back to MD5." % (OpenSSL.__version__, ))
+        sys.stderr.write("Warning: Using an other digest for CRL signing than MD5 supported since version 0.15 of "
+                         "pyOpenSSL (but this is %s). Falling back to MD5.\n" % (OpenSSL.__version__, ))
         crl_data = crl.export(crl_pub_key, crl_priv_key, type=OpenSSL.crypto.FILETYPE_PEM,
                               days=crl_period)
 

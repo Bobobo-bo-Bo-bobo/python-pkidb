@@ -4,8 +4,8 @@
 [global]
 # backend - to store data
 # 
-# mysql - MySQL (not implemented yet)
-# sqlite3 - SQLite3 (not implemented yet)
+# mysql - MySQL
+# sqlite3 - SQLite3
 # pgsql - PostgreSQL
 backend = pgsql
 
@@ -57,4 +57,5 @@ host = 127.0.0.1
 port = 3306
 user = dbuser
 passphrase = DoesThisCountAsAnnoying?
+database = pkidb
 

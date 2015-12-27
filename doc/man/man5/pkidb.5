@@ -203,6 +203,7 @@ Mark certificate as revoked. \c
 .I reason \c
 can be one of:
 .RS
+
 .I unspecified
 .br
 .I keyCompromise
@@ -354,6 +355,7 @@ Set revocation reason for certificate. \c
 .I reason \c
 can be one of:
 .RS
+
 .I unspecified
 .br
 .I keyCompromise
@@ -374,6 +376,7 @@ can be one of:
 .br
 .I aACompromise
 .RE
+
 If no reasen is given, the default
 .I unspecified
 is used.
@@ -430,6 +433,7 @@ X509 extension to be included in new certificate. Can be repeated for multiple e
 .I extdata
 is a comma separated list of:
 .RS
+
 .I name \c
 - Name of the X509 extension
 .br
@@ -460,6 +464,7 @@ Comma separated list of extended key usage bits. Prefix
 .I critical: 
 can be used to set the critical flag. Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5. Known extended key usage bits are defined in RFC 55280:
 .RS
+
 .I serverAuth
 .br
 .I clientAuth
@@ -550,6 +555,7 @@ Comma separated list of keyUsage bits. Prefix
 .I critical:
 can be used to set the critical flag. Known keyUsage bits according to RFC 5280 are:
 .RS
+
 .I digitalSignature
 .br
 .I nonRepudiation
@@ -572,6 +578,7 @@ can be used to set the critical flag. Known keyUsage bits according to RFC 5280 
 .I decipherOnly
 .br
 .RE
+
 (see RFC 5280, Section 4.2.1.3 "Key Usage" for futher details).
 .RE
 .RE
@@ -640,8 +647,269 @@ Print small summary of stored certificates. Output will be written to standard o
 ." .RE
 
 .SH CONFIGFILE
+The configuration file is structured like a INI file. It contains at least two sections. The 
+.B global
+section and a backend specific section based on the backend selected in the 
+.B global
+section. As it will contain sensitive informations like the path and the password for the private key of your certificate authority, access to this configuration file should be restricted!
+
+.BR global
+.RS
+.RS
+The 
+.B global
+section contains general configuration settings. 
+.I ALL
+options must be set.
+
+.RE
+.RS
+.I backend
+.br
+.RS
+Which database backend to use. Possible options are:
+
+.I mysql\c
+ \- MySQL, requires the mysqldb Python module
+.br
+.I pgsql\c
+ \- PostgreSQL, requires the psycopg2 Python module
+.br
+.I sqlite3\c
+ \- SQLite3, requires the pysqlite2 Python module
+.br
+.RE
+.RE
+
+.RS
+.I ca_public_key
+.br
+.RS
+Absolute path to the public key of the CA certificate.
+.RE
+.RE
+
+.RS
+.I ca_private_key
+.br
+.RS
+Absoulte path to the private key of the CA certificate.
+.RE
+.RE
+
+.RS
+.I ca_passphrase
+.br
+.RS
+The passphrase to decrypt the private key of the CA certificate.
+.RE
+.RE
+
+.RS
+.I digest
+.br
+.RS
+Default message digest to use for certificate signing. See 
+.IR dgst "(1)
+for a complete list of supported message digest algorithm of the current OpenSSL installation.
+.RE
+.RE
+
+.RS
+.I serial_number
+.br
+.RS
+Method to generate new serial numbers, possible options are:
+
+.I random\c
+ \- Use random serial numbers.
+.br
+.I increment\c
+ \- Increment the last serial number.
+
+.RE
+.RE
+
+.RS
+.I validity_period
+.br
+.RS
+The number of days to make a certificate valid.
+.RE
+.RE
+
+.RS
+.I autorenew_delta
+.br
+.RS
+For auto renewable certificates, the auto renewable will be run if less then
+.I autorenew_delta
+days are left til expiration.
+.RE
+.RE
+
+.RS
+.I crl_public_key
+.br
+.RS
+The absolute path to the public key for the certificate to sign the certificate revocation list. This can be the same as the CA certificate but it best practices recommend a separate certificate with a shorter
+validity period.
+.RE
+.RE
+
+.RS
+.I crl_private_key
+.br
+.RS
+The absolute path to the private key for the certificate to sign the certificate revocation list. This can be the same as the CA certificate but it best practices recommend a separate certificate with a shorter
+validity period.
+.RE
+.RE
+
+.RS
+.I crl_passphrase
+.br
+.RS
+The passphrase to decrypt the private key of the certificate used to sign the revocation list.
+.RE
+.RE
+
+.RS
+.I crl_validity_period
+.br
+.RS
+The number of days before the next CRL is due.
+.RE
+.RE
+
+.RS
+.I crl_digest
+.br
+.RS
+Message digest algorithm to sign the certificate revocation list. See 
+.IR dgst "(1)
+for a list of valid digest algorithm for the current OpenSSL version.
+.br
+.I Note:
+Changing the message digest algorithm for CRL list signing is only supported since version 0.15 of pyOpenSSL!
+.RE
+.RE
+
+.BR mysql
+.RS
+.RS
+The 
+.B mysql
+section contains configuration settings for the MySQL backend.
+.I ALL
+options must be set.
+
+.RS
+.I host
+.br
+.RS
+The host or IP address to connect to.
+.RE
+.RE
+
+.RS
+.I port
+.br
+.RS
+The port mysqld is running on (usually 3306).
+.RE
+.RE
+
+.RS
+.I database
+.br
+.RS
+Name of the database to connect to.
+.RE
+.RE
+
+.RS
+.I user
+.br
+.RS
+The user name for the database connection.
+.RE
+.RE
+
+.RS
+.I passphrase
+.br
+.RS
+The password for the 
+.I user
+of the database connection.
+.RE
+.RE
 
 .SH TEMPLATEFILE
+
+.SH EXAMPLES
+
+.nf
+
+[global]
+# backend - to store data
+#
+# mysql - MySQL (not implemented yet)
+# sqlite3 - SQLite3 (not implemented yet)
+# pgsql - PostgreSQL
+backend = pgsql
+
+# path to public and private ca key
+# and the passphrase protecting it.
+ca_public_key = /path/to/public/ca/certificate
+ca_private_key = /path/to/private/ca/certificate
+ca_passphrase = ItsSoFluffyImGonnaDie!
+
+# default message digest to use when signing certificates
+# see man 1 dgst for supported digest algorithm
+digest = sha512
+
+# use random serial number for certificates (random) or increment
+# the serial number (increment)
+serial_number = random
+
+# default validity period for new certificates
+validity_period = 1095
+
+# renew autorenwable certificates if less than autorenew_delta days left
+autorenew_delta = 1
+
+# path to crl signing certificarte and private
+# key and the passphrase protecting it
+crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
+crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
+crl_passphrase = AssembleTheMinions!
+
+# numver of days before the next crl is due
+crl_validity_period = 30
+
+# message digest to use for crl signing
+crl_digest = sha512
+
+# Backend configurations
+[pgsql]
+host = 127.0.0.1
+port = 5432
+user = dbuser
+passphrase = DoesThisCountAsAnnoying?
+database = pkidb
+
+[sqlite3]
+database = /path/to/sqlite/file
+
+[mysql]
+host = 127.0.0.1
+port = 3306
+user = dbuser
+passphrase = DoesThisCountAsAnnoying?
+
+.fi
 
 .SH BUGS
 .SH AUTHOR

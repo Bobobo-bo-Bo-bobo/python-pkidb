@@ -1065,3 +1065,140 @@ class MySQL(Backend):
             self.__db.rollback()
             return None
         return data
+
+    # FIXME: Eligible for move to parent class
+    def _get_from_config_global(self, option):
+        if option in self.__config["global"]:
+            return self.__config["global"][option]
+        else:
+            return None
+
+    def set_certificate_metadata(self, serial, auto_renew=None, auto_renew_start_period=None,
+                                 auto_renew_validity_period=None):
+
+        if auto_renew == None and not auto_renew_start_period and not auto_renew_validity_period:
+            return False
+
+        if not self.get_certificate(serial):
+            return None
+
+        try:
+            cursor = self.__db.cursor()
+
+            qdata = {
+                "serial":serial,
+                "auto_renewable":auto_renew,
+                "auto_renew_start_period":auto_renew_start_period,
+                "auto_renew_validity_period":auto_renew_validity_period,
+            }
+
+            if auto_renew == None:
+                # setting auto_renew_start_period or auto_renew_validity_period implicitly sets the auto_renew flag
+                if auto_renew_start_period or auto_renew_validity_period:
+                    qdata["auto_renewable"] = True
+                    auto_renew = True
+
+                if auto_renew_start_period:
+                    qdata["auto_renew_start_period"] = float(qdata["auto_renew_start_period"]) * 86400.
+                    cursor.execute("UPDATE certificate SET "
+                                   "auto_renew_start_period=%s, "
+                                   "auto_renewable=%s WHERE serial_number=%s;",
+                                   (qdata["auto_renew_start_period"], qdata["auto_renewable"], qdata["serial"]))
+
+                    self.__logger.info("Setting auto_renew_start_period of certificate 0x%x to %f days." %
+                                       (serial, qdata["auto_renew_start_period"]/86400.))
+                    udata = {
+                        "serial":serial,
+                    }
+                    # set auto_renew_validity_period to validity_period of not set
+                    if not auto_renew_validity_period:
+                        udata["auto_renew_validity_period"] = float(self._get_from_config_global("validity_period")) \
+                                                              * 86400
+                        cursor.execute("UPDATE certificate SET "
+                                       "auto_renew_validity_period=%s "
+                                       "WHERE serial_number=%s AND auto_renew_validity_period IS NULL;",
+                                       (udata["auto_renew_validity_period"], udata["serial"]))
+                        self.__logger.info("Setting auto_renew_validity_period to %f days if not already set." %
+                                           (udata["auto_renew_validity_period"]/86400., ))
+
+                if auto_renew_validity_period:
+                    qdata["auto_renew_validity_period"] = float(qdata["auto_renew_validity_period"]) * 86400.
+                    cursor.execute("UPDATE certificate SET "
+                                   "auto_renew_validity_period=%s, "
+                                   "auto_renewable=%s WHERE serial_number=%s;",
+                                   (qdata["auto_renew_validity_period"], qdata["auto_renewable"], qdata["serial"]))
+
+                    self.__logger.info("Setting auto_renew_validity_period of certificate 0x%x to %f days." %
+                                       (serial, qdata["auto_renew_validity_period"]/86400.))
+
+                    udata = {
+                        "serial":serial,
+                    }
+                    # set auto_renew_start_period to validity_period of not set
+                    if not auto_renew_start_period:
+                        udata["auto_renew_start_period"] = float(self._get_from_config_global("autorenew_delta")) \
+                                                              * 86400.
+                        cursor.execute("UPDATE certificate SET "
+                                       "auto_renew_start_period=%s "
+                                       "WHERE serial_number=%s AND auto_renew_start_period IS NULL;",
+                                       (udata["auto_renew_start_period"], udata["serial"]))
+                        self.__logger.info("Setting auto_renew_start_period to %f days if not already set." %
+                                           (udata["auto_renew_start_period"]/86400., ))
+
+            if auto_renew == True:
+                # setting auto_renewable flag also sets auto_renew_start_period and auto_renew_validity_period
+                if not auto_renew_start_period:
+                    auto_renew_start_period = float(self._get_from_config_global("autorenew_delta")) * 86400.
+                    self.__logger.info("Setting auto_renew_start_period from configuration file to %s" %
+                                       (auto_renew_start_period, ))
+
+                    if not auto_renew_start_period:
+                        self.__logger.error("Can't lookup option autorenew_delta from configuration file.")
+                        sys.stderr.write("Error: Can't lookup option autorenew_delta from configuration file.\n")
+                        cursor.close()
+                        self.__db.rollback()
+                        sys.exit(3)
+
+                    qdata["auto_renew_start_period"] = auto_renew_start_period
+
+                if not auto_renew_validity_period:
+                    auto_renew_validity_period = float(self._get_from_config_global("validity_period")) * 86400.
+                    self.__logger.info("Setting auto_renew_validity_period from configuration file to %s" %
+                                       (auto_renew_validity_period/86400., ))
+
+                    if not auto_renew_validity_period:
+                        self.__logger.error("Can't lookup validity_period from configuration file.")
+                        sys.stderr.write("Error: Can't lookup validity_period from configuration file.\n")
+                        cursor.close()
+                        self.__db.rollback()
+                        sys.exit(3)
+                    qdata["auto_renew_validity_period"] = auto_renew_validity_period
+
+                    cursor.execute("UPDATE certificate SET auto_renewable=%s, "
+                                   "auto_renew_start_period=%s, "
+                                   "auto_renew_validity_period=%s "
+                                   "WHERE serial_number=%s;",
+                                   (qdata["auto_renewable"], qdata["auto_renew_start_period"],
+                                    qdata["auto_renew_validity_period"], qdata["serial"]))
+
+                    self.__logger.info("Setting auto_renewable to %s (auto_renew_start_period is %s days and "
+                                       "auto_renew_validity_period is %s days)" %
+                                       (qdata["auto_renewable"], qdata["auto_renew_start_period"]/86400.,
+                                        qdata["auto_renew_validity_period"]/86400.))
+
+            # explicitly check for False to avoid None
+            elif auto_renew == False:
+                # disabling auto_renew flag also removes auto_renew_start_period and auto_renew_validity_period
+                qdata["auto_renew_start_period"] = None
+                qdata["auto_renew_validity_period"] = None
+                cursor.execute("UPDATE certificate SET auto_renewable=%s, "
+                               "auto_renew_start_period=NULL, auto_renew_validity_period=NULL "
+                               "WHERE serial_number=%s;", (qdata["auto_renewable"], qdata["serial"]))
+            cursor.close()
+            self.__db.commit()
+        except MySQLdb.Error as error:
+            self.__logger.error("Can't update auto_renew parameters: %s" % (error.message, ))
+            sys.stderr.write("Error: Can't update auto_renew parameters: %s\n" % (error.message, ))
+            return None
+
+        return True

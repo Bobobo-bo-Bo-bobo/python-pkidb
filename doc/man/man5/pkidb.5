@@ -396,6 +396,64 @@ is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the forma
 .RE
 .RE
 
+.BR set
+.RS
+.RS
+Modify meta data of a certificate identified by the serial number.  The serial number of the certificate must be given on the command line or will be read from the standard input.
+.RE
+
+.RS
+.B \-A \c
+.br
+.B \-\-auto-renew\c
+.RS
+Mark a certificate as auto renewable.
+.RE
+.RE
+
+
+.RS
+.B \-P \c
+.I period
+.br
+.B \-\-auto-renew-start-period=\c
+.I period
+.RS
+Set auto renew start period in days. If there are less than 
+.I period
+days. left until certificate expiration it will be renewed. The 
+.B housekeeping
+command will renew the certificate.
+.RE
+.RE
+
+
+.RS
+.B \-V \c
+.I period
+.br
+.B \-\-auto-renew-validity-period=\c
+.I period
+.RS
+Renew the certificate for
+.I period
+days. If not specified the setting from the configuration file will be used.
+.RE
+.RE
+
+
+.RS
+.B \-a \c
+.br
+.B \-\-no-auto-renew\c
+.RS
+Remove auto renewable flag from certificate meta data.
+.RE
+.RE
+
+.RE
+.RE
+
 .BR show
 .RS
 .RS

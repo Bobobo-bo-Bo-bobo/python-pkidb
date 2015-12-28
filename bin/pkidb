@@ -52,6 +52,7 @@ shortoptions = {
     "restore":"",
     "delete":"",
     "show":"o:",
+    "set":"aAP:V:"
 }
 
 longoptions = {
@@ -71,6 +72,7 @@ longoptions = {
     "restore":[],
     "delete":[],
     "show":["output="],
+    "set":["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
 }
 
 # initialize logging subsystem
@@ -260,6 +262,23 @@ def usage():
      --revocation-date=<date>               <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
                                             string in the format YYYYMMDDhhmmssZ.
                                             If not given, the current date will be used.
+
+   set                                      Modify meta data of a certificate identified by the serial number.
+                                            The serial number of the certificate must be given on the command line or
+                                            will be read from the standard input.
+
+     -A                                     Mark a certificate as auto renewable.
+     --auto-renew
+
+     -P <period>                            Set auto renew start period in days. If there are less than <period> days
+     --auto-renew-start-period=<period>     left until certificate expiration it will be renewed. The "housekeeping"
+                                            command will renew the certificate.
+
+     -V                                     Renew the certificate for <period> days. If not specified the setting
+     --auto-renew-validity-period=<period>  from the configuration file will be used.
+
+     -a                                     Remove auto renewable flag from certificate meta data.
+     --no-auto-renew
 
    show                                     Shows information of a certificate identified by the serial number.
                                             The serial number of the certificate must be given on the command line or
@@ -490,6 +509,67 @@ def restore_database(opts, config, backend):
             sys.exit(4)
 
         backend.restore_database(data)
+
+def set_certificate_metadata(opts, config, backend):
+    """
+    Set certificate meta data in the backend.
+    :param opts: options
+    :param config: configuration
+    :param backend: backend
+    :return:
+    """
+
+    auto_renew=None
+    auto_renew_start_period = None
+    auto_renew_validity_period = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["set"], longoptions["set"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-A", "--auto-renew"):
+            auto_renew = True
+        elif opt in ("-a", "--no-auto-renew"):
+            auto_renew = False
+        elif opt in ("-P", "--auto-renew-start-period"):
+            try:
+                auto_renew_start_period = float(val)
+            except ValueError as error:
+                __logger.error("Can't convert option to a number: %s" % (error.message, ))
+                sys.stderr.write("Error: Can't convert option to a number: %s" % (error.message, ))
+                sys.exit(2)
+
+        elif opt in ("-V", "--auto-renew-validty-period"):
+            try:
+                auto_renew_validity_period = float(val)
+            except ValueError as error:
+                __logger.error("Can't convert option to a number: %s" % (error.message, ))
+                sys.stderr.write("Error: Can't convert option to a number: %s" % (error.message, ))
+                sys.exit(2)
+
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
+            sys.exit(1)
+
+    serial = None
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+    cert = backend.set_certificate_metadata(serial, auto_renew=auto_renew,
+                                            auto_renew_start_period=auto_renew_start_period,
+                                            auto_renew_validity_period=auto_renew_validity_period)
+    if not cert:
+        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
+        __logger.error("No certificate with serial number %s found" % (serial, ))
+        sys.exit(2)
 
 def export_certificate(opts, config, backend):
     """
@@ -1572,6 +1652,8 @@ if __name__ == "__main__":
         delete_certificate(trailing[1:], options, backend)
     elif command == "show":
         show_certificate(trailing[1:], options, backend)
+    elif command == "set":
+        set_certificate_metadata(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command, ))
         __logger.error("Unknown command %s" % (command, ))

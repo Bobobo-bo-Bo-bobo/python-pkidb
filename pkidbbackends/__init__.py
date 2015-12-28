@@ -584,3 +584,23 @@ class Backend(object):
         :return: certificate data
         """
         return None
+
+    def set_certificate_metadata(self, serial, auto_renew=None, auto_renew_start_period=None,
+                                 auto_renew_validity_period=None):
+        """
+        Sets meta data for a certificate identified by the serial number.
+        :param serial: serial number
+        :param auto_renew: auto renew flag
+        :param auto_renew_start_period: auto renew start period
+        :param auto_renew_validity_period: auto renew validity period
+        :return: None if certificate was not found, True if the metadata were set, False if no meta data was given.
+        """
+        return None
+
+    def _get_from_config_global(self, option):
+        """
+        Get value for option from global section of the configuration
+        :param option: option
+        :return: value or None
+        """
+        return None

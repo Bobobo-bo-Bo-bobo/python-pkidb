@@ -859,6 +859,74 @@ Changing the message digest algorithm for CRL list signing is only supported sin
 .RE
 .RE
 
+.BR logging
+.RS
+.RS
+The 
+.B logging
+section is optional and contains options for logging. A unique user defined string can be used for each logname. The format should be all lowercase letters and numbers and underscores (_).
+.br
+If no 
+.B logging
+section has been given (or it is empty) the default will be used (Destination: syslog, Facility: user)
+
+.RS
+
+.I level,destination:option
+.br
+.RS
+.I level
+describes the loglevel and can be one of:
+.RS
+
+.I info
+.br
+.I warning
+.br
+.I error
+.br
+.I critical
+.RE
+
+.I destination
+specify the log destination. Supported 
+.I destination
+values are:
+.RS
+
+.I file\c
+ \- log to a file.
+.br
+.I syslog\c
+ \- log via syslog.
+.br
+.RE
+
+.I option
+are 
+.I destination
+specific options. Supported options are:
+
+.RS
+.I filename\c
+ \- filename to write output for
+.I file
+destination
+.br
+.I facility\c
+ \- syslog facility for 
+.I syslog \c
+logging.
+.br
+.RE
+
+.RE
+.RE
+
+.RE
+.RE
+
+
 .BR mysql
 .RS
 .RS
@@ -1101,6 +1169,21 @@ crl_validity_period = 30
 
 # message digest to use for crl signing
 crl_digest = sha512
+
+[logging]
+# format:
+# <user_defined_string>=<level>,<destination>:<option>
+# 
+# destination: file
+# 
+# option - absolute path to filename
+#
+# destination: syslog
+#
+# option - facility
+# 
+log_warn_to_file=warning,file:/var/log/pkidb.log
+log_to_syslog=info,syslog:user
 
 # Backend configurations
 [pgsql]

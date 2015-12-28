@@ -25,6 +25,7 @@ import logging.handlers
 import os
 import sqlite3
 import random
+import re
 import sys
 import time
 import OpenSSL
@@ -35,19 +36,46 @@ class SQLite(Backend):
     __config = None
     __logger = None
 
-    def __init_logger(self):
-        # setup logging first
-        self.__logger = logging.getLogger("__sqlite__")
+    def __init_logger(self, options):
+        name = os.path.basename(sys.argv[0])
+        logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
+        re_logging=re.compile("(\w+),(\w+):(.*)$")
+
+        self.__logger = logging.getLogger("sqlite")
         self.__logger.setLevel(logging.INFO)
 
-        address = '/dev/log'
-        handler = logging.handlers.SysLogHandler(address=address)
-        handler.setLevel(logging.INFO)
-        name = os.path.basename(sys.argv[0])
-        format = logging.Formatter(name + " %(name)s:%(funcName)s:%(lineno)d %(levelname)s: %(message)s")
-        handler.setFormatter(format)
+        if "logging" in options:
 
-        self.__logger.addHandler(handler)
+            for log in options["logging"]:
+                if re_logging.match(options["logging"][log]):
+                    (level, logtype, logoptions) = re_logging.match(options["logging"][log]).groups()
+
+                    if logtype.lower() == "file":
+                        handler = logging.FileHandler(logoptions)
+                        handler.setLevel(self._get_loglevel(level))
+                        flogformat = logging.Formatter("%(asctime)s " + name +
+                                                      " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                      datefmt='%d %b %Y %H:%M:%S')
+                        handler.setFormatter(flogformat)
+                        self.__logger.addHandler(handler)
+                    elif logtype.lower() == "syslog":
+                        handler = logging.handlers.SysLogHandler(address="/dev/log", facility=logoptions.lower())
+                        handler.setLevel(self._get_loglevel(level))
+                        handler.setFormatter(logformat)
+                        handler.setLevel(logging.INFO)
+
+                        self.__logger.addHandler(handler)
+                    else:
+                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
+        else:
+            # set default logging
+            # initialize logging subsystem
+
+            handler = logging.handlers.SysLogHandler(address='/dev/log')
+            handler.setLevel(logging.INFO)
+            handler.setFormatter(logformat)
+
+            self.__logger.addHandler(handler)
 
     def __connect(self, config):
         db = None
@@ -62,10 +90,10 @@ class SQLite(Backend):
     def __init__(self, config):
         super(SQLite, self).__init__(config)
 
-        if not self.__logger:
-            self.__init_logger()
-
         self.__config = config
+        if not self.__logger:
+            self.__init_logger(self.__config)
+
         self.__db = self.__connect(config)
         if not self.__db:
             self.__logger.error("Unable to connect to database")

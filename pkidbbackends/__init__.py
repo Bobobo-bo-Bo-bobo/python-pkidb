@@ -21,6 +21,7 @@
 import base64
 import hashlib
 import logging
+import logging.handlers
 import os
 import sys
 import time
@@ -111,23 +112,73 @@ class Backend(object):
     ]
     __logger = None
 
-    def __init_logger(self):
+    def _get_loglevel(self, string):
         """
-        Initialize logging.
-        :return: Nothing
+        Returns value of loglevel for logging from string
+        :param string: string
+        :return: numeric loglevel
         """
-        # setup logging first
+        if string.lower() == "debug":
+            return logging.DEBUG
+        elif string.lower() == "info":
+            return logging.INFO
+        elif string.lower() == "warning":
+            return logging.WARNING
+        elif string.lower() == "warn":
+            return logging.WARN
+        elif string.lower() == "error":
+            return logging.ERROR
+        elif string.lower() == "critical":
+            return logging.CRITICAL
+        else:
+            sys.stderr.write("Error: Unknown log level %s\n" % (string, ))
+            sys.exit(2)
+
+    def __init_logger(self, options):
+        """
+        Setup logging based on the configuration setting
+        :param options: parsed config file
+        :return: None
+        """
+        name = os.path.basename(sys.argv[0])
+        logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
+        re_logging=re.compile("(\w+),(\w+):(.*)$")
+
         self.__logger = logging.getLogger("__init__")
         self.__logger.setLevel(logging.INFO)
 
-        address = '/dev/log'
-        handler = logging.handlers.SysLogHandler(address=address)
-        handler.setLevel(logging.INFO)
-        name = os.path.basename(sys.argv[0])
-        format = logging.Formatter(name + " %(name)s:%(funcName)s:%(lineno)d %(levelname)s: %(message)s")
-        handler.setFormatter(format)
+        if "logging" in options:
 
-        self.__logger.addHandler(handler)
+            for log in options["logging"]:
+                if re_logging.match(options["logging"][log]):
+                    (level, logtype, logoptions) = re_logging.match(options["logging"][log]).groups()
+
+                    if logtype.lower() == "file":
+                        handler = logging.FileHandler(logoptions)
+                        handler.setLevel(self._get_loglevel(level))
+                        flogformat = logging.Formatter("%(asctime)s " + name +
+                                                      " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                      datefmt='%d %b %Y %H:%M:%S')
+                        handler.setFormatter(flogformat)
+                        self.__logger.addHandler(handler)
+                    elif logtype.lower() == "syslog":
+                        handler = logging.handlers.SysLogHandler(address="/dev/log", facility=logoptions.lower())
+                        handler.setLevel(self._get_loglevel(level))
+                        handler.setLevel(logging.INFO)
+                        handler.setFormatter(logformat)
+
+                        self.__logger.addHandler(handler)
+                    else:
+                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
+        else:
+            # set default logging
+            # initialize logging subsystem
+
+            handler = logging.handlers.SysLogHandler(address='/dev/log')
+            handler.setLevel(logging.INFO)
+            handler.setFormatter(logformat)
+
+            self.__logger.addHandler(handler)
 
     def __init__(self, config):
         """
@@ -135,8 +186,10 @@ class Backend(object):
         :param config: dictionary of parsed configuration options
         :return: Nothing
         """
+        self.__config = config
         if not self.__logger:
-            self.__init_logger()
+            self.__init_logger(self.__config)
+
         pass
 
     def _get_state(self, serial):

@@ -41,6 +41,21 @@ crl_validity_period = 30
 # message digest to use for crl signing
 crl_digest = sha512
 
+[logging]
+# format:
+# <user_defined_string>=<level>,<destination>:<option>
+# 
+# destination: file
+# 
+# option - absolute path to filename
+#
+# destination: syslog
+#
+# option - facility
+# 
+log_warn_to_file=warning,file:/var/log/pkidb.log
+log_to_syslog=info,syslog:user
+
 # Backend configurations
 [pgsql]
 host = 127.0.0.1

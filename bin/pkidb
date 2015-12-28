@@ -75,18 +75,7 @@ longoptions = {
     "set":["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
 }
 
-# initialize logging subsystem
-__logger = logging.getLogger(__name__)
-__logger.setLevel(logging.INFO)
-
-address = '/dev/log'
-handler = logging.handlers.SysLogHandler(address=address)
-handler.setLevel(logging.INFO)
-name = os.path.basename(sys.argv[0])
-format = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
-handler.setFormatter(format)
-
-__logger.addHandler(handler)
+__logger = None
 
 # Python 3 renamed ConfigParser to configparser
 if sys.version_info[0] < 3:
@@ -1566,6 +1555,73 @@ def print_statistics(opts, config, backend):
 
     return None
 
+def _get_loglevel(string):
+    """
+    Returns value of loglevel for logging from string
+    :param string: string
+    :return: numeric loglevel
+    """
+    if string.lower() == "debug":
+        return logging.DEBUG
+    elif string.lower() == "info":
+        return logging.INFO
+    elif string.lower() == "warning":
+        return logging.WARNING
+    elif string.lower() == "warn":
+        return logging.WARN
+    elif string.lower() == "error":
+        return logging.ERROR
+    elif string.lower() == "critical":
+        return logging.CRITICAL
+    else:
+        sys.stderr.write("Error: Unknown log level %s\n" % (string, ))
+        sys.exit(2)
+
+def setup_logging(options):
+    """
+    Setup logging based on the configuration setting
+    :param options: parsed config file
+    :return: None
+    """
+    global __logger
+
+    name = os.path.basename(sys.argv[0])
+    logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
+
+    re_logging=re.compile("(\w+),(\w+):(.*)$")
+    if "logging" in options:
+        __logger = logging.getLogger("__main__")
+        __logger.setLevel(logging.INFO)
+
+        for log in options["logging"]:
+            if re_logging.match(options["logging"][log]):
+                (level, logtype, logoptions) = re_logging.match(options["logging"][log]).groups()
+
+                if logtype.lower() == "file":
+                    handler = logging.FileHandler(logoptions)
+                    handler.setLevel(_get_loglevel(level))
+                    flogformat = logging.Formatter("%(asctime)s " + name +
+                                                  " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                  datefmt='%d %b %Y %H:%M:%S')
+                    handler.setFormatter(flogformat)
+                    __logger.addHandler(handler)
+                elif logtype.lower() == "syslog":
+                    handler = logging.handlers.SysLogHandler(address="/dev/log", facility=logoptions.lower())
+                    handler.setLevel(_get_loglevel(level))
+                    handler.setFormatter(logformat)
+                    __logger.addHandler(handler)
+                else:
+                    sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
+    else:
+        # set default logging
+        # initialize logging subsystem
+        address = '/dev/log'
+        handler = logging.handlers.SysLogHandler(address=address)
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(logformat)
+
+        __logger.addHandler(handler)
+
 if __name__ == "__main__":
 
     # parse commandline options
@@ -1573,7 +1629,6 @@ if __name__ == "__main__":
         (optval, trailing) = getopt.getopt(sys.argv[1:], shortoptions["main"], longoptions["main"])
     except getopt.GetoptError as error:
         sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
-        __logger.error("Can't parse command line: %s" % (error.msg, ))
         sys.exit(1)
 
     for (opt, val) in optval:
@@ -1584,16 +1639,14 @@ if __name__ == "__main__":
             configfile = val
         else:
             sys.stderr.write("Error: Unknown option %s" % (opt,))
-            __logger.error("Unknown option %s" % (opt, ))
             sys.exit(1)
 
     if not os.access(configfile, os.R_OK):
         sys.stderr.write("Error: Can't open configuration file %s for reading\n" % (configfile, ))
-        __logger.error("Can't open configuration file %s for reading" % (configfile, ))
         sys.exit(1)
 
     options = parseoptions(configfile)
-
+    setup_logging(options)
     # FIXME: Validate options
 
     backend = None

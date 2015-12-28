@@ -203,7 +203,7 @@ class PostgreSQL(Backend):
 
                 # no entry found, insert data
                 if searchresult[0][0] == 0:
-                    cursor.execute("INSERT INTO extension (hash, name, criticality, data) "
+                    cursor.execute("INSERT INTO extension (hash, name, critical, data) "
                                    "VALUES (%(hash)s, %(name)s, %(critical)s, %(data)s);", extdata)
 
                 cursor.close()
@@ -753,7 +753,7 @@ class PostgreSQL(Backend):
             # dumping x509 extensions
             extdump = []
             cursor.execute("LOCK TABLE extension;")
-            cursor.execute("SELECT hash, name, criticality, data FROM extension;")
+            cursor.execute("SELECT hash, name, critical, data FROM extension;")
             result = cursor.fetchall()
             self.__logger.info("Dumping %u extensions" % (len(result), ))
             if len(result) > 0:
@@ -762,7 +762,7 @@ class PostgreSQL(Backend):
                     entry = {
                         "hash":res[0],
                         "name":res[1],
-                        "criticality":res[2],
+                        "critical":res[2],
                         "data":res[3],
                     }
                     extdump.append(entry)
@@ -886,8 +886,8 @@ class PostgreSQL(Backend):
             # restore extension table
             self.__logger.info("Restoring extension table")
             for ext in dump["extension"]:
-                cursor.execute("INSERT INTO extension (hash, name, criticality, data) VALUES "
-                               "(%(hash)s, %(name)s, %(criticality)s, %(data)s);", ext)
+                cursor.execute("INSERT INTO extension (hash, name, critical, data) VALUES "
+                               "(%(hash)s, %(name)s, %(critical)s, %(data)s);", ext)
             self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]), ))
             self.__logger.info("Forcing reindexing on table extension")
             cursor.execute("REINDEX TABLE extension FORCE;")
@@ -1005,7 +1005,7 @@ class PostgreSQL(Backend):
                     extlist = []
                     for ext in data["extension"]:
                         qext = { "hash":ext }
-                        cursor.execute("SELECT name, criticality, data FROM extension WHERE hash=%(hash)s;", qext)
+                        cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%(hash)s;", qext)
                         ext_result = cursor.fetchall()
                         extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
                     data["extension"] = extlist
@@ -1092,7 +1092,7 @@ class PostgreSQL(Backend):
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
-                        udata["auto_renew_start_period"] = float(self._get_from_config_global("autorenew_delta"))
+                        udata["auto_renew_start_period"] = float(self._get_from_config_global("auto_renew_start_period"))
                         cursor.execute("UPDATE certificate SET "
                                        "auto_renew_start_period='%(auto_renew_start_period)s days' "
                                        "WHERE serial_number=%(serial)s AND auto_renew_start_period IS NULL;", udata)
@@ -1102,13 +1102,13 @@ class PostgreSQL(Backend):
             if auto_renew == True:
                 # setting auto_renewable flag also sets auto_renew_start_period and auto_renew_validity_period
                 if not auto_renew_start_period:
-                    auto_renew_start_period = float(self._get_from_config_global("autorenew_delta"))
+                    auto_renew_start_period = float(self._get_from_config_global("auto_renew_start_period"))
                     self.__logger.info("Setting auto_renew_start_period from configuration file to %s" %
                                        (auto_renew_start_period, ))
 
                     if not auto_renew_start_period:
-                        self.__logger.error("Can't lookup option autorenew_delta from configuration file.")
-                        sys.stderr.write("Error: Can't lookup option autorenew_delta from configuration file.\n")
+                        self.__logger.error("Can't lookup option auto_renew_start_period from configuration file.")
+                        sys.stderr.write("Error: Can't lookup option auto_renew_start_period from configuration file.\n")
                         cursor.close()
                         self.__db.rollback()
                         sys.exit(3)

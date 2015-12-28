@@ -26,8 +26,8 @@ serial_number = random
 # default validity period for new certificates
 validity_period = 1095
 
-# renew autorenwable certificates if less than autorenew_delta days left
-autorenew_delta = 1
+# renew autorenwable certificates if less than auto_renew_start_period days left
+auto_renew_start_period = 1
 
 # path to crl signing certificarte and private
 # key and the passphrase protecting it

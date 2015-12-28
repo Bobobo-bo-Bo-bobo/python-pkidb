@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS extension (
   name VARCHAR(767) NOT NULL CHECK(name <> ''),
 
   -- criticality flag of the x509 extension
-  criticality BOOLEAN NOT NULL DEFAULT False,
+  critical BOOLEAN NOT NULL DEFAULT False,
 
   -- base64 encoded data of the extension
   data TEXT NOT NULL CHECK(data <> '')

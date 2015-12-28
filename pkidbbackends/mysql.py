@@ -196,7 +196,7 @@ class MySQL(Backend):
 
                 # no entry found, insert data
                 if searchresult[0][0] == 0:
-                    cursor.execute("INSERT INTO extension (hash, name, criticality, data) "
+                    cursor.execute("INSERT INTO extension (hash, name, critical, data) "
                                    "VALUES (%s, %s, %s, %s);",
                                    (extdata["hash"], extdata["name"], extdata["critical"], extdata["data"]))
 
@@ -782,7 +782,7 @@ class MySQL(Backend):
 
             # dumping x509 extensions
             extdump = []
-            cursor.execute("SELECT hash, name, criticality, data FROM extension;")
+            cursor.execute("SELECT hash, name, critical, data FROM extension;")
             result = cursor.fetchall()
             self.__logger.info("Dumping %u extensions" % (len(result), ))
             if len(result) > 0:
@@ -791,15 +791,15 @@ class MySQL(Backend):
                     entry = {
                         "hash":res[0],
                         "name":res[1],
-                        "criticality":res[2],
+                        "critical":res[2],
                         "data":res[3],
                     }
 
                     # convert "boolean" from MySQL into REAL booleans
-                    if entry["criticality"] == 0:
-                        entry["criticality"] = False
-                    elif entry["criticality"] == 1:
-                        entry["criticality"] = True
+                    if entry["critical"] == 0:
+                        entry["critical"] = False
+                    elif entry["critical"] == 1:
+                        entry["critical"] = True
 
                     extdump.append(entry)
             dump["extension"] = extdump
@@ -928,8 +928,8 @@ class MySQL(Backend):
             # restore extension table
             self.__logger.info("Restoring extension table")
             for ext in dump["extension"]:
-                cursor.execute("INSERT INTO extension (hash, name, criticality, data) VALUES "
-                               "(%s, %s, %s, %s);", (ext["hash"], ext["name"], ext["criticality"], ext["data"]))
+                cursor.execute("INSERT INTO extension (hash, name, critical, data) VALUES "
+                               "(%s, %s, %s, %s);", (ext["hash"], ext["name"], ext["critical"], ext["data"]))
             self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]), ))
 
             # restore signing_request table
@@ -1046,7 +1046,7 @@ class MySQL(Backend):
                     data["extension"] = data["extension"].split(",")
                     for ext in data["extension"]:
                         qext = { "hash":ext }
-                        cursor.execute("SELECT name, criticality, data FROM extension WHERE hash=%s;", (qext["hash"], ))
+                        cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%s;", (qext["hash"], ))
                         ext_result = cursor.fetchall()
                         extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
                     data["extension"] = extlist
@@ -1136,7 +1136,7 @@ class MySQL(Backend):
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
-                        udata["auto_renew_start_period"] = float(self._get_from_config_global("autorenew_delta")) \
+                        udata["auto_renew_start_period"] = float(self._get_from_config_global("auto_renew_start_period")) \
                                                               * 86400.
                         cursor.execute("UPDATE certificate SET "
                                        "auto_renew_start_period=%s "
@@ -1148,13 +1148,13 @@ class MySQL(Backend):
             if auto_renew == True:
                 # setting auto_renewable flag also sets auto_renew_start_period and auto_renew_validity_period
                 if not auto_renew_start_period:
-                    auto_renew_start_period = float(self._get_from_config_global("autorenew_delta")) * 86400.
+                    auto_renew_start_period = float(self._get_from_config_global("auto_renew_start_period")) * 86400.
                     self.__logger.info("Setting auto_renew_start_period from configuration file to %s" %
                                        (auto_renew_start_period, ))
 
                     if not auto_renew_start_period:
-                        self.__logger.error("Can't lookup option autorenew_delta from configuration file.")
-                        sys.stderr.write("Error: Can't lookup option autorenew_delta from configuration file.\n")
+                        self.__logger.error("Can't lookup option auto_renew_start_period from configuration file.")
+                        sys.stderr.write("Error: Can't lookup option auto_renew_start_period from configuration file.\n")
                         cursor.close()
                         self.__db.rollback()
                         sys.exit(3)

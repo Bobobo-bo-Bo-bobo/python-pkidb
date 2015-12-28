@@ -1375,7 +1375,7 @@ def import_certificate(opts, config, backend):
     revoked = None
     autorenewable = False
     autorenew_period = float(config["global"]["validity_period"])
-    autorenew_delta = float(config["global"]["autorenew_delta"])
+    auto_renew_start_period = float(config["global"]["auto_renew_start_period"])
 
     for (opt, val) in optval:
         if opt in ("-c", "--csr"):
@@ -1428,7 +1428,7 @@ def import_certificate(opts, config, backend):
 
         elif opt in ("-d", "--delta"):
             try:
-                autorenew_delta = float(val)
+                auto_renew_start_period = float(val)
             except ValueError as error:
                 sys.stderr.write("Error: Can't parse delta period option %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse delta period option %s: %s" % (val, error.message))
@@ -1444,7 +1444,7 @@ def import_certificate(opts, config, backend):
     # discard autorenew_period if imported certificate is not marked as autorenewable
     if not autorenewable:
         autorenew_period = None
-        autorenew_delta = None
+        auto_renew_start_period = None
 
     if len(trailing) == 0:
         input = sys.stdin
@@ -1475,7 +1475,7 @@ def import_certificate(opts, config, backend):
 
     # assuming PEM input
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
-    backend.store_certificate(cert, csr, revoked, autorenew=autorenewable, validity_period=autorenew_delta)
+    backend.store_certificate(cert, csr, revoked, autorenew=autorenewable, validity_period=auto_renew_start_period)
 
 def housekeeping(opts, config, backend):
     """

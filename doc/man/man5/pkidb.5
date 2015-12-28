@@ -800,11 +800,11 @@ The number of days to make a certificate valid.
 .RE
 
 .RS
-.I autorenew_delta
+.I auto_renew_start_period
 .br
 .RS
 For auto renewable certificates, the auto renewable will be run if less then
-.I autorenew_delta
+.I auto_renew_start_period
 days are left til expiration.
 .RE
 .RE
@@ -1087,8 +1087,8 @@ serial_number = random
 # default validity period for new certificates
 validity_period = 1095
 
-# renew autorenwable certificates if less than autorenew_delta days left
-autorenew_delta = 1
+# renew autorenwable certificates if less than auto_renew_start_period days left
+auto_renew_start_period = 1
 
 # path to crl signing certificarte and private
 # key and the passphrase protecting it

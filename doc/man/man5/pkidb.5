@@ -118,6 +118,24 @@ instead of standard output
 .RE
 
 .RE
+.BR healthcheck
+.RS
+Verify integrity of the stored certifiate data. This is done by extracting the certificate data from the certificate stored in the database and compare the values against the database.
+.RE
+
+.RS
+.B \-f
+.br
+.B \-\-fix
+.RS
+If there are differences, fix them.
+.RE
+.RE
+
+.RE
+.RE
+
+.RE
 .BR housekeeping
 .RS
 General housekeeping. Checking all certificates in the database for expiration, renew auto renewable certificates (if option -a is used). This should be run at regular intervals.

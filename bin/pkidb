@@ -52,7 +52,8 @@ shortoptions = {
     "restore":"",
     "delete":"",
     "show":"o:",
-    "set":"aAP:V:"
+    "set":"aAP:V:",
+    "healthcheck":"f",
 }
 
 longoptions = {
@@ -73,6 +74,7 @@ longoptions = {
     "delete":[],
     "show":["output="],
     "set":["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
+    "healthcheck":["fix"],
 }
 
 __logger = None
@@ -163,6 +165,11 @@ def usage():
 
      -o <output>                            Write revocation list to <output> instead of standard output.
      --output=<output>
+
+   healthcheck                              Verify integrity of the stored certifiate data.
+
+   -f                                       Fix errors. Stored data will be replaced with data from the certifiate
+   --fix                                    stored in the database.
 
    housekeeping                             General "housekeeping. Checking all certificates in the database
                                             for expiration, renew auto renewable certificates (if option -A is used).
@@ -452,6 +459,32 @@ def backup_database(opts, config, backend):
             sys.exit(error.errno)
     else:
         sys.stdout.write(json_dump+"\n")
+
+def healthcheck(opts, config, backend):
+    fix = False
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["healthcheck"], longoptions["healthcheck"])
+    except getopt.GetoptError as error:
+        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
+        __logger.error("Can't parse command line: %s" % (error.msg))
+        sys.exit(1)
+
+    for (opt, val) in optval:
+        if opt in ("-f", "--fix"):
+            fix = True
+        else:
+            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
+            __logger.error("Unknown option %s" % (opt,))
+            sys.exit(1)
+
+    result = backend.healthcheck(fix)
+
+    total = len(result[0]) + len(result[1]) + len(result[2])
+    found = len(result[1])
+    repaired = len(result[2])
+
+    __logger.info("%u certificates checked, %u problems found, %u problems repaired" % (total, found, repaired))
 
 def restore_database(opts, config, backend):
     """
@@ -1707,6 +1740,8 @@ if __name__ == "__main__":
         show_certificate(trailing[1:], options, backend)
     elif command == "set":
         set_certificate_metadata(trailing[1:], options, backend)
+    elif command == "healthcheck":
+        healthcheck(trailing[1:], options, backend)
     else:
         sys.stderr.write("Error: Unknown command %s\n" % (command, ))
         __logger.error("Unknown command %s" % (command, ))

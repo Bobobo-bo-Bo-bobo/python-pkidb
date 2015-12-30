@@ -110,6 +110,11 @@ class Backend(object):
         "msefs",
         "nssgc",
     ]
+
+    # known meta data fields
+    _metadata = [ "auto_renewable", "auto_renew_start_period", "auto_renew_validity_period", "state", "revocation_date",
+                  "revocation_reason", "certificate", "signing_request" ]
+
     __logger = None
 
     def _get_loglevel(self, string):
@@ -324,6 +329,29 @@ class Backend(object):
 
         asn1_time = time.strftime("%Y%m%d%H%M%S%z", time.localtime(timestamp))
         return asn1_time
+
+    def _date_string_to_unix_timestamp(self, datestring):
+        """
+        Convert date string in format %a, %d %b %Y %H:%M:%S %z to UNIX epoch
+        :param datestring: string
+        :return: UNIX epoch
+        """
+        stamp = None
+
+        # although time.strftime supports %z time.strptime does not
+        # split string into date and timeoffset
+        re_data_tz = re.compile("^([A-Za-z0-9, :]+) ([+-][0-9]{4})")
+        if re_data_tz.match(datestring):
+            (date, tz) = re_data_tz.match(datestring).groups()
+            try:
+                stamp = time.mktime(time.strptime(date, "%a, %d %b %Y %H:%M:%S"))
+                tz = long(tz) / 100.00
+
+                stamp += 3600.0 * tz
+            except ValueError as error:
+                self.__logger.error("Can't convert %s to UNIX timestamp" % (datestring, ))
+                sys.stderr.write("Error: Can't convert %s to UNIX timestamp\n" % (datestring, ))
+        return stamp
 
     def _asn1_time_to_unix_timestamp(self, asn1_time):
         """
@@ -630,6 +658,15 @@ class Backend(object):
         """
         return None
 
+    def _get_raw_certificate_data(self, serial):
+        """
+        Like get_certificate_data but don't do an inner join (which will result in NULL if signature_algorithm_id
+        becomes corrupt
+        :param serial: serial
+        :return: data
+        """
+        return None
+
     def get_certificate_data(self, serial):
         """
         Fetches certificate data from backend for certificate with serial number <serial>
@@ -655,5 +692,162 @@ class Backend(object):
         Get value for option from global section of the configuration
         :param option: option
         :return: value or None
+        """
+        return None
+
+    def _get_signature_algorithm(self, id):
+        """
+        Get signature algorithm name based on its id
+        :param id: id
+        :return: name
+        """
+        return None
+
+    def healthcheck(self, fix=False):
+        """
+        Checks data from certificates with stored data
+        :param fix: fix problems
+        :return: tuple of two arrays (ok, notok) containing serial numbers that are ok or not ok
+        """
+
+        re_sn = re.compile("(\d+)\s\(0x[a-f0-9]+\)")
+
+        ok = []
+        notok = []
+        repaired = []
+
+        try:
+            serialnumbers = self.list_serial_number_by_state(None)
+#            serialnumbers = [ 54245710 ]
+            for serial in serialnumbers:
+                cert = self.get_certificate(serial)
+                certdbdata = self._get_raw_certificate_data(serial)
+
+                # extract data from ASN1 data of the certificate
+                certcontent = self._extract_data(cert)
+
+                # remove meta data fields not found in ASN1 data from certdata
+                for remove in self._metadata:
+                    if remove in certdbdata:
+                        certdbdata.pop(remove)
+                    if remove in certcontent:
+                        certcontent.pop(remove)
+
+                # calculate fields from certificate data and add it to certdata for comparison
+                certdbdata["start_date"] = self._date_string_to_unix_timestamp(certdbdata["start_date"])
+                certdbdata["end_date"] = self._date_string_to_unix_timestamp(certdbdata["end_date"])
+
+                # reformat serial number field
+                certdbdata["serial_number"] = long(re_sn.match(certdbdata["serial_number"]).groups()[0])
+
+                # try to map signature_algorithm_id to algorithm
+                certdbdata["algorithm"] = self._get_signature_algorithm(certdbdata["signature_algorithm_id"])
+                certdbdata.pop("signature_algorithm_id")
+
+                if not certdbdata["algorithm"]:
+                    certdbdata["algorithm"] = "<UNKNOWN>"
+
+                # adjust for different key names
+                certcontent["fingerprint_md5"] = certcontent["fp_md5"]
+                certcontent.pop("fp_md5")
+
+                certcontent["fingerprint_sha1"] = certcontent["fp_sha1"]
+                certcontent.pop("fp_sha1")
+
+                certcontent["serial_number"] = certcontent["serial"]
+                certcontent.pop("serial")
+
+                certcontent["algorithm"] = self._get_signature_algorithm(certcontent["signature_algorithm_id"])
+                if not certcontent["algorithm"]:
+                    certcontent["algorithm"] = "<unknown>"
+
+                certcontent.pop("signature_algorithm_id")
+
+                certcontent["version"] += 1
+
+                certcontent.pop("pubkey")
+
+                if "extension" in certcontent:
+                    reformatted = []
+                    for ext in certcontent["extension"]:
+                        extdata = {}
+                        extdata["name"] = ext[0]
+                        if ext[1] == 1:
+                            extdata["critical"] = True
+                        else:
+                            extdata["critical"] = False
+
+                        extdata["data"] = base64.b64encode(ext[2])
+                        reformatted.append(extdata)
+                    certcontent["extension"] = reformatted
+                else:
+                    certcontent["extension"] = []
+
+                for data in certdbdata.keys():
+                    if certdbdata[data] != certcontent[data]:
+                        self.__logger.warning("Content for %s differ (%s vs. %s) for serial number %s" %
+                                              (data, certdbdata[data], certcontent[data], serial))
+                        sys.stderr.write("Error:Content for %s differ (%s vs. %s) for serial number %s\n" %
+                                         (data, certdbdata[data], certcontent[data], serial))
+                        if not serial in notok:
+                            notok.append(serial)
+
+                        if data == "serial_number":
+                            self.__logger.critical("ATTENTION: Serial numbers does not match (database: %s / "
+                                                   "certificate data: %s" % (certdbdata[data], certcontent[data]))
+
+                        if fix:
+                            # preserve meta data
+                            metadata = self._get_meta_data(serial, self._metadata)
+
+                            # except certificate, we already know this one
+                            metadata.pop("certificate")
+
+                            if metadata:
+                                # if the serial_number does not match the database is heavily damaged
+                                # it is considered beyound repair. this happens if the database has been
+                                # modified outside this programm. recommended action is dumping (pkidb export),
+                                # wiping and reinitialising the database and import the dumped certificates
+                                if data == "serial_number":
+                                    self.__logger.critical("ATTENTION: Serial number mismatch!")
+                                    self.__logger.critical("ATTENTION: To fix this export all certificates (pkidb export),")
+                                    self.__logger.critical("ATTENTION: wipe and reinitialise the database and reimport ")
+                                    self.__logger.critical("ATTENTION: the exported certifiates (pkidb import)!")
+                                else:
+                                    self._set_meta_data(serial, metadata)
+                                    # force rewrite of certificate data
+                                    self.__logger.info("Regenerating and storing certificate data "
+                                                       "for serial number %s." % (serial, ))
+                                    self.store_certificate(cert, replace=True)
+                                    repaired.append(serial)
+                            else:
+                                self.__logger.error("Failed to get meta data for certificate with serial number %s"
+                                                    % (serial, ))
+                    else:
+                        if not serial in ok:
+                            ok.append(serial)
+                        self.__logger.info("Content of %s is o.k. for serial number %s" % (data, serial))
+
+        except Exception as error:
+            self.__logger.error("Error while processing certifcate data: %s" % (error.message, ))
+            sys.stderr.write("Error: Error while processing certifcate data: %s\n" % (error.message, ))
+
+        return (ok, notok, repaired)
+
+    def _get_meta_data(self, serial, fields=None):
+        """
+        Fetch metadata from backend
+        :param serial: serial number to look up the meta data
+        :param field: if field is None or empty all metadata are returned, otherwise the requested fields
+        :return: dictionary of metadata
+        """
+        return None
+
+    def _set_meta_data(self, serial, metadata):
+        """
+        Set metadata in backend database for certifiate with a given serial number
+        :param serial: serial number to set meta data for
+        :param metadata: if dictionary containig meta data to set with their values
+        :return: Nothing
         """
         return None

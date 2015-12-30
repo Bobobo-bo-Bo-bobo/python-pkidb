@@ -1232,3 +1232,110 @@ class MySQL(Backend):
             return None
 
         return True
+
+    def _get_signature_algorithm(self, id):
+        algo = None
+        qdata = { "id":id }
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT algorithm FROM signature_algorithm WHERE id=%s;", (qdata["id"], ))
+            result = cursor.fetchall()
+            if len(result) == 0:
+                algo = None
+            else:
+                algo = result[0][0]
+
+            cursor.close()
+            self.__db.commit()
+        except MySQLdb.Error as error:
+            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (id, error.message))
+            sys.stderr.write("Error: Can't lookup algorithm id %u in database: %s" % (id, error.message))
+            self.__db.rollback()
+            sys.exit(9)
+
+        return algo
+
+    def _get_meta_data(self, serial, fields=None):
+        result = {
+            "auto_renewable":None,
+            "auto_renew_start_period":None,
+            "auto_renew_validity_period":None,
+            "state":None,
+            "revocation_date":None,
+            "revocation_reason":None,
+            "certificate":None,
+            "signing_request":None,
+        }
+        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial, ))
+
+        try:
+            qdata = { "serial":serial, }
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
+                           "extract(EPOCH FROM auto_renew_validity_period), state, "
+                           "extract(EPOCH FROM revocation_date), revocation_reason, certificate, signing_request "
+                           "FROM certificate WHERE serial_number=%s;", (qdata["serial"], ))
+            qresult = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            if len(qresult) != 0:
+                result["auto_renewable"] = qresult[0][0]
+                result["auto_renew_start_period"] = qresult[0][1]
+                result["auto_renew_validity_period"] = qresult[0][2]
+                result["state"] = qresult[0][3]
+                result["revocation_date"] = qresult[0][4]
+                result["revocation_reason"] = qresult[0][5]
+                result["certificate"] = qresult[0][6]
+                result["signing_request"] = qresult[0][7]
+        except MySQLdb.Error as error:
+            self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
+            sys.stderr.write("Error: Can't fetch metadata from backend: %s" % (error.message, ))
+            self.__db.rollback()
+            return None
+
+        if not fields:
+            return result
+        elif len(fields) == 0:
+            return result
+        else:
+            returnval = {}
+            for request in fields:
+                if request in result:
+                    returnval[request] = result[request]
+                else:
+                    returnval[request] = None
+                    self.__logger.warning("Skipping unknown meta data field %s for certificate with serial number %s"
+                                          % (request, serial))
+            return returnval
+
+    def _set_meta_data(self, serial, metadata):
+        # discard empty requests
+        if not metadata:
+            return None
+
+        if len(metadata.keys()) == 0:
+            return None
+
+        try:
+            cursor = self.__db.cursor()
+            data = metadata
+            # add serial number to array
+            data["serial"] = serial
+
+            for meta in metadata:
+                if meta in self._metadata:
+                    query = "UPDATE certificate SET %s=%%s WHERE serial_number=%%s;" % (meta, )
+                    cursor.execute(query, (data[meta], data["serial"]))
+                else:
+                    self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
+                                          % (meta, serial))
+
+            cursor.close()
+            self.__db.commit()
+        except MySQLdb.Error as error:
+            self.__logger.error("Failed to set meta data in database: %s" % (error.message, ))
+            self.__db.rollback()
+
+        return None

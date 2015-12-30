@@ -329,7 +329,7 @@ class PostgreSQL(Backend):
         # check if serial_number already exist
         try:
             cursor = self.__db.cursor()
-            cursor.execute("LOCK TABLE certificate")
+            cursor.execute("LOCK TABLE certificate;")
 
             if self._has_serial_number(data["serial"]):
                 # if the data will not be replaced (the default), return an error if serial number already exists
@@ -677,7 +677,7 @@ class PostgreSQL(Backend):
             "serial":serial,
         }
 
-        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%x" % (serial, ))
+        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial, ))
 
         try:
             cursor = self.__db.cursor()
@@ -711,7 +711,7 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
             cursor.execute("SELECT state FROM certificate WHERE serial_number=%(serial)s;", qdata)
 
-            self.__logger.info("Getting state for certificate with serial number 0x%x" % (serial, ))
+            self.__logger.info("Getting state for certificate with serial number 0x%s" % (serial, ))
 
             result = cursor.fetchall()
             cursor.close()
@@ -962,6 +962,96 @@ class PostgreSQL(Backend):
 
         return True
 
+    def _get_raw_certificate_data(self, serial):
+        data = {
+            "serial_number":None,
+            "version":None,
+            "start_date":None,
+            "end_date":None,
+            "subject":None,
+            "auto_renewable":None,
+            "auto_renew_start_period":None,
+            "auto_renew_validity_period":None,
+            "issuer":None,
+            "keysize":None,
+            "fingerprint_md5":None,
+            "fingerprint_sha1":None,
+            "certificate":None,
+            "signature_algorithm_id":None,
+            "extension":None,
+            "signing_request":None,
+            "state":None,
+            "revocation_date":None,
+            "revocation_reason":None,
+        }
+        qdata = { "serial":serial }
+
+        try:
+            cursor = self.__db.cursor()
+            # we can't do a second INNER JOIN on signing_request because it may be NULL
+            cursor.execute("SELECT serial_number, version, extract(EPOCH FROM start_date), "
+                           "extract(EPOCH FROM end_date), subject, auto_renewable, "
+                           "extract(EPOCH FROM auto_renew_start_period), "
+                           "extract(EPOCH FROM auto_renew_validity_period), issuer, keysize, fingerprint_md5, "
+                           "fingerprint_sha1, certificate, signature_algorithm_id, extension, signing_request, "
+                           "state, extract(EPOCH FROM revocation_date), revocation_reason "
+                           "FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            result = cursor.fetchall()
+            if len(result) > 0:
+                data = {
+                    "serial_number":"%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "version":result[0][1] + 1,
+                    "start_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
+                    "end_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
+                    "subject":result[0][4],
+                    "auto_renewable":result[0][5],
+                    "issuer":result[0][8],
+                    "keysize":result[0][9],
+                    "fingerprint_md5":result[0][10],
+                    "fingerprint_sha1":result[0][11],
+                    "certificate":result[0][12],
+                    "signature_algorithm_id":result[0][13],
+                    "extension":result[0][14],
+                    "signing_request":result[0][15],
+                    "state":self._certificate_status_reverse_map[result[0][16]],
+
+                }
+                if data["state"] == "revoked":
+                    data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
+                    data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
+
+                if data["auto_renewable"]:
+                    data["auto_renew_start_period"] = result[0][6]
+                    data["auto_renew_validity_period"] = result[0][7]
+
+                if data["signing_request"]:
+                    cursor.execute("SELECT request FROM signing_request WHERE hash=%(signing_request)s;", data)
+                    csr_result = cursor.fetchall()
+                    data["signing_request"] = csr_result[0][0]
+                if data["extension"]:
+                    extlist = []
+                    for ext in data["extension"]:
+                        qext = { "hash":ext }
+                        cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%(hash)s;", qext)
+                        ext_result = cursor.fetchall()
+                        extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
+                    data["extension"] = extlist
+                else:
+                    data["extension"] = []
+            else:
+                data = None
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
+                                % (serial, error.pgerror))
+            sys.stderr.write("Error: Can't lookup certificate with serial number %s in database: %s"
+                             % (serial, error.pgerror))
+            self.__db.rollback()
+            return None
+        return data
+
     def get_certificate_data(self, serial):
         data = {
             "serial_number":None,
@@ -1182,3 +1272,111 @@ class PostgreSQL(Backend):
             return None
 
         return True
+
+    def _get_signature_algorithm(self, id):
+        algo = None
+        qdata = { "id":id }
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT algorithm FROM signature_algorithm WHERE id=%(id)s;", qdata)
+            result = cursor.fetchall()
+            if len(result) == 0:
+                algo = None
+            else:
+                algo = result[0][0]
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (id, error.pgerror))
+            sys.stderr.write("Error: Can't lookup algorithm id %u in database: %s" % (id, error.pgerror))
+            self.__db.rollback()
+            sys.exit(9)
+
+        return algo
+
+    def _get_meta_data(self, serial, fields=None):
+        result = {
+            "auto_renewable":None,
+            "auto_renew_start_period":None,
+            "auto_renew_validity_period":None,
+            "state":None,
+            "revocation_date":None,
+            "revocation_reason":None,
+            "certificate":None,
+            "signing_request":None,
+        }
+        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial, ))
+
+        try:
+            qdata = { "serial":serial, }
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
+                           "extract(EPOCH FROM auto_renew_validity_period), state, "
+                           "extract(EPOCH FROM revocation_date), revocation_reason, certificate, signing_request "
+                           "FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            qresult = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            if len(qresult) != 0:
+                result["auto_renewable"] = qresult[0][0]
+                result["auto_renew_start_period"] = qresult[0][1]
+                result["auto_renew_validity_period"] = qresult[0][2]
+                result["state"] = qresult[0][3]
+                result["revocation_date"] = qresult[0][4]
+                result["revocation_reason"] = qresult[0][5]
+                result["certificate"] = qresult[0][6]
+                result["signing_request"] = qresult[0][7]
+        except psycopg2.Error as error:
+            self.__logger.error("Can't fetch metadata from backend: %s" % (error.pgerror, ))
+            sys.stderr.write("Error: Can't fetch metadata from backend: %s" % (error.pgerror, ))
+            self.__db.rollback()
+            return None
+
+        if not fields:
+            return result
+        elif len(fields) == 0:
+            return result
+        else:
+            returnval = {}
+            for request in fields:
+                if request in result:
+                    returnval[request] = result[request]
+                else:
+                    returnval[request] = None
+                    self.__logger.warning("Skipping unknown meta data field %s for certificate with serial number %s"
+                                          % (request, serial))
+            return returnval
+
+    def _set_meta_data(self, serial, metadata):
+        # discard empty requests
+        if not metadata:
+            return None
+
+        if len(metadata.keys()) == 0:
+            return None
+
+        try:
+            cursor = self.__db.cursor()
+            cursor.execute("LOCK TABLE certficate;")
+            data = metadata
+            # add serial number to array
+            data["serial"] = serial
+
+            for meta in metadata:
+                if meta in self._metadata:
+                    query = "UPDATE certificate SET %s=%%(%s)s WHERE serial_number=%%(serial)s;" % (meta, meta)
+                    cursor.execute(query, data)
+                else:
+                    self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
+                                          % (meta, serial))
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            self.__logger.error("Failed to set meta data in database: %s" % (error.pgerror, ))
+            self.__db.rollback()
+
+        return None

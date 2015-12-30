@@ -167,7 +167,7 @@ class PostgreSQL(Backend):
         self.__logger.info("Looking for last serial number")
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number FROM certificate ORDER BY serial_number DESC LIMIT 1;")
+            cursor.execute("SELECT MAX(serial_number) FROM certificate;")
             result = cursor.fetchall()
             if len(result) == 0:
                 serial = 0
@@ -182,7 +182,12 @@ class PostgreSQL(Backend):
             self.__db.rollback()
             return None
 
-        self.__logger.info("Last serial number is 0x%x" % (serial, ))
+        if result >= self._MAX_SERIAL_NUMBER:
+            self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
+            return None
+        else:
+            self.__logger.info("Last serial number is 0x%x" % (serial, ))
+
         return result
 
     def _get_new_serial_number(self, cert):

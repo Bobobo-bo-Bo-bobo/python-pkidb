@@ -31,8 +31,8 @@ auto_renew_start_period = 1
 
 # path to crl signing certificarte and private
 # key and the passphrase protecting it
-crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
-crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
+crl_public_key = /path/to/public/crl/certificate
+crl_private_key = /path/to/private/crl/certificate
 crl_passphrase = AssembleTheMinions!
 
 # numver of days before the next crl is due

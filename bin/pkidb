@@ -32,7 +32,7 @@ import time
 import OpenSSL
 
 # default configuration file
-configfile = "/etc/pki/config.ini"
+configfile = "/etc/pkidb/config.ini"
 
 __version__ = "0.8.2"
 

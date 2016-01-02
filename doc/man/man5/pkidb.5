@@ -33,28 +33,6 @@ as configuration file instead of the default /etc/pki/config.ini
 
 .SH COMMANDS
 
-." .BR <command>
-." .RS
-." .RS
-." <description>
-." <description>
-." .RE
-." 
-." .RS
-." .B \-o \c
-." .I outputfile
-." .br
-." .B \-\-output=\c
-." .I outputfile
-." .RS
-." Write new certificate to
-." .I outputfile
-." instead of standard output
-." .RE
-." .RE
-
-
-." Command: backup
 .BR backup
 .RS
 Dumps the content of the backend database in JSON format.
@@ -80,7 +58,6 @@ instead of standard output
 Deletes a certficiate identified by the serial number. If the serial number is not given on the command line it will be read from standard input.
 .RE
 
-." Command: export
 .BR export
 .RS
 Dumps base64 encoded X509 data of a certificate. The serial number of the certificate must be given. If not given it will be read from the standard input.
@@ -704,26 +681,6 @@ Use a template file for certificate signing.
 Print small summary of stored certificates. Output will be written to standard output.
 .RE
 
-
-." .BR <command>
-." .RS
-." .RS
-." <description>
-." <description>
-." .RE
-." 
-." .RS
-." .B \-o \c
-." .I outputfile
-." .br
-." .B \-\-output=\c
-." .I outputfile
-." .RS
-." Write new certificate to
-." .I outputfile
-." instead of standard output
-." .RE
-." .RE
 
 .SH CONFIGFILE
 The configuration file is structured like a INI file. It contains at least two sections. The 

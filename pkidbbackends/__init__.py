@@ -29,6 +29,14 @@ import re
 import OpenSSL
 
 __all__ = [ "pgsql", "sqlite", "mysql" ]
+
+class PKIDBException(Exception):
+    def __init__(self, *args, **kwargs):
+        super(PKIDBException, self).__init__(args, kwargs)
+
+    def __str__(self):
+        super(PKIDBException, self).__str__()
+
 class Backend(object):
 
     # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
@@ -137,7 +145,7 @@ class Backend(object):
             return logging.CRITICAL
         else:
             sys.stderr.write("Error: Unknown log level %s\n" % (string, ))
-            sys.exit(2)
+            raise PKIDBException(message="Unknown log level %s" % (string, ))
 
     def __init_logger(self, options):
         """
@@ -175,6 +183,7 @@ class Backend(object):
                         self.__logger.addHandler(handler)
                     else:
                         sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
+                        raise PKIDBException(message="Unknown logging mechanism %s" % (logtype, ))
         else:
             # set default logging
             # initialize logging subsystem
@@ -350,7 +359,7 @@ class Backend(object):
                 stamp += 3600.0 * tz
             except ValueError as error:
                 self.__logger.error("Can't convert %s to UNIX timestamp" % (datestring, ))
-                sys.stderr.write("Error: Can't convert %s to UNIX timestamp\n" % (datestring, ))
+                raise PKIDBException(message="Can't convert %s to UNIX timestamp" % (datestring, ))
         return stamp
 
     def _asn1_time_to_unix_timestamp(self, asn1_time):
@@ -611,11 +620,10 @@ class Backend(object):
 
         # check if the certificate has been revoked
         if self._is_revoked(serial):
-            sys.stderr.write("Error: Certificate with serial number %s can't be renewed, "
-                             "it has been revoked\n" % (serial, ))
-            self.__logger.error("Certificate with serial number 0x%x can't be renewed, "
+            self.__logger.error("Certificate with serial number %s can't be renewed, "
                                 "it has been revoked" % (serial, ))
-            return None
+            raise PKIDBException(message="Certificate with serial number %s can't be renewed, "
+                                "it has been revoked" % (serial, ))
 
         newcert = self.get_certificate(serial)
         if newcert:
@@ -627,7 +635,7 @@ class Backend(object):
             # resign certificate using the same signature algorithm
             newcert.sign(cakey, newcert.get_signature_algorithm())
 
-            self.__logger.info("Certificate with serial number 0x%x is now valid from %s til %s" %
+            self.__logger.info("Certificate with serial number %s is now valid from %s til %s" %
                                (serial, notBefore, notAfter))
 
             # commit new certificate
@@ -787,8 +795,6 @@ class Backend(object):
                     if certdbdata[data] != certcontent[data]:
                         self.__logger.warning("Content for %s differ (%s vs. %s) for serial number %s" %
                                               (data, certdbdata[data], certcontent[data], serial))
-                        sys.stderr.write("Error:Content for %s differ (%s vs. %s) for serial number %s\n" %
-                                         (data, certdbdata[data], certcontent[data], serial))
                         if not serial in notok:
                             notok.append(serial)
 
@@ -830,7 +836,7 @@ class Backend(object):
 
         except Exception as error:
             self.__logger.error("Error while processing certifcate data: %s" % (error.message, ))
-            sys.stderr.write("Error: Error while processing certifcate data: %s\n" % (error.message, ))
+            raise PKIDBException(message="Error: Error while processing certifcate data: %s" % (error.message, ))
 
         return (ok, notok, repaired)
 

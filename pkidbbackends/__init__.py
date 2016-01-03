@@ -31,11 +31,17 @@ import OpenSSL
 __all__ = [ "pgsql", "sqlite", "mysql" ]
 
 class PKIDBException(Exception):
+    message = None
     def __init__(self, *args, **kwargs):
         super(PKIDBException, self).__init__(args, kwargs)
+        if "message" in kwargs:
+            self.message = kwargs["message"]
+        else:
+            self.message = ""
 
     def __str__(self):
         super(PKIDBException, self).__str__()
+        return self.message
 
 class Backend(object):
 

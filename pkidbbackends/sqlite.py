@@ -585,7 +585,7 @@ class SQLite(Backend):
         except sqlite3.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't remove certificate from database: %s" % (error.message, ))
-            raise PKIDBException("Can't remove certificate from database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't remove certificate from database: %s" % (error.message, ))
 
         return None
 
@@ -680,7 +680,7 @@ class SQLite(Backend):
                     raise PKIDBException(message="Can't parse ASN1 data: %s" % (error.message, ))
         except sqlite3.Error as error:
             self.__logger.error("Can't read certificate data from database: %s" % (error.message, ))
-            raise PKIDBException("Can't read certificate data from database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't read certificate data from database: %s" % (error.message, ))
 
         return cert
 
@@ -1148,7 +1148,7 @@ class SQLite(Backend):
                         cursor.close()
                         self.__db.rollback()
                         self.__logger.error("Can't lookup option auto_renew_start_period from configuration file.")
-                        raise PKIDBException("Error: Can't lookup option auto_renew_start_period "
+                        raise PKIDBException(message="Error: Can't lookup option auto_renew_start_period "
                                              "from configuration file.")
 
                     qdata["auto_renew_start_period"] = auto_renew_start_period
@@ -1253,7 +1253,7 @@ class SQLite(Backend):
         except sqlite3.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
-            raise PKIDBException("Can't fetch metadata from backend: %s" % (error.message, ))
+            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message, ))
 
         if not fields:
             return result

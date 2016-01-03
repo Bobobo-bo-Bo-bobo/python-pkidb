@@ -154,7 +154,7 @@ class MySQL(Backend):
 
         except MySQLdb.Error as error:
             self.__logger.error("Can't query database for serial number: %s" % (error.message, ))
-            raise PKIDBException("Can't query database for serial number: %s" % (error.message, ))
+            raise PKIDBException(message="Can't query database for serial number: %s" % (error.message, ))
 
     def _get_last_serial_number(self):
         serial = None
@@ -175,7 +175,7 @@ class MySQL(Backend):
         except MySQLdb.Error as error:
             self.__db.rollback()
             self.__logger("Can't lookup serial number from database: %s" % (error.message, ))
-            raise PKIDBException("Error: Can't lookup serial number from database: %s" % (error.message, ))
+            raise PKIDBException(message="Error: Can't lookup serial number from database: %s" % (error.message, ))
 
         if result >= self._MAX_SERIAL_NUMBER:
             self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
@@ -281,7 +281,7 @@ class MySQL(Backend):
         except MySQLdb.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't lookup signature algorithm in database: %s" % (error.message, ))
-            raise PKIDBException("Can't lookup signature algorithm in database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't lookup signature algorithm in database: %s" % (error.message, ))
 
         return algoid
 
@@ -479,7 +479,7 @@ class MySQL(Backend):
         except MySQLdb.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't validate certificates: %s" % (error.message, ))
-            raise PKIDBException("Can't validate certificates: %s" % (error.message, ))
+            raise PKIDBException(message="Can't validate certificates: %s" % (error.message, ))
 
     def get_statistics(self):
         self.__logger.info("Getting statistics from database")
@@ -1281,7 +1281,7 @@ class MySQL(Backend):
         except MySQLdb.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
-            raise PKIDBException("Can't fetch metadata from backend: %s" % (error.message, ))
+            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message, ))
 
         if not fields:
             return result

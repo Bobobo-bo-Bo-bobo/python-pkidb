@@ -474,7 +474,7 @@ class PostgreSQL(Backend):
         except psycopg2.Error as error:
             self.__logger.error("Can't validate certificates: %s" % (error.message, ))
             self.__db.rollback()
-            raise PKIDBException("Error: Can't validate certificates: %s\n" % (error.message, ))
+            raise PKIDBException(message="Can't validate certificates: %s" % (error.message, ))
 
     def get_statistics(self):
 
@@ -527,7 +527,7 @@ class PostgreSQL(Backend):
         except psycopg2.Error as error:
             self.__logger.error("Can't read certifcate informations from database: %s" % (error.message, ))
             self.__db.rollback()
-            raise PKIDBException("Can't read certifcate informations from database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't read certifcate informations from database: %s" % (error.message, ))
 
         statistics["state"] = state_statistics
         statistics["keysize"] = keysize_statistics
@@ -632,7 +632,7 @@ class PostgreSQL(Backend):
         except OpenSSL.crypto.Error as x509error:
             self.__db.rollback()
             self.__logger.error("Can't build revocation list: %s" % (x509error.message, ))
-            raise PKIDBException("Can't build revocation list: %s" % (x509error.message, ))
+            raise PKIDBException(message="Can't build revocation list: %s" % (x509error.message, ))
 
         return crl
 
@@ -1035,7 +1035,7 @@ class PostgreSQL(Backend):
             self.__db.rollback()
             self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
                                 % (serial, error.message))
-            raise PKIDBException("Can't lookup certificate with serial number %s in database: %s"
+            raise PKIDBException(message="Can't lookup certificate with serial number %s in database: %s"
                                  % (serial, error.message))
         return data
 
@@ -1216,7 +1216,8 @@ class PostgreSQL(Backend):
                         cursor.close()
                         self.__db.rollback()
                         self.__logger.error("Can't lookup option auto_renew_start_period from configuration file.")
-                        raise PKIDBException("Can't lookup option auto_renew_start_period from configuration file.")
+                        raise PKIDBException(message="Can't lookup option auto_renew_start_period from "
+                                                     "configuration file.")
 
                     qdata["auto_renew_start_period"] = auto_renew_start_period
 
@@ -1318,7 +1319,7 @@ class PostgreSQL(Backend):
         except psycopg2.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
-            raise PKIDBException("Can't fetch metadata from backend: %s" % (error.message, ))
+            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message, ))
 
         if not fields:
             return result

@@ -367,9 +367,8 @@ def list_certificates(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["list"], longoptions["list"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
         __logger.error("Can't parse command line: %s" % (error.msg))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg))
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
@@ -387,9 +386,8 @@ def list_certificates(opts, config, backend):
         elif opt in ("-v", "--valid"):
             snfilter.append("valid")
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (opt,))
 
     serials = []
     if len(snfilter) == 0:
@@ -410,9 +408,8 @@ def list_certificates(opts, config, backend):
             fd.write(sn_dump)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't write to output file %s: %s" % (output, error.strerror))
     else:
         sys.stdout.write(sn_dump+'\n')
 
@@ -429,21 +426,18 @@ def backup_database(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["backup"], longoptions["backup"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
         __logger.error("Can't parse command line: %s" % (error.msg))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException(message="Error: Unknown option %s\n" % (opt,))
 
     dump = backend.dump_database()
     if not dump:
-        sys.stderr.write("Warning: Database dump is empty")
         __logger.warning("Database dump is empty")
         return None
 
@@ -454,9 +448,8 @@ def backup_database(opts, config, backend):
             fd.write(json_dump)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't write to output file %s: %s" % (output, error.strerror))
     else:
         sys.stdout.write(json_dump+"\n")
 
@@ -466,17 +459,15 @@ def healthcheck(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["healthcheck"], longoptions["healthcheck"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
         __logger.error("Can't parse command line: %s" % (error.msg))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-f", "--fix"):
             fix = True
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException(message="Unknown option %s" % (opt, ))
 
     result = backend.healthcheck(fix)
 
@@ -498,9 +489,8 @@ def restore_database(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["restore"], longoptions["restore"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
         __logger.error("Can't parse command line: %s" % (error.msg))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         pass
@@ -516,8 +506,8 @@ def restore_database(opts, config, backend):
             fd.close()
         except IOError as error:
             __logger.error("Can't read from input file %s: %s" % (input, error.strerror))
-            sys.stderr.write("Error: Can't read from input file %s: %s\n" % (input, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't read from input file %s: %s" % (input, error.strerror))
+
     else:
         json_data = sys.stdin.read()
 
@@ -527,8 +517,7 @@ def restore_database(opts, config, backend):
             data = json.loads(json_data)
         except ValueError as error:
             __logger.error("Input is not valid JSON format: %s" % (error.message, ))
-            sys.stderr.write("Error: Input is not valid JSON format: %s\n" % (error.message, ))
-            sys.exit(4)
+            raise pkidbbackends.PKIDBException(message="Input is not valid JSON format: %s" % (error.message, ))
 
         backend.restore_database(data)
 
@@ -548,9 +537,8 @@ def set_certificate_metadata(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["set"], longoptions["set"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-A", "--auto-renew"):
@@ -562,21 +550,18 @@ def set_certificate_metadata(opts, config, backend):
                 auto_renew_start_period = float(val)
             except ValueError as error:
                 __logger.error("Can't convert option to a number: %s" % (error.message, ))
-                sys.stderr.write("Error: Can't convert option to a number: %s" % (error.message, ))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Can't convert option to a number: %s" % (error.message, ))
 
         elif opt in ("-V", "--auto-renew-validty-period"):
             try:
                 auto_renew_validity_period = float(val)
             except ValueError as error:
                 __logger.error("Can't convert option to a number: %s" % (error.message, ))
-                sys.stderr.write("Error: Can't convert option to a number: %s" % (error.message, ))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException("Can't convert option to a number: %s" % (error.message, ))
 
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException(message="Unknown option %s" % (opt, ))
 
     serial = None
     if len(trailing) == 0:
@@ -589,9 +574,8 @@ def set_certificate_metadata(opts, config, backend):
                                             auto_renew_start_period=auto_renew_start_period,
                                             auto_renew_validity_period=auto_renew_validity_period)
     if not cert:
-        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
         __logger.error("No certificate with serial number %s found" % (serial, ))
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial, ))
 
 def export_certificate(opts, config, backend):
     """
@@ -606,17 +590,15 @@ def export_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["export"], longoptions["export"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException("Unknown option %s" % (opt, ))
 
     serial = None
     if len(trailing) == 0:
@@ -628,9 +610,8 @@ def export_certificate(opts, config, backend):
     cert = backend.get_certificate(serial)
 
     if not cert:
-        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
         __logger.error("No certificate with serial number %s found" % (serial, ))
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found\n" % (serial, ))
 
     pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
 
@@ -640,9 +621,9 @@ def export_certificate(opts, config, backend):
             fd.write(pem_data)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't write to output file %s: %s" % (output, error.strerror))
+
     else:
         sys.stdout.write(pem_data)
 
@@ -659,17 +640,15 @@ def show_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["show"], longoptions["show"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
             __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            raise pkidbbackends.PKIDBException(message="Unknown option %s" % (opt, ))
 
     serial = None
     if len(trailing) == 0:
@@ -681,9 +660,8 @@ def show_certificate(opts, config, backend):
     certdata = backend.get_certificate_data(serial)
 
     if not certdata:
-        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
         __logger.error("No certificate with serial number %s found" % (serial, ))
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial, ))
 
     string = _print_data(certdata)
 
@@ -693,9 +671,9 @@ def show_certificate(opts, config, backend):
             fd.write(string)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't write to output file %s: %s" % (output, error.strerror))
+
     else:
         sys.stdout.write(string)
 
@@ -773,9 +751,8 @@ def delete_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["delete"], longoptions["delete"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         pass
@@ -790,9 +767,9 @@ def delete_certificate(opts, config, backend):
     cert = backend.get_certificate(serial)
 
     if not cert:
-        sys.stderr.write("Error: No certificate with serial number %s found\n" % (serial, ))
         __logger.error("No certificate with serial number %s found" % (serial, ))
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial, ))
+
     else:
         backend.remove_certificate(serial)
 
@@ -811,24 +788,23 @@ def renew_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["renew"], longoptions["renew"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-p", "--period"):
             try:
                 validity_period = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse validity period option %s: %s" % (val, error.message))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Can't parse validity period option %s: %s"
+                                                           % (val, error.message))
+
         elif opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
-            __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            __logger.error("Unknown option %s" % (opt, ))
+            raise pkidbbackends.PKIDBException(message="Unknown option %s" % (opt, ))
 
     serial = None
     if len(trailing) == 0:
@@ -849,7 +825,7 @@ def renew_certificate(opts, config, backend):
     newcert = backend.renew_certificate(serial, notbefore, notafter, ca_key)
 
     if not newcert:
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="Can't renew certificate with serial number %s" % (serial, ))
 
     pem_data = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)
     if output:
@@ -858,9 +834,9 @@ def renew_certificate(opts, config, backend):
             fd.write(pem_data)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write to output file %s: %s" % (output, error.strerror))
-            return error.errno
+            raise pkidbbackends.PKIDBException(message="Can't write to output file %s: %s" % (output, error.strerror))
+
     else:
         sys.stdout.write(pem_data)
 
@@ -889,9 +865,8 @@ def serial_to_number(serial):
         else:
             serial = long(serial)
     except ValueError as error:
-        sys.stderr.write("Error: Can't convert serial number %s: %s\n" % (serial, error.message))
         __logger.error("Can't convert serial number %s: %s" % (serial, error.message))
-        sys.exit(2)
+        raise pkidbbackends.PKIDBException(message="Can't convert serial number %s: %s" % (serial, error.message))
 
     return serial
 
@@ -912,8 +887,8 @@ def revoke_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["revoke"], longoptions["revoke"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg))
-        sys.exit(1)
+        self.__logger.error("Can't parse command line: %s" % (error.msg, ))
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-R", "--revocation-date"):
@@ -925,20 +900,19 @@ def revoke_certificate(opts, config, backend):
             try:
                 rev_date = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse end time %s: %s" % (val, error.message))
-                return 1
+                raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
+
         elif opt in ("-r", "--reason"):
             if val.lower() in backend._revocation_reason_map:
                 reason = val.lower()
             else:
-                sys.stderr.write("Error: %s is not a valid revocation reason\n" % (val, ))
                 __logger.error("%s is not a valid revocation reason" % (val, ))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="%s is not a valid revocation reason" % (val, ))
+
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
-            __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            __logger.error("Unknown option %s" % (opt, ))
+            raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (opt, ))
 
     if len(trailing) == 0:
         serial = sys.stdin.read()
@@ -963,17 +937,15 @@ def generate_certificate_revocation_list(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["gencrl"], longoptions["gencrl"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException("Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-o", "--output"):
             output = val
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
-            __logger.error("Error: Unknown option %s" % (opt,))
-            sys.exit(1)
+            __logger.error("Error: Unknown option %s" % (opt, ))
+            raise pkidbbackends.PKIDBException("Unknown option %s" % (opt, ))
 
     # load CRL signing keys
     crl_pub_key = load_public_key(config, "crl_public_key")
@@ -1000,8 +972,6 @@ def generate_certificate_revocation_list(opts, config, backend):
     else:
         __logger.warning("Using an other digest for CRL signing than MD5 supported since version 0.15 of "
                          "pyOpenSSL (but this is %s). Falling back to MD5." % (OpenSSL.__version__, ))
-        sys.stderr.write("Warning: Using an other digest for CRL signing than MD5 supported since version 0.15 of "
-                         "pyOpenSSL (but this is %s). Falling back to MD5.\n" % (OpenSSL.__version__, ))
         crl_data = crl.export(crl_pub_key, crl_priv_key, type=OpenSSL.crypto.FILETYPE_PEM,
                               days=crl_period)
 
@@ -1011,9 +981,9 @@ def generate_certificate_revocation_list(opts, config, backend):
             fd.write(crl_data)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't write CRL data to output file %s: %s\n" % (output, error.strerror))
             __logger.error("Can't write CRL data to output file %s: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Can't write CRL data to output file %s: %s"
+                                                       % (output, error.strerror))
     else:
         sys.stdout.write(crl_data)
 
@@ -1040,17 +1010,16 @@ def sign_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["sign"], longoptions["sign"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        sys.exit(1)
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         if opt in ("-E", "--extension"):
             ext = val.split(",", 4)
             if len(ext) != 5:
-                sys.stderr.write("Error: Illegal number of fields for extension (expect:%u got %u)\n" %(4, len(ext)))
                 __logger.error("Illegal number of fields for extension (expect:%u got %u)" %(4, len(ext)))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Illegal number of fields for extension (expect:%u got %u)"
+                                                           % (4, len(ext)))
 
             name = None
             subject = None
@@ -1094,11 +1063,9 @@ def sign_certificate(opts, config, backend):
             extusagelist = extusage.split(",")
             for eusage in extusagelist:
                 if not eusage.strip().lower() in backend._extended_keyusage_list:
-                   if not re_oid.match(eusage.strip()):
+                    if not re_oid.match(eusage.strip()):
                         __logger.error("Invalid extended key usage %s" % (eusage, ))
-                        sys.stderr.write("Error: Invalid extended key usage %s\n" % (eusage, ))
-                        sys.exit(6)
-
+                        raise pkidbbackends.PKIDBException("Invalid extended key usage %s" % (eusage, ))
 
             value = ",".join(extusagelist)
             extensions.append(OpenSSL.crypto.X509Extension("extendedKeyUsage", critical, value))
@@ -1116,8 +1083,7 @@ def sign_certificate(opts, config, backend):
             for usage in usagelist:
                 if not usage.strip().lower() in backend._keyusage_list:
                     __logger.error("%s is not a valid key usage" % (usage, ))
-                    sys.stderr.write("Error: %s is not a valid key usage\n" % (usage, ))
-                    sys.exit(4)
+                    raise pkidbbackends.PKIDBException("%s is not a valid key usage" % (usage, ))
 
             value = ",".join(usagelist)
             extensions.append(OpenSSL.crypto.X509Extension("keyUsage", critical, value))
@@ -1139,8 +1105,7 @@ def sign_certificate(opts, config, backend):
                     flag = "FALSE"
                 else:
                     __logger.error("%s is not a valid boolean flag" % (flag, ))
-                    sys.stderr.write("Error: %s is not a valid boolean flag\n" % (flag, ))
-                    sys.exit(7)
+                    raise pkidbbackends.PKIDBException(message="%s is not a valid boolean flag" % (flag, ))
 
                 # put them together again
                 basic = "CA:%s%s" % (flag, remainder)
@@ -1158,9 +1123,8 @@ def sign_certificate(opts, config, backend):
             try:
                 end = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse end time %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse end time %s: %s" % (val, error.message))
-                return 1
+                raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
 
         elif opt in ("-s", "--start"):
             start = val
@@ -1173,9 +1137,8 @@ def sign_certificate(opts, config, backend):
             try:
                 start = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse start time %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse start time %s: %s" % (val, error.message))
-                return 1
+                raise pkidbbackends.PKIDBException(message="Can't parse start time %s: %s" % (val, error.message))
 
         elif opt in ("-t", "--template"):
             parsed = parseoptions(val)
@@ -1196,7 +1159,7 @@ def sign_certificate(opts, config, backend):
                             data = base64.b64decode(parsed[key]["data:base64"])
                         else:
                             __logger.error("No data found in extension section %s" % (key, ))
-                            sys.stderr.write("Error: No data found in extension section %s" % (key, ))
+                            raise pkidbbackends.PKIDBException("No data found in extension section %s" % (key, ))
 
                         subject = None
                         if "subject" in parsed[key]:
@@ -1213,9 +1176,8 @@ def sign_certificate(opts, config, backend):
             output = val
 
         else:
-            sys.stderr.write("Error: Unknown option %s\n" % (opt,))
-            __logger.error("Unknown option %s" % (opt,))
-            sys.exit(1)
+            __logger.error("Unknown option %s" % (opt, ))
+            raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (opt, ))
 
     # data from template override global settings
     validity_period = long(config["global"]["validity_period"]) * 86400.
@@ -1238,9 +1200,8 @@ def sign_certificate(opts, config, backend):
         end = start + validity_period
 
     if start >= end:
-        sys.stderr.write("Error: Start time (%f) is >= end time (%f)\n" % (start, end))
         __logger.error("Start time (%f) is >= end time (%f)" % (start, end))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Start time (%f) is >= end time (%f)" % (start, end))
 
     if len(trailing) == 0:
         input = sys.stdin
@@ -1249,22 +1210,20 @@ def sign_certificate(opts, config, backend):
         try:
             input = open(trailing[0], "r")
         except IOError as error:
-            sys.stderr.write("Error: Can't open %s for reading: %s\n" %(trailing[0], error.strerror))
-            __logger.error("Can't open %s for reading: %s" %(trailing[0], error.strerror))
-            return error.errno
+            __logger.error("Can't open %s for reading: %s" % (trailing[0], error.strerror))
+            raise pkidbbackends.PKIDBException(message="Can't open %s for reading: %s" % (trailing[0], error.strerror))
 
     else:
-        sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
         __logger.error("Too much arguments. Expect zero or one, got %u instead" % (len(trailing),))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Too much arguments. Expect zero or one, got %u instead"
+                                                   % (len(trailing),))
 
     # csr read data from input
     try:
         data = input.read()
     except IOError as error:
-        sys.stderr.write("Error: Read from %s failed: %s\n" % (input.name, error.strerror))
         __logger.error("Read from %s failed: %s" % (input.name, error.strerror))
-        return error.errno
+        raise pkidbbackends.PKIDBException(message="Error: Read from %s failed: %s" % (input.name, error.strerror))
 
     # close non stdin input
     if input != sys.stdin:
@@ -1281,15 +1240,13 @@ def sign_certificate(opts, config, backend):
     # load private CA key
     ca_priv_key = load_private_key(config, "ca_private_key", "ca_passphrase")
     if not ca_priv_key:
-        sys.stderr.write("Error: Failed to load CA private key\n")
-        __logger.error("Failed to load CA private key")
-        return 2
+        __logger.error("Failed to load CA private key (Wrong password ?)")
+        raise pkidbbackends.PKIDBException("Error: Failed to load CA private key (Wrong password?)")
 
     ca_pub_key = load_public_key(config, "ca_public_key")
     if not ca_pub_key:
-        sys.stderr.write("Error: Failed to load CA public key\n")
         __logger.error("Failed to load CA public key")
-        return 2
+        raise pkidbbackends.PKIDBException(message="Failed to load CA public key")
 
     # set start and and time
     # Note: start/end time must be formatted as ASN1 GENERALIZEDTIME string
@@ -1313,9 +1270,10 @@ def sign_certificate(opts, config, backend):
             fd.write(newcert_pem)
             fd.close()
         except IOError as error:
-            sys.stderr.write("Error: Can't open output file %s for writing: %s\n" % (output, error.strerror))
             __logger.error("Can't open output file %s for writing: %s" % (output, error.strerror))
-            sys.exit(error.errno)
+            raise pkidbbackends.PKIDBException(message="Error: Can't open output file %s for writing: %s"
+                                                       % (output, error.strerror))
+
     else:
         sys.stdout.write(newcert_pem)
 
@@ -1333,16 +1291,15 @@ def load_public_key(config, keyname):
         data = fd.read()
         fd.close()
     except IOError as error:
-        sys.stderr.write("Error: Can't read public key %s: %s\n" % (config["global"][keyname], error.strerror, ))
         __logger.error("Can't read public key %s: %s" % (config["global"][keyname], error.strerror, ))
-        return None
+        raise pkidbbackends.PKIDBException(message="Can't read public key %s: %s"
+                                                   % (config["global"][keyname], error.strerror, ))
 
     try:
         pubkey = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, data)
     except OpenSSL.crypto.Error as error:
-        sys.stderr.write("Error: Invalid public key: %s\n" % (error.message, ))
         __logger.error("Invalid public key: %s" % (error.message, ))
-        return None
+        raise pkidbbackends.PKIDBException(message="Error: Invalid public key: %s" % (error.message, ))
 
     return pubkey
 
@@ -1363,16 +1320,15 @@ def load_private_key(config, keyname, passphrase):
         data = fd.read()
         fd.close()
     except IOError as error:
-        sys.stderr.write("Error: Can't read private key %s: %s\n" % (config["global"][keyname], error.strerror, ))
         __logger.error("Can't read private key %s: %s" % (config["global"][keyname], error.strerror, ))
-        return None
+        raise pkidbbackends.PKIDBException("Can't read private key %s: %s"
+                                           % (config["global"][keyname], error.strerror, ))
 
     try:
         result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=key_passphrase)
     except OpenSSL.crypto.Error as error:
-        sys.stderr.write("Error: Can't load private key: %s\n" % (error.message, ))
-        __logger.error("Can't load private key: %s" % (error.message, ))
-        return None
+        __logger.error("Can't load private key. Wrong password ?")
+        raise pkidbbackends.PKIDBException(message="Can't load private key. Wrong password?")
 
     return result
 
@@ -1389,9 +1345,8 @@ def import_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["import"], longoptions["import"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     csr = None
     revoked = None
@@ -1406,9 +1361,9 @@ def import_certificate(opts, config, backend):
                 csrdata = fd.read()
                 fd.close()
             except IOError as error:
-                sys.stderr.write("Error: Can't read certificate signing request from %s: %s\n" % (val, error.strerror))
                 __logger.error("Can't read certificate signing request from %s: %s" % (val, error.strerror))
-                return error.errno
+                raise pkidbbackends.PKIDBException(message="Can't read certificate signing request from %s: %s"
+                                                           % (val, error.strerror))
 
             csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csrdata)
 
@@ -1425,9 +1380,8 @@ def import_certificate(opts, config, backend):
             try:
                 revtime = float(revtime)
             except ValueError as error:
-                sys.stderr.write("Error: Illegal timestamp %s\n" % (revtime, ))
                 __logger.error("Illegal timestamp %s" % (revtime, ))
-                return 1
+                raise pkidbbackends.PKIDBException(message="Illegal timestamp %s" % (revtime, ))
 
             # treat no reason as unspecified
             if reason == '':
@@ -1444,22 +1398,21 @@ def import_certificate(opts, config, backend):
             try:
                 autorenew_period = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse validity period option %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse validity period option %s: %s" % (val, error.message))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Can't parse validity period option %s: %s"
+                                                           % (val, error.message))
 
         elif opt in ("-d", "--delta"):
             try:
                 auto_renew_start_period = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse delta period option %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse delta period option %s: %s" % (val, error.message))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Can't parse delta period option %s: %s"
+                                                           % (val, error.message))
 
             else:
-                sys.stderr.write("Error: Unknown revocation reason %s\n" % (reason, ))
                 __logger.error("Unknown revocation reason %s" % (reason, ))
-                return 1
+                raise pkidbbackends.PKIDBException(message="Unknown revocation reason %s" % (reason, ))
 
     input = None
 
@@ -1475,21 +1428,19 @@ def import_certificate(opts, config, backend):
         try:
             input = open(trailing[0], "r")
         except IOError as error:
-            sys.stderr.write("Error: Can't open %s for reading: %s\n" %(trailing[0], error.strerror))
-            __logger.error("Can't open %s for reading: %s" %(trailing[0], error.strerror))
-            return error.errno
+            __logger.error("Can't open %s for reading: %s" % (trailing[0], error.strerror))
+            raise pkidbbackends.PKIDBException(message="Can't open %s for reading: %s" % (trailing[0], error.strerror))
 
     else:
-        sys.stderr.write("Error: Too much arguments. Expect zero or one, got %u instead\n" % (len(trailing),))
-        __logger.error("Too much arguments. Expect zero or one, got %u instead" % (len(trailing),))
-        return 1
+        __logger.error("Too much arguments. Expect zero or one, got %u instead" % (len(trailing), ))
+        raise pkidbbackends.PKIDBException(message="Too much arguments. Expect zero or one, got %u instead"
+                                                   % (len(trailing), ))
 
     try:
         data = input.read()
     except IOError as error:
-        sys.stderr.write("Error: Read from %s failed: %s\n" % (input.name, error.strerror))
         __logger.error("Read from %s failed: %s" % (input.name, error.strerror))
-        return error.errno
+        raise pkidbbackends.PKIDBException(message="Read from %s failed: %s" % (input.name, error.strerror))
 
     # close non stdin input
     if input != sys.stdin:
@@ -1510,9 +1461,8 @@ def housekeeping(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["housekeeping"], longoptions["housekeeping"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     autorenew = False
     autorenew_period = None
@@ -1524,9 +1474,10 @@ def housekeeping(opts, config, backend):
             try:
                 autorenew_period = float(val)
             except ValueError as error:
-                sys.stderr.write("Error: Can't parse autorenew period option %s: %s\n" % (val, error.message))
                 __logger.error("Can't parse autorenew period option %s: %s" % (val, error.message))
-                sys.exit(2)
+                raise pkidbbackends.PKIDBException(message="Can't parse autorenew period option %s: %s"
+                                                           % (val, error.message))
+
     if not autorenew:
         autorenew_period = None
 
@@ -1545,9 +1496,8 @@ def remove_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["remove"], longoptions["remove"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         pass
@@ -1573,9 +1523,8 @@ def print_statistics(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["statistics"], longoptions["statistics"])
     except getopt.GetoptError as error:
-        sys.stderr.write("Error: Can't parse command line: %s\n" % (error.msg, ))
         __logger.error("Can't parse command line: %s" % (error.msg, ))
-        return 1
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:
         pass
@@ -1697,7 +1646,6 @@ if __name__ == "__main__":
             backend = pkidbbackends.mysql.MySQL(options)
         else:
             __logger.error("Unknown backend type %s" % (options["global"]["backend"], ))
-            sys.stderr.write("Error: Unknown backend type %s\n" % (options["global"]["backend"], ))
             sys.exit(1)
 
     if len(trailing) == 0:
@@ -1709,44 +1657,47 @@ if __name__ == "__main__":
     command = trailing[0]
     start = time.time()
 
-    if command == "sign":
-        sign_certificate(trailing[1:], options, backend)
-    elif command == "help":
-        usage()
-        sys.exit(0)
-    elif command == "import":
-        import_certificate(trailing[1:], options, backend)
-    elif command == "housekeeping":
-        housekeeping(trailing[1:], options, backend)
-    elif command == "statistics":
-        print_statistics(trailing[1:], options, backend)
-    elif command == "gencrl":
-        generate_certificate_revocation_list(trailing[1:], options, backend)
-    elif command == "revoke":
-        revoke_certificate(trailing[1:], options, backend)
-    elif command == "renew":
-        renew_certificate(trailing[1:], options, backend)
-    elif command == "export":
-        export_certificate(trailing[1:], options, backend)
-    elif command == "backup":
-        backup_database(trailing[1:], options, backend)
-    elif command == "list":
-        list_certificates(trailing[1:], options, backend)
-    elif command == "restore":
-        restore_database(trailing[1:], options, backend)
-    elif command == "delete":
-        delete_certificate(trailing[1:], options, backend)
-    elif command == "show":
-        show_certificate(trailing[1:], options, backend)
-    elif command == "set":
-        set_certificate_metadata(trailing[1:], options, backend)
-    elif command == "healthcheck":
-        healthcheck(trailing[1:], options, backend)
-    else:
-        sys.stderr.write("Error: Unknown command %s\n" % (command, ))
-        __logger.error("Unknown command %s" % (command, ))
-        usage()
-        sys.exit(1)
+    try:
+        if command == "sign":
+            sign_certificate(trailing[1:], options, backend)
+        elif command == "help":
+            usage()
+            sys.exit(0)
+        elif command == "import":
+            import_certificate(trailing[1:], options, backend)
+        elif command == "housekeeping":
+            housekeeping(trailing[1:], options, backend)
+        elif command == "statistics":
+            print_statistics(trailing[1:], options, backend)
+        elif command == "gencrl":
+            generate_certificate_revocation_list(trailing[1:], options, backend)
+        elif command == "revoke":
+            revoke_certificate(trailing[1:], options, backend)
+        elif command == "renew":
+            renew_certificate(trailing[1:], options, backend)
+        elif command == "export":
+            export_certificate(trailing[1:], options, backend)
+        elif command == "backup":
+            backup_database(trailing[1:], options, backend)
+        elif command == "list":
+            list_certificates(trailing[1:], options, backend)
+        elif command == "restore":
+            restore_database(trailing[1:], options, backend)
+        elif command == "delete":
+            delete_certificate(trailing[1:], options, backend)
+        elif command == "show":
+            show_certificate(trailing[1:], options, backend)
+        elif command == "set":
+            set_certificate_metadata(trailing[1:], options, backend)
+        elif command == "healthcheck":
+            healthcheck(trailing[1:], options, backend)
+        else:
+            sys.stderr.write("Error: Unknown command %s\n" % (command, ))
+            __logger.error("Unknown command %s" % (command, ))
+            usage()
+            sys.exit(1)
+    except pkidbbackends.PKIDBException as pkidberror:
+        __logger.error("Command %s failed: %s" % (command, pkidberror.message))
 
     stop = time.time()
     __logger.info("Command %s finished after %f seconds" % (command, (stop - start)))

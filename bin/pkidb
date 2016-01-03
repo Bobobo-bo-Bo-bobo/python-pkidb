@@ -37,44 +37,44 @@ configfile = "/etc/pkidb/config.ini"
 __version__ = "0.8.4"
 
 shortoptions = {
-    "main":"c:h",
-    "sign":"b:o:s:e:E:S:k:K:t:",
-    "import":"c:r:a:p:d:",
-    "housekeeping":"ap:",
-    "statistics":"",
-    "gencrl":"o:",
-    "revoke":"r:R:",
-    "renew":"o:p:",
-    "export":"o:",
-    "remove":"",
-    "backup":"o:",
-    "list":"eiho:rtv",
-    "restore":"",
-    "delete":"",
-    "show":"o:",
-    "set":"aAP:V:",
-    "healthcheck":"f",
+    "main": "c:h",
+    "sign": "b:o:s:e:E:S:k:K:t:",
+    "import": "c:r:a:p:d:",
+    "housekeeping": "ap:",
+    "statistics": "",
+    "gencrl": "o:",
+    "revoke": "r:R:",
+    "renew": "o:p:",
+    "export": "o:",
+    "remove": "",
+    "backup": "o:",
+    "list": "eiho:rtv",
+    "restore": "",
+    "delete": "",
+    "show": "o:",
+    "set": "aAP:V:",
+    "healthcheck": "f",
 }
 
 longoptions = {
-    "main":["config=", "help"],
-    "sign":["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint=",
+    "main": ["config=", "help"],
+    "sign": ["output=", "start=", "end=", "extension=", "san=", "keyusage=", "extended-keyusage=", "basic-constraint=",
             "template="],
-    "import":["csr=", "revoked=", "auto-renew", "period=", "delta="],
-    "housekeeping":["auto-renew", "period="],
-    "statistics":[],
-    "gencrl":["output="],
-    "revoke":["reason=", "revocation-date="],
-    "renew":["output=", "period="],
-    "export":["output="],
-    "remove":[],
-    "backup":["output="],
-    "list":["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
-    "restore":[],
-    "delete":[],
-    "show":["output="],
-    "set":["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
-    "healthcheck":["fix"],
+    "import": ["csr=", "revoked=", "auto-renew", "period=", "delta="],
+    "housekeeping": ["auto-renew", "period="],
+    "statistics": [],
+    "gencrl": ["output="],
+    "revoke": ["reason=", "revocation-date="],
+    "renew": ["output=", "period="],
+    "export": ["output="],
+    "remove": [],
+    "backup": ["output="],
+    "list": ["expired", "hex", "invalid", "output=", "revoked", "temporary", "valid"],
+    "restore": [],
+    "delete": [],
+    "show": ["output="],
+    "set": ["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
+    "healthcheck": ["fix"],
 }
 
 __logger = None
@@ -887,7 +887,7 @@ def revoke_certificate(opts, config, backend):
     try:
         (optval, trailing) = getopt.getopt(opts, shortoptions["revoke"], longoptions["revoke"])
     except getopt.GetoptError as error:
-        self.__logger.error("Can't parse command line: %s" % (error.msg, ))
+        __logger.error("Can't parse command line: %s" % (error.msg, ))
         raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg, ))
 
     for (opt, val) in optval:

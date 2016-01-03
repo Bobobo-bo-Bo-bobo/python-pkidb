@@ -415,7 +415,7 @@ class MySQL(Backend):
                                "auto_renewable=True AND state=%s;", (qdata["valid"], ))
 
                 result = cursor.fetchall()
-                self.__logger.info("Found %u certificates eligible for auto renewal")
+                self.__logger.info("Found %u certificates eligible for auto renewal" % (len(result), ))
 
                 if len(result) > 0:
                     for sn in result:
@@ -1209,17 +1209,17 @@ class MySQL(Backend):
                         sys.exit(3)
                     qdata["auto_renew_validity_period"] = auto_renew_validity_period
 
-                    cursor.execute("UPDATE certificate SET auto_renewable=%s, "
-                                   "auto_renew_start_period=%s, "
-                                   "auto_renew_validity_period=%s "
-                                   "WHERE serial_number=%s;",
-                                   (qdata["auto_renewable"], qdata["auto_renew_start_period"],
-                                    qdata["auto_renew_validity_period"], qdata["serial"]))
+                cursor.execute("UPDATE certificate SET auto_renewable=%s, "
+                               "auto_renew_start_period=%s, "
+                               "auto_renew_validity_period=%s "
+                               "WHERE serial_number=%s;",
+                               (qdata["auto_renewable"], qdata["auto_renew_start_period"],
+                                qdata["auto_renew_validity_period"], qdata["serial"]))
 
-                    self.__logger.info("Setting auto_renewable to %s (auto_renew_start_period is %s days and "
-                                       "auto_renew_validity_period is %s days)" %
-                                       (qdata["auto_renewable"], qdata["auto_renew_start_period"]/86400.,
-                                        qdata["auto_renew_validity_period"]/86400.))
+                self.__logger.info("Setting auto_renewable to %s (auto_renew_start_period is %s days and "
+                                   "auto_renew_validity_period is %s days)" %
+                                   (qdata["auto_renewable"], qdata["auto_renew_start_period"]/86400.,
+                                    qdata["auto_renew_validity_period"]/86400.))
 
             # explicitly check for False to avoid None
             elif auto_renew == False:

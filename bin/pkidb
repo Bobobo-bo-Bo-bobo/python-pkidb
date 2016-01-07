@@ -34,10 +34,10 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.5"
+__version__ = "0.8.6"
 
 shortoptions = {
-    "main": "c:h",
+    "main": "c:hV",
     "sign": "b:o:s:v:E:S:k:K:t:",
     "import": "c:r:a:p:d:",
     "housekeeping": "ap:",
@@ -57,7 +57,7 @@ shortoptions = {
 }
 
 longoptions = {
-    "main": ["config=", "help"],
+    "main": ["config=", "help", "version"],
     "sign": ["output=", "start-in=", "valid-for=", "extension=", "san=", "keyusage=", "extended-keyusage=",
              "basic-constraint=", "template="],
     "import": ["csr=", "revoked=", "auto-renew", "period=", "delta="],
@@ -127,8 +127,12 @@ def parseoptions(optfile):
     return result
 
 def usage():
+    version()
 
     print("""Usage: %s [-c <cfg>|--config=<cfg>] [-h|--help] <command> [<commandoptions>]
+
+  -V                                        Shows version.
+  --version
 
   -c <cfg>                                  Use configuration file instead of the default
   --config=<cfg>                            Default: %s
@@ -1586,6 +1590,19 @@ def setup_logging(options):
 
         __logger.addHandler(handler)
 
+def version():
+    """
+    Shows version.
+    :return: None
+    """
+    print("""python-pkidb version %s
+Copyright by Andreas Maus <maus@ypbind.de>
+
+python-pkidb is distributed under the Terms of the GNU General
+Public License Version 3. (http://www.gnu.org/copyleft/gpl.html)
+
+""" % (__version__, ))
+
 if __name__ == "__main__":
 
     # parse commandline options
@@ -1601,6 +1618,9 @@ if __name__ == "__main__":
             sys.exit(0)
         elif opt in ("-c", "--config"):
             configfile = val
+        elif opt in ("-V", "--version"):
+            version()
+            sys.exit(0)
         else:
             sys.stderr.write("Error: Unknown option %s" % (opt,))
             sys.exit(1)

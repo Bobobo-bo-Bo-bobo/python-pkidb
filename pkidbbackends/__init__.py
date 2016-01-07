@@ -520,8 +520,8 @@ class Backend(object):
         """
         Create a certificate from a certificate signing request,
         :param csr: X509Request object of certificate signing request
-        :param notBefore: start of validity period as ASN1 GERNERALIZEDTIME string
-        :param notAfter: end of validity period as ASN1 GENERALIZEDTIME string
+        :param notBefore: start of validity period in days from now (can be None)
+        :param notAfter: end of validity period in days
         :param cakey: X509 object of CA signing key
         :param issuer: X509Name object containing the subject of CA
         :param extension: list of x509 extension
@@ -542,8 +542,8 @@ class Backend(object):
         newcert.set_pubkey(csr.get_pubkey())
 
         # set validity period
-        newcert.set_notBefore(notBefore)
-        newcert.set_notAfter(notAfter)
+        newcert.gmtime_adj_notBefore(notBefore * 86400)
+        newcert.gmtime_adj_notAfter(notAfter * 86400)
 
         newcert.set_issuer(issuer)
 
@@ -557,6 +557,7 @@ class Backend(object):
 
         # insert new serial number to database to lock serial
         self._insert_empty_cert_data(new_serial_number, self._format_subject(newcert.get_subject().get_components()))
+
         # handle extensions
         if extensions and len(extensions) > 0:
             newcert.add_extensions(extensions)

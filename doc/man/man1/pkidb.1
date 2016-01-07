@@ -469,6 +469,10 @@ Write new certificate information to
 .I outputfile
 instead of standard output.
 .RE
+.RE
+
+.RE
+.RE
 
 .BR sign
 .RS
@@ -583,19 +587,6 @@ can be used to set the critical flag on the basic constraints.
 .RE
 .RE
 
-.RS
-.B \-e \c
-.I endtime
-.br
-.B \-\-end=\c
-.I endtime
-.RS
-End time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
-Default is
-.I start+validity_period
-days.
-.RE
-.RE
 
 .RS
 .B \-k \c
@@ -651,13 +642,14 @@ instead of standard output
 
 .RS
 .B \-s \c
-.I startdate
+.I startin
 .br
-.B \-\-start=\c
-.I startdate
+.B \-\-start-in=\c
+.I startin
 .RS
-Start time for new certificate as Unix timestamp or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
-Default: now
+Validity of the new certificate starts in
+.I startin
+days. Default: now
 .RE
 .RE
 
@@ -669,6 +661,21 @@ Default: now
 .I templatefile
 .RS
 Use a template file for certificate signing.
+.RE
+.RE
+
+.RS
+.B \-v \c
+.I validfor
+.br
+.B \-\-valid-for=\c
+.I validfor
+.RS
+New certificate will be valid for
+.I validfor
+days. Default ist the defined
+.I validity_period
+in the configuration or the template file.
 .RE
 .RE
 

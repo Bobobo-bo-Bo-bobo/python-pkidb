@@ -604,12 +604,13 @@ class Backend(object):
         """
         return None
 
-    def revoke_certificate(self, serial, reason, revocation_date):
+    def revoke_certificate(self, serial, reason, revocation_date, force=False):
         """
         Revoke certificate identified by serial number
         :param serial: serial number
         :param reason: revocation reason
         :param revocation_date: revocation date as UNIX timestamp
+        :param force: insert dummy data if the serial number does not exist in the database
         :return: None
         """
         return None

@@ -638,7 +638,7 @@ class MySQL(Backend):
 
         return crl
 
-    def revoke_certificate(self, serial, reason, revocation_date):
+    def revoke_certificate(self, serial, reason, revocation_date, force=False):
         try:
             qdata = {
                 "serial":serial,
@@ -647,10 +647,23 @@ class MySQL(Backend):
                 "state":self._certificate_status_map["revoked"],
             }
 
+            cursor = self.__db.cursor()
+
+            if force:
+                cursor.execute("SELECT 1 FROM certificate WHERE serial_number=%(serial)s;", qdata)
+                result = cursor.fetchall()
+                if len(result) == 0:
+                    qdata["version"] = 2
+                    qdata["subject"] = "Placeholder, set by revoking non-existent certificate with serial number %s " \
+                                       "and using the force flag." % (serial, )
+                    qdata["certificate"] = qdata["subject"]
+
+                    cursor.execute("INSERT INTO certificate (serial_number, version, subject, certificate, state) "
+                                   "VALUES (%(serial)s, %(version)s, %(subject)s, %(certificate)s, %(state)s);", qdata)
+
             self.__logger.info("Revoking certificate with serial number 0x%x with revocation reason %s "
                                "and revocation date %s" % (serial, reason, revocation_date))
 
-            cursor = self.__db.cursor()
             cursor.execute("UPDATE certificate SET state=%s, revocation_date=FROM_UNIXTIME(%s), "
                            "revocation_reason=%s WHERE serial_number=%s;",
                            (qdata["state"], qdata["date"], qdata["reason"], qdata["serial"]))

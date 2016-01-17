@@ -43,7 +43,7 @@ shortoptions = {
     "housekeeping": "ap:",
     "statistics": "",
     "gencrl": "o:",
-    "revoke": "r:R:",
+    "revoke": "fr:R:",
     "renew": "o:p:",
     "export": "o:",
     "remove": "",
@@ -64,7 +64,7 @@ longoptions = {
     "housekeeping": ["auto-renew", "period="],
     "statistics": [],
     "gencrl": ["output="],
-    "revoke": ["reason=", "revocation-date="],
+    "revoke": ["force", "reason=", "revocation-date="],
     "renew": ["output=", "period="],
     "export": ["output="],
     "remove": [],
@@ -886,7 +886,7 @@ def revoke_certificate(opts, config, backend):
     """
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
-
+    force = False
     reason = "unspecified"
     rev_date = time.time()
 
@@ -916,6 +916,8 @@ def revoke_certificate(opts, config, backend):
                 __logger.error("%s is not a valid revocation reason" % (val, ))
                 raise pkidbbackends.PKIDBException(message="%s is not a valid revocation reason" % (val, ))
 
+        elif opt in ("-f", "--force"):
+            force = True
         else:
             __logger.error("Unknown option %s" % (opt, ))
             raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (opt, ))
@@ -927,7 +929,14 @@ def revoke_certificate(opts, config, backend):
 
     serial = serial_to_number(serial)
 
-    backend.revoke_certificate(serial, reason, rev_date)
+    if not backend.get_certificate(serial) and not force:
+        __logger.error("Certificate with serial number %s not found in database. If you want to revoke a certificate "
+                       "by it's serial number that is not present in the database, use the force option." % (serial, ))
+        raise pkidbbackends.PKIDBException(message="Certificate with serial number %s not found in database. "
+                                                   "If you want to revoke a certificate by it's serial number that is "
+                                                   "not present in the database, use the force option." % (serial, ))
+
+    backend.revoke_certificate(serial, reason, rev_date, force=force)
 
 def generate_certificate_revocation_list(opts, config, backend):
     """

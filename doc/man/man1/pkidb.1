@@ -346,6 +346,15 @@ Revoke a certificate. Serial number of the certificate to revoke must be used. I
 .RE
 
 .RS
+.B \-f
+.br
+.B \-\-force
+.RS
+Revoke certificate by it's serial number event it is not present in the database. A dummy entry will be inserted in the database and marked as revoked.
+.RE
+.RE
+
+.RS
 .B \-r \c
 .I reason
 .br
@@ -708,8 +717,7 @@ section. As it will contain sensitive informations like the path and the passwor
 The 
 .B global
 section contains general configuration settings. 
-.I ALL
-options must be set.
+.I Depending on the purpose, not all of the options must be set. For instance a configuration for a dedicated system to generate the revocation list doesn't need the CA key settings.
 
 .RE
 .RS

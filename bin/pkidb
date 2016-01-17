@@ -252,6 +252,9 @@ def usage():
                                             be used. If given not given on the command line it will be read from
                                             stdin.
 
+     -f                                     Revoke certificate by it's serial number event it is not present in the
+     --force                                database. A dummy entry will be inserted in the database and marked as revoked.
+
      -r <reason>                            Set revocation reason for certificate.
      --reason=<reason>                      <reason> can be one of:
                                             unspecified, keyCompromise, CACompromise, affiliationChanged,

@@ -4,7 +4,7 @@ from distutils.core import setup
 
 PKIDB_SETUP = {
     "name" : "pkidb",
-    "version" : "0.8.7",
+    "version" : "0.8.8",
     "description" : "PKI system based on a SQL database",
     "long_description" : """PKI script for managing certificates.
 Certificates are stored in a database.

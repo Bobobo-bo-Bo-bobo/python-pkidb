@@ -29,12 +29,18 @@ import os
 import re
 import sys
 import time
+
+# ignore DeprecationWarning from OpenSSL for Python <= 2.6 (e.g. on RHEL6)
+if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import OpenSSL
 
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 shortoptions = {
     "main": "c:hV",

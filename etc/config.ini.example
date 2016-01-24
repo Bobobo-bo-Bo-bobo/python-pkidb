@@ -78,5 +78,5 @@ user = dbuser
 passphrase = DoesThisCountAsAnnoying?
 database = pkidb
 sslcacert = /path/to/ca
-; sslcert
-; sslkey
+sslcert = /path/to/client/cert
+sslkey = /path/to/client/key

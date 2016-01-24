@@ -929,8 +929,17 @@ logging.
 The 
 .B mysql
 section contains configuration settings for the MySQL backend.
-.I ALL
-options must be set.
+At least 
+.I host\c
+,
+.I port\c
+,
+.I database\c
+,
+.I user
+and
+.I password
+must be set.
 
 .RS
 .I host
@@ -974,6 +983,30 @@ of the database connection.
 .RE
 .RE
 
+.RS
+.I sslcacert
+.br
+.RS
+Path to the CA public key file (PEM format).
+.RE
+.RE
+
+.RS
+.I sslcert
+.br
+.RS
+Path to the client certificate (PEM format) for client authentication with SSL certificate.
+.RE
+.RE
+
+.RS
+.I sslkey
+.br
+.RS
+Path to the client certificate key file (PKCS#1 format) for client authentication with SSL certificate.
+.RE
+.RE
+
 .RE
 .RE
 
@@ -983,8 +1016,17 @@ of the database connection.
 The 
 .B pgsql
 section contains configuration settings for the PostgreSQL backend.
-.I ALL
-options must be set.
+At least 
+.I host\c
+,
+.I port\c
+,
+.I database\c
+,
+.I user
+and
+.I password
+must be set.
 
 .RS
 .I host
@@ -1028,6 +1070,75 @@ of the database connection.
 .RE
 .RE
 
+.RS
+.I sslmode
+.RS
+SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html). Valid values are:
+.RS
+.I disable
+.br
+.RS
+Don't use SSL at all.
+.RE
+
+.I allow
+.br
+.RS
+Don't use SSL except the server enforce it.
+.RE
+
+.I prefer
+.br
+.RS
+Don't use SSL except the server supports it.
+.RE
+
+.I require
+.br
+.RS
+Use SSL but don't check the server certificate.
+.RE
+
+.I verify-ca
+.br
+.RS
+Use SSL and check if the server certificate has been signed by the correct CA.
+.RE
+
+.I verify-full
+.br
+.RS
+Use SSL and check the server name in the certificate and the signing CA of the server certificate.
+.RE
+.RE
+.RE
+.RE
+
+.RS
+.I sslcacert
+.br
+.RS
+Path to the CA public key file (PEM format).
+.RE
+.RE
+
+.RS
+.I sslcert
+.br
+.RS
+Path to the client certificate (PEM format) for client authentication with SSL certificate.
+.RE
+.RE
+
+.RS
+.I sslkey
+.br
+.RS
+Path to the client certificate key file (PKCS#1 format) for client authentication with SSL certificate.
+.RE
+.RE
+
+.RE
 .RE
 .RE
 
@@ -1035,9 +1146,10 @@ of the database connection.
 .RS
 .RS
 The 
-.B pgsql
-section contains configuration settings for the PostgreSQL backend.
-.I ALL
+.B sqlite3
+section contains configuration settings for the SQLite3 backend.
+The
+.I database
 options must be set.
 
 .RS
@@ -1188,6 +1300,8 @@ port = 5432
 user = dbuser
 passphrase = DoesThisCountAsAnnoying?
 database = pkidb
+sslmode = verify-full
+sslcacert = /etc/ssl/certs/cacert.pem
 
 [sqlite3]
 database = /path/to/sqlite/file

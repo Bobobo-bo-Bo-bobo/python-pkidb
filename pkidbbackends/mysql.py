@@ -66,8 +66,26 @@ class MySQL(Backend):
             if "database" in self.__config["mysql"]:
                 database = self.__config["mysql"]["database"]
 
+            sslcacert = None
+            if "sslcacert" in self.__config["mysql"]:
+                sslcacert = self.__config["mysql"]["sslcacert"]
+
+            sslcert = None
+            if "sslcert" in self.__config["mysql"]:
+                sslcert = self.__config["mysql"]["sslcert"]
+
+            sslkey = None
+            if "sslkey" in self.__config["mysql"]:
+                sslkey = self.__config["mysql"]["sslkey"]
+
+            ssl = {
+                "ca": sslcacert,
+                "cert": sslcert,
+                "key": sslkey,
+            }
+
             try:
-                dbconn = MySQLdb.connect(db=database, user=user, passwd=passphrase, host=host, port=port)
+                dbconn = MySQLdb.connect(db=database, user=user, passwd=passphrase, host=host, port=port, ssl=ssl)
             except MySQLdb.Error as error:
                 self.__logger.error("Can't connect to database: %s\n" % (error.message,))
                 raise PKIDBException(message="Can't connect to database: %s" % (error.message,))

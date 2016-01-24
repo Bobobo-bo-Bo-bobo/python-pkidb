@@ -66,8 +66,30 @@ class PostgreSQL(Backend):
             if "database" in self.__config["pgsql"]:
                 database = self.__config["pgsql"]["database"]
 
+            sslmode = "prefer"
+            if "sslmode" in self.__config["pgsql"]:
+                sslmode = self.__config["pgsql"]["sslmode"]
+
+            sslcacert = None
+            if "sslcacert" in self.__config["pgsql"]:
+                sslcacert = self.__config["pgsql"]["sslcacert"]
+
+            sslcert = None
+            if "sslcert" in self.__config["pgsql"]:
+                sslcert = self.__config["pgsql"]["sslcert"]
+
+            sslkey = None
+            if "sslkey" in self.__config["pgsql"]:
+                sslkey = self.__config["pgsql"]["sslkey"]
+
             try:
-                dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port)
+                # use ssl certificate
+                if sslcert and sslkey:
+                    dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port,
+                                              sslmode=sslmode, sslrootcert=sslcacert, sslcert=sslcert, sslkey=sslkey)
+                else:
+                    dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port,
+                                              sslmode=sslmode, sslrootcert=sslcacert)
             except psycopg2.Error as error:
                 self.__logger.error("Can't connect to database: %s\n" % (error.message,))
                 raise PKIDBException(message="Error: Can't connect to database: %s" % (error.message, ))

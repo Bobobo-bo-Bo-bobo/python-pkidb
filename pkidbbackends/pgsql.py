@@ -270,19 +270,13 @@ class PostgreSQL(Backend):
         self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist), ))
         return result
 
-    def _store_signature_algorithm(self, cert):
+    def _store_signature_algorithm_name(self, algoname):
         algoid = None
-
         algo = {
-            "algorithm":"undefined"
+            "algorithm": algoname,
         }
 
         self.__logger.info("Storing signature algorithm in database")
-        try:
-            algo["algorithm"] = cert.get_signature_algorithm()
-        except ValueError as error:
-            self.__logger.warning("Undefined signature algorithm in certificate data")
-
         try:
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE signature_algorithm;")
@@ -1096,7 +1090,7 @@ class PostgreSQL(Backend):
             "revocation_date":None,
             "revocation_reason":None,
         }
-        qdata = { "serial":serial }
+        qdata = {"serial": serial,}
 
         try:
             cursor = self.__db.cursor()
@@ -1111,24 +1105,33 @@ class PostgreSQL(Backend):
                            "WHERE serial_number=%(serial)s;", qdata)
             result = cursor.fetchall()
             if len(result) > 0:
-                data = {
-                    "serial_number":"%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
-                    "version":result[0][1] + 1,
-                    "start_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
-                    "end_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
-                    "subject":result[0][4],
-                    "auto_renewable":result[0][5],
-                    "issuer":result[0][8],
-                    "keysize":result[0][9],
-                    "fingerprint_md5":result[0][10],
-                    "fingerprint_sha1":result[0][11],
-                    "certificate":result[0][12],
-                    "algorithm":result[0][13],
-                    "extension":result[0][14],
-                    "signing_request":result[0][15],
-                    "state":self._certificate_status_reverse_map[result[0][16]],
 
+                data = {
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
+                    "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
+                    "subject": result[0][4],
+                    "auto_renewable": result[0][5],
+                    "issuer": result[0][8],
+                    "keysize": result[0][9],
+                    "fingerprint_md5": result[0][10],
+                    "fingerprint_sha1": result[0][11],
+                    "certificate": result[0][12],
+                    "algorithm": result[0][13],
+                    "extension": result[0][14],
+                    "signing_request": result[0][15],
+                    "state": self._certificate_status_reverse_map[result[0][16]],
                 }
+
+                # check if version is NULL (e.g. it is a dummy)
+                if result[0][1]:
+                    data["version"] = result[0][1]
+                else:
+                    data["version"] = -1
+
+                if not data["keysize"]:
+                    data["keysize"] = -1
+
                 if data["state"] == "revoked":
                     data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
                     data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
@@ -1298,7 +1301,7 @@ class PostgreSQL(Backend):
 
     def _get_signature_algorithm(self, id):
         algo = None
-        qdata = { "id":id }
+        qdata = { "id": id }
 
         try:
             cursor = self.__db.cursor()
@@ -1381,18 +1384,24 @@ class PostgreSQL(Backend):
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("LOCK TABLE certficate;")
+            cursor.execute("LOCK TABLE certificate;")
             data = metadata
             # add serial number to array
             data["serial"] = serial
 
             for meta in metadata:
-                if meta in self._metadata:
-                    query = "UPDATE certificate SET %s=%%(%s)s WHERE serial_number=%%(serial)s;" % (meta, meta)
-                    cursor.execute(query, data)
-                else:
-                    self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
-                                          % (meta, serial))
+                if meta != "serial":
+                    if meta in self._metadata:
+                        # *_date requires special handling because of the TIMESTAMP type and the required conversion
+                        if meta == "start_date" or meta == "end_date" or meta == "revocation_date":
+                            query = "UPDATE certificate SET %s=to_timestamp(%%(%s)s) WHERE serial_number=%%(serial)s;" %\
+                                    (meta, meta)
+                        else:
+                            query = "UPDATE certificate SET %s=%%(%s)s WHERE serial_number=%%(serial)s;" % (meta, meta)
+                        cursor.execute(query, data)
+                    else:
+                        self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
+                                              % (meta, serial))
 
             cursor.close()
             self.__db.commit()

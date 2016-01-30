@@ -126,8 +126,18 @@ class Backend(object):
     ]
 
     # known meta data fields
-    _metadata = [ "auto_renewable", "auto_renew_start_period", "auto_renew_validity_period", "state", "revocation_date",
-                  "revocation_reason", "certificate", "signing_request" ]
+    _metadata = [ "auto_renewable",
+                  "auto_renew_start_period",
+                  "auto_renew_validity_period",
+                  "state",
+                  "revocation_date",
+                  "revocation_reason",
+                  "certificate",
+                  "signing_request",
+                  "start_date",
+                  "end_date",
+                  "signature_algorithm_id",
+                ]
 
     __logger = None
 
@@ -425,13 +435,31 @@ class Backend(object):
         """
         return None
 
+    def _store_signature_algorithm_name(self, algoname):
+        """
+        Stores signature algorithm by its name
+        :param algoname: algorithm name
+        :return: primary key of signature algorithm in lookup table
+        """
+        return None
+
     def _store_signature_algorithm(self, cert):
         """
         Stores signature algorithm
         :param cert: X509 object
         :return: primary key of signature algorithm in lookup table
         """
-        return None
+        algoid = None
+        algo = "undefined"
+
+        try:
+            algo = cert.get_signature_algorithm()
+        except ValueError as error:
+            self.__logger.warning("Undefined signature algorithm in certificate data")
+
+        algoid = self._store_signature_algorithm_name(algo)
+
+        return algoid
 
     def _extract_data(self, cert, csr=None, revoked=None):
         """
@@ -588,6 +616,33 @@ class Backend(object):
         """
         return None
 
+    def insert_empty_cert_data(self, serial, subject, start=None, end=None):
+        """
+        Insert empty data to "lock" new serial number during certificate signing or to add a "dummy" certificate
+        (e.g. a certificate with a known serial number but missing the real certificate)
+        :param serial: serial number
+        :param subject: subject string
+        :param start: date when certificate becomes valid
+        :param end: end of vailidity period for certificate
+        :return: Nothing
+        """
+        if not subject:
+            subject = serial
+
+        self._insert_empty_cert_data(serial, subject)
+
+        # we don't know the signing algorithm so set it to "placeholder"
+        algo_id = self._store_signature_algorithm_name("placeholder")
+        meta = { "signature_algorithm_id": algo_id, }
+        if start or end:
+            if start:
+                meta["start_date"] = start
+            if end:
+                meta["end_date"] = end
+
+        self._set_meta_data(serial, meta)
+        return None
+
     def _insert_empty_cert_data(self, serial, subject):
         """
         Insert empty data to "lock" new serial number during certificate signing
@@ -734,7 +789,6 @@ class Backend(object):
 
         try:
             serialnumbers = self.list_serial_number_by_state(None)
-#            serialnumbers = [ 54245710 ]
             for serial in serialnumbers:
                 cert = self.get_certificate(serial)
                 certdbdata = self._get_raw_certificate_data(serial)

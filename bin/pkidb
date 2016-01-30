@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.10"
+__version__ = "0.8.11"
 
 shortoptions = {
     "main": "c:hV",
@@ -54,6 +54,7 @@ shortoptions = {
     "show": "o:",
     "set": "aAP:V:",
     "healthcheck": "f",
+    "add-dummy": "s:e:S:",
 }
 
 longoptions = {
@@ -75,6 +76,7 @@ longoptions = {
     "show": ["output="],
     "set": ["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
     "healthcheck": ["fix"],
+    "add-dummy": ["start=", "end=", "subject="],
 }
 
 __logger = None
@@ -142,6 +144,24 @@ def usage():
 
   Commands:
 
+   add-dummy                                Add a dummy certificate identified by the serial number.
+                                            If the serial number is not given on the command line it will be
+                                            read from standard input.
+                                            This can be used if the certificate has been issued but the certificate
+                                            file is not present (e.g. during a migration) but the serial number
+                                            and optionally the start date, end date or subject is known.
+
+     -S <subject>                           Certificate subject.
+     --subject=<subject>
+
+     -s <start>                             Start of the certificates validity period.
+     --start=<start>                        <start> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                            string in the format YYYYMMDDhhmmssZ
+
+     -e <end>                               End of the certificates validity period.
+     --end=<end>                            <end> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
+                                            string in the format YYYYMMDDhhmmssZ
+
    backup                                   Dumps the content of the backend database in JSON format.
                                             This can be used to backup the PKI database and is the only
                                             supported way to migrate between different backend types.
@@ -194,6 +214,9 @@ def usage():
 
      -c <csr>                               Certificate signing request used for certificate
      --csr=<csr>                            creation. Optional.
+
+     -d <delta_period>                      For auto renewable certificates the auto renew process starts if the time
+     --delta=<delta_period>                 til expiration is less than <delta_period> days.
 
      -p <period>                            New validity period for auto renewed certificate.
      --period=<period>                      Default is the value given in the configuration file as validity_period.
@@ -859,7 +882,7 @@ def serial_to_number(serial):
     :param serial: string containing serial number
     :return: decimal value of serial number string
     """
-    re_serial_is_hex = re.compile("0x[0-9a-f]+")
+    re_serial_is_hex = re.compile("0x[0-9a-fA-F]+")
 
     # convert serial number to a number
     try:
@@ -1602,6 +1625,68 @@ def setup_logging(options):
 
         __logger.addHandler(handler)
 
+def add_dummy(opts, config, backend):
+    """
+    Add dummy certificate identified by it's serial number.
+    :param opts: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: None
+    """
+
+    start = None
+    end = None
+    subject = None
+    serial = None
+
+    re_asn1_time_string = re.compile("^\d{14}Z$")
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["add-dummy"], longoptions["add-dummy"])
+    except getopt.GetoptError as error:
+        __logger.error("Can't parse command line: %s" % (error.msg))
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg))
+
+    for (opt, val) in optval:
+        if opt in ("-s", "--start"):
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(val):
+                # convert to UNIX timestamp
+                start = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
+
+            try:
+                start = float(val)
+            except ValueError as error:
+                __logger.error("Can't parse start time %s: %s" % (val, error.message))
+                raise pkidbbackends.PKIDBException(message="Can't parse start time %s: %s" % (val, error.message))
+
+        elif opt in ("-e", "--end"):
+            # ASN1 GENERALIZEDTIME string?
+            if re_asn1_time_string.match(val):
+                # convert to UNIX timestamp
+                end = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
+
+            try:
+                end = float(val)
+            except ValueError as error:
+                __logger.error("Can't parse end time %s: %s" % (val, error.message))
+                raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
+
+        elif opt in ("-S", "--subject"):
+            subject = val
+
+    if len(trailing) == 0:
+        serial = sys.stdin.read()
+    else:
+        serial = trailing[0]
+
+    serial = serial_to_number(serial)
+
+    if not subject:
+        subject = "Placeholder, set for imported certificate with serial number %s" % (str(serial), )
+
+    backend.insert_empty_cert_data(serial, subject, start, end)
+
 def version():
     """
     Shows version.
@@ -1705,6 +1790,8 @@ if __name__ == "__main__":
             set_certificate_metadata(trailing[1:], options, backend)
         elif command == "healthcheck":
             healthcheck(trailing[1:], options, backend)
+        elif command == "add-dummy":
+            add_dummy(trailing[1:], options, backend)
         else:
             sys.stderr.write("Error: Unknown command %s\n" % (command, ))
             __logger.error("Unknown command %s" % (command, ))

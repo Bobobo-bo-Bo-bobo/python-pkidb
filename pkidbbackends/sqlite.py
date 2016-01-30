@@ -241,16 +241,9 @@ class SQLite(Backend):
         self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist), ))
         return result
 
-    def _store_signature_algorithm(self, cert):
+    def _store_signature_algorithm_name(self, algoname):
         algoid = None
-
-        algo = "undefined"
-
-        self.__logger.info("Storing signature algorithm in database")
-        try:
-            algo = cert.get_signature_algorithm()
-        except ValueError as error:
-            self.__logger.warning("Undefined signature algorithm in certificate data")
+        algo = algoname
 
         try:
             cursor = self.__db.cursor()
@@ -995,7 +988,7 @@ class SQLite(Backend):
             "revocation_date":None,
             "revocation_reason":None,
         }
-        qdata = { "serial":serial }
+        qdata = {"serial": serial, }
 
         try:
             cursor = self.__db.cursor()
@@ -1011,23 +1004,30 @@ class SQLite(Backend):
             result = cursor.fetchall()
             if len(result) > 0:
                 data = {
-                    "serial_number":"%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
-                    "version":result[0][1] + 1,
-                    "start_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
-                    "end_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
-                    "subject":result[0][4],
-                    "auto_renewable":result[0][5],
-                    "issuer":result[0][8],
-                    "keysize":result[0][9],
-                    "fingerprint_md5":result[0][10],
-                    "fingerprint_sha1":result[0][11],
-                    "certificate":result[0][12],
-                    "algorithm":result[0][13],
-                    "extension":result[0][14],
-                    "signing_request":result[0][15],
-                    "state":self._certificate_status_reverse_map[result[0][16]],
-
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
+                    "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
+                    "subject": result[0][4],
+                    "auto_renewable": result[0][5],
+                    "issuer": result[0][8],
+                    "keysize": result[0][9],
+                    "fingerprint_md5": result[0][10],
+                    "fingerprint_sha1": result[0][11],
+                    "certificate": result[0][12],
+                    "algorithm": result[0][13],
+                    "extension": result[0][14],
+                    "signing_request": result[0][15],
+                    "state": self._certificate_status_reverse_map[result[0][16]],
                 }
+                # check if version is NULL (e.g. it is a dummy)
+                if result[0][1]:
+                    data["version"] = result[0][1]
+                else:
+                    data["version"] = -1
+
+                if not data["keysize"]:
+                    data["keysize"] = -1
+
                 if data["state"] == "revoked":
                     data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
                     data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
@@ -1298,12 +1298,13 @@ class SQLite(Backend):
             data["serial"] = serial
 
             for meta in metadata:
-                if meta in self._metadata:
-                    query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta, )
-                    cursor.execute(query, (data[meta], data["serial"]))
-                else:
-                    self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
-                                          % (meta, serial))
+                if meta != "serial":
+                    if meta in self._metadata:
+                        query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta, )
+                        cursor.execute(query, (data[meta], data["serial"]))
+                    else:
+                        self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
+                                              % (meta, serial))
 
             cursor.close()
             self.__db.commit()

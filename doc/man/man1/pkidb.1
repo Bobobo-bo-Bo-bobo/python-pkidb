@@ -39,6 +39,50 @@ as configuration file instead of the default /etc/pki/config.ini
 
 .SH COMMANDS
 
+.BR add-dummy
+.RS
+Add a dummy certificate identified by the serial number.  If the serial number is not given on the command line it will be
+read from standard input.  This can be used if the certificate has been issued but the certificate
+file is not present (e.g. during a migration) but the serial number and optionally the start date, end date or subject is known.
+.RE
+
+.RS
+.B \-S \c
+.I subject
+.br
+.B \-\-subject=\c
+.I subject
+.RS
+Certificate subject.
+.RE
+.RE
+
+.RS
+.B \-s \c
+.I start
+.br
+.B \-\-start=\c
+.I start
+.RS
+Start of the certificates validity period. 
+.I start
+is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
+.RE
+.RE
+
+.RS
+.B \-e \c
+.I end
+.br
+.B \-\-end=\c
+.I end
+.RS
+End of the certificates validity period. 
+.I end
+is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the format YYYYMMDDhhmmssZ
+.RE
+.RE
+
 .BR backup
 .RS
 Dumps the content of the backend database in JSON format.
@@ -166,6 +210,17 @@ Certificates marked as auto renewable will be renewed.
 .I csr_file
 .RS
 Certificate signing request used for certificate.
+.RE
+
+.B \-d \c
+.I delta_period
+.br
+.B \-\-delta=\c
+.I delta_period
+.RS
+For auto renewable certificates the auto renew process starts if the time til expiration is less than
+.I delta_period
+days.
 .RE
 
 .B \-p \c

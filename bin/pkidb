@@ -55,6 +55,7 @@ shortoptions = {
     "set": "aAP:V:",
     "healthcheck": "f",
     "add-dummy": "s:e:S:",
+    "search": "",
 }
 
 longoptions = {
@@ -77,6 +78,7 @@ longoptions = {
     "set": ["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
     "healthcheck": ["fix"],
     "add-dummy": ["start=", "end=", "subject="],
+    "search": [],
 }
 
 __logger = None
@@ -289,6 +291,11 @@ def usage():
      --revocation-date=<date>               <revdate> is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME
                                             string in the format YYYYMMDDhhmmssZ.
                                             If not given, the current date will be used.
+
+   search                                   Search certificate subject for a given string. Search string can be given
+                                            on the command line. If omitted it will be read from standard input.
+                                            SQL wildcards like %% can be used. The serial numbers matching the search
+                                            will be printed to standard output.
 
    set                                      Modify meta data of a certificate identified by the serial number.
                                             The serial number of the certificate must be given on the command line or
@@ -1634,8 +1641,8 @@ def add_dummy(opts, config, backend):
     :return: None
     """
 
-    start = None
-    end = None
+    notbefore = None
+    notafter = None
     subject = None
     serial = None
 
@@ -1652,10 +1659,10 @@ def add_dummy(opts, config, backend):
             # ASN1 GENERALIZEDTIME string?
             if re_asn1_time_string.match(val):
                 # convert to UNIX timestamp
-                start = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
+                notbefore = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
 
             try:
-                start = float(val)
+                notbefore = float(val)
             except ValueError as error:
                 __logger.error("Can't parse start time %s: %s" % (val, error.message))
                 raise pkidbbackends.PKIDBException(message="Can't parse start time %s: %s" % (val, error.message))
@@ -1664,10 +1671,10 @@ def add_dummy(opts, config, backend):
             # ASN1 GENERALIZEDTIME string?
             if re_asn1_time_string.match(val):
                 # convert to UNIX timestamp
-                end = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
+                notafter = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
 
             try:
-                end = float(val)
+                notafter = float(val)
             except ValueError as error:
                 __logger.error("Can't parse end time %s: %s" % (val, error.message))
                 raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
@@ -1686,6 +1693,36 @@ def add_dummy(opts, config, backend):
         subject = "Placeholder, set for imported certificate with serial number %s" % (str(serial), )
 
     backend.insert_empty_cert_data(serial, subject, start, end)
+
+def search_certificate(opts, config, backend):
+    """
+    Search database for subject.
+    :param opts: options for import
+    :param config: parsed configuration file
+    :param backend: backend object
+    :return: None
+    """
+    searchstring = None
+
+    try:
+        (optval, trailing) = getopt.getopt(opts, shortoptions["search"], longoptions["search"])
+    except getopt.GetoptError as error:
+        __logger.error("Can't parse command line: %s" % (error.msg))
+        raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (error.msg))
+
+    for (opt, val) in optval:
+        pass
+
+    if len(trailing) == 0:
+        searchstring = sys.stdin.read()
+    else:
+        searchstring = trailing[0]
+
+    if searchstring and len(searchstring) > 0:
+        result = backend.search_certificate(searchstring)
+
+        for res in result:
+            sys.stdout.write("%s\n" % (long(res), ))
 
 def version():
     """
@@ -1792,6 +1829,8 @@ if __name__ == "__main__":
             healthcheck(trailing[1:], options, backend)
         elif command == "add-dummy":
             add_dummy(trailing[1:], options, backend)
+        elif command == "search":
+            search_certificate(trailing[1:], options, backend)
         else:
             sys.stderr.write("Error: Unknown command %s\n" % (command, ))
             __logger.error("Unknown command %s" % (command, ))

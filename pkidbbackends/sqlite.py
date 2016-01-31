@@ -1313,3 +1313,23 @@ class SQLite(Backend):
             self.__db.rollback()
 
         return None
+
+    def search_certificate(self, searchstring):
+        serials = []
+        try:
+            query = {"search": searchstring, }
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE ?;", (query["search"], ))
+            result = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            for serial in result:
+                serials.append(serial[0])
+
+        except sqlite3.Error as error:
+            self.__db.rollback()
+            self.__logger.error("Can't search subject in database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't search subject in database: %s" % (error.message, ))
+
+        return serials

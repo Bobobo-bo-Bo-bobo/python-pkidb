@@ -919,3 +919,10 @@ class Backend(object):
         :return: Nothing
         """
         return None
+
+    def search_certificate(self, searchstring):
+        """
+        Search backend for searchstring
+        :param searchstring: search string
+        :return: tuple of serial numbers
+        """

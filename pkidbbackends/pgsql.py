@@ -1394,10 +1394,13 @@ class PostgreSQL(Backend):
                     if meta in self._metadata:
                         # *_date requires special handling because of the TIMESTAMP type and the required conversion
                         if meta == "start_date" or meta == "end_date" or meta == "revocation_date":
-                            query = "UPDATE certificate SET %s=to_timestamp(%%(%s)s) WHERE serial_number=%%(serial)s;" %\
-                                    (meta, meta)
+                            query = "UPDATE certificate SET %s=to_timestamp(%%(%s)s) WHERE serial_number=%%(serial)s;" \
+                                    % (meta, meta)
                         else:
                             query = "UPDATE certificate SET %s=%%(%s)s WHERE serial_number=%%(serial)s;" % (meta, meta)
+
+
+                        self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], serial))
                         cursor.execute(query, data)
                     else:
                         self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
@@ -1411,3 +1414,23 @@ class PostgreSQL(Backend):
             raise PKIDBException(message="Failed to set meta data in database: %s" % (error.message, ))
 
         return None
+
+    def search_certificate(self, searchstring):
+        serials = []
+        try:
+            query = {"search": searchstring, }
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE %(search)s;", query)
+            result = cursor.fetchall()
+            cursor.close()
+            self.__db.commit()
+
+            for serial in result:
+                serials.append(serial[0])
+
+        except psycopg2.Error as error:
+            self.__db.rollback()
+            self.__logger.error("Can't search subject in database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't search subject in database: %s" % (error.message, ))
+
+        return serials

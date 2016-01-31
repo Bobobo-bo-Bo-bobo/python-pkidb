@@ -1301,6 +1301,8 @@ class SQLite(Backend):
                 if meta != "serial":
                     if meta in self._metadata:
                         query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta, )
+                        self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], serial))
+
                         cursor.execute(query, (data[meta], data["serial"]))
                     else:
                         self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"

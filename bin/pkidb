@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.11"
+__version__ = "0.8.12"
 
 shortoptions = {
     "main": "c:hV",
@@ -274,7 +274,7 @@ def usage():
                                             will be read, otherwise input will be read from standard input
 
    revoke                                   Revoke a certificate. Serial number of the certificate to revoke must
-                                            be used. If given not given on the command line it will be read from
+                                            be used. If not given on the command line it will be read from
                                             stdin.
 
      -f                                     Revoke certificate by it's serial number event it is not present in the
@@ -1049,7 +1049,7 @@ def sign_certificate(opts, config, backend):
     input = None
     start = None
     valid_for = None
-    templatedata = { "global":{}, "extension":[] }
+    templatedata = {"global": {}, "extension": [], }
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
     re_oid = re.compile("[0-9\.]+")
@@ -1210,7 +1210,13 @@ def sign_certificate(opts, config, backend):
                         if "issuer" in parsed[key]:
                             issuer = parsed[key]["issued"]
 
-                        extdata = {"name":name, "critical":critical, "data":data, "subject":subject, "issuer":issuer}
+                        extdata = {
+                            "name": name,
+                            "critical": critical,
+                            "data": data,
+                            "subject": subject,
+                            "issuer": issuer,
+                        }
                         templatedata["extension"].append(extdata)
 
         elif opt in ("-o", "--output"):

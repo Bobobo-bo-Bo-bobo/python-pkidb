@@ -158,10 +158,10 @@ class PostgreSQL(Backend):
 
     def _has_serial_number(self, serial):
         query = {
-            "serial":serial,
+            "serial": serial,
         }
 
-        self.__logger.info("Looking for serial number 0x%x in database" % (serial, ))
+        self.__logger.info("Looking for serial number %s in database" % (str(serial), ))
 
         try:
             cursor = self.__db.cursor()
@@ -170,10 +170,10 @@ class PostgreSQL(Backend):
             result = cursor.fetchall()
 
             if len(result) == 0:
-                self.__logger.info("Serial number 0x%x was not found in the database" % (serial, ))
+                self.__logger.info("Serial number %s was not found in the database" % (str(serial), ))
                 return False
             else:
-                self.__logger.info("Serial number 0x%x was found in the database" % (serial, ))
+                self.__logger.info("Serial number %s was found in the database" % (str(serial), ))
                 return True
 
         except psycopg2.Error as error:
@@ -229,7 +229,7 @@ class PostgreSQL(Backend):
                 if new_serial:
                     new_serial += 1
 
-        self.__logger.info("New serial number is 0x%x" % (new_serial, ))
+        self.__logger.info("New serial number is %s" % (str(new_serial), ))
         return new_serial
 
     def _store_extension(self, extlist):
@@ -241,10 +241,10 @@ class PostgreSQL(Backend):
             # primary key is the sha512 hash of name+critical+data
             pkey = hashlib.sha512(extension[0]+str(extension[1])+extension[2]).hexdigest()
             extdata = {
-                "hash":pkey,
-                "name":extension[0],
-                "critical":str(extension[1]),
-                "data":base64.b64encode(extension[2]),
+                "hash": pkey,
+                "name": extension[0],
+                "critical": str(extension[1]),
+                "data": base64.b64encode(extension[2]),
             }
 
             try:
@@ -310,8 +310,8 @@ class PostgreSQL(Backend):
         csr_rawdata = OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_ASN1, csr)
         csr_pkey = hashlib.sha512(csr_rawdata).hexdigest()
         csr_data = {
-            "pkey":csr_pkey,
-            "request":base64.b64encode(csr_rawdata),
+            "pkey": csr_pkey,
+            "request": base64.b64encode(csr_rawdata),
         }
 
         # check if csr already exists
@@ -356,8 +356,8 @@ class PostgreSQL(Backend):
                 # data will be replaced
                 else:
                     # delete old dataset
-                    self.__logger.info("Replacement flag set, deleting old certificate with serial number 0x%x" %
-                                       (data["serial"], ))
+                    self.__logger.info("Replacement flag set, deleting old certificate with serial number %s" %
+                                       (str(data["serial"]), ))
                     cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", data)
 
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
@@ -369,13 +369,13 @@ class PostgreSQL(Backend):
 
             if "csr" in data:
                 self.__logger.info("Certificate signing request found, linking certificate with serial "
-                                   "number 0x%x to signing request 0x%s" % (data["serial"], data["csr"]))
+                                   "number %s to signing request 0x%s" % (str(data["serial"]), data["csr"]))
                 cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", data)
 
             if "revreason" in data:
                 self.__logger.info("Revocation flag found, set revocation reason to %s with revocation time "
-                                   "%s for certificate with serial number 0x%x" % (data["revreason"], data["revtime"],
-                                                                                   data["serial"]))
+                                   "%s for certificate with serial number %s" % (data["revreason"], data["revtime"],
+                                                                                 str(data["serial"])))
                 cursor.execute("UPDATE certificate SET revocation_reason=%(revreason)s, "
                                "revocation_date=to_timestamp(%(revtime)s), state=%(state)s WHERE "
                                "serial_number=%(serial)s;", data)
@@ -404,10 +404,10 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE certificate;")
 
             qdata = {
-                "valid":self._certificate_status_map["valid"],
-                "invalid":self._certificate_status_map["invalid"],
-                "expired":self._certificate_status_map["expired"],
-                "now":time.time(),
+                "valid": self._certificate_status_map["valid"],
+                "invalid": self._certificate_status_map["invalid"],
+                "expired": self._certificate_status_map["expired"],
+                "now": time.time(),
             }
 
             # if auto renew has been requested get list
@@ -436,51 +436,52 @@ class PostgreSQL(Backend):
                             self.__logger.info("Using validity period of %f sec for renewal" % (sn[1], ))
                             new_end = self._unix_timestamp_to_asn1_time(time.time() + sn[1])
 
-                        self.__logger.info("Renewing certificate with serial number 0x%x (notBefore=%s, "
-                                           "notAfter=%s)" % (sn[0], new_start, new_end))
+                        self.__logger.info("Renewing certificate with serial number %s (notBefore=%s, "
+                                           "notAfter=%s)" % (str(sn[0]), new_start, new_end))
                         self.renew_certificate(sn[0], new_start, new_end, cakey)
 
             # set all invalid certificates to valid if notBefore < now and notAfter > now
             self.__logger.info("Set all invalid certificates to valid if notBefore < now and notAfter > now")
-            cursor.execute("SELECT serial_number, start_date, end_date FROM certificate WHERE state=%(invalid)s AND "
+            cursor.execute("SELECT serial_number, extract(EPOCH FROM start_date), extract(EPOCH FROM end_date) "
+                           "FROM certificate WHERE state=%(invalid)s AND "
                            "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
             self.__logger.info("%u certificates will be set from invalid to valid" % (len(result), ))
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Certificate with serial number 0x%x changed from invalid to valid because "
-                                       "(%f < %f) AND (%f > %f)" % (res[0], res[1], qdata["now"], res[2], qdata["now"]))
+                    self.__logger.info("Certificate with serial number %s changed from invalid to valid because "
+                                       "(%f < %f) AND (%f > %f)" % (str(res[0]), res[1], qdata["now"], res[2], qdata["now"]))
 
             cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=%(invalid)s AND "
                            "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)
 
             # set all valid certificates to invalid if notBefore >= now
             self.__logger.info("Set all valid certificates to invalid if notBefore >= now")
-            cursor.execute("SELECT serial_number, start_date FROM certificate WHERE state=%(valid)s AND "
-                           "(start_date >= to_timestamp(%(now)s));", qdata)
+            cursor.execute("SELECT serial_number, extract(EPOCH FROM start_date) FROM certificate WHERE "
+                           "state=%(valid)s AND (start_date >= to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
             self.__logger.info("%u certificates will be set from valid to invalid" % (len(result), ))
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Certificate with serial number 0x%x changed from valid to invalid because "
-                                       "(%f >= %f)" % (res[0], res[1], qdata["now"]))
+                    self.__logger.info("Certificate with serial number %s changed from valid to invalid because "
+                                       "(%f >= %f)" % (str(res[0]), res[1], qdata["now"]))
 
             cursor.execute("UPDATE certificate SET state=%(invalid)s WHERE state=%(valid)s AND "
                            "(start_date >= to_timestamp(%(now)s));", qdata)
 
             # set all valid certificates to expired if notAfter <= now
             self.__logger.info("Set all valid certificates to expired if notAfter <= now")
-            cursor.execute("SELECT serial_number, end_date FROM certificate WHERE state=%(valid)s AND "
-                           "(end_date <= to_timestamp(%(now)s));", qdata)
+            cursor.execute("SELECT serial_number, extract(EPOCH FROM end_date) FROM certificate WHERE "
+                           "state=%(valid)s AND (end_date <= to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
             self.__logger.info("%u certificates will be set from valid to expired" % (len(result), ))
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Certificate with serial number 0x%x changed from valid to expired because "
-                                       "(%f <= %f)" % (res[0], res[1], qdata["now"]))
+                    self.__logger.info("Certificate with serial number %s changed from valid to expired because "
+                                       "(%f <= %f)" % (str(res[0]), res[1], qdata["now"]))
 
             cursor.execute("UPDATE certificate SET state=%(expired)s WHERE state=%(valid)s AND "
                            "(end_date <= to_timestamp(%(now)s));", qdata)
@@ -557,8 +558,8 @@ class PostgreSQL(Backend):
         return statistics
 
     def _insert_empty_cert_data(self, serial, subject):
-        self.__logger.info("Inserting temporary certificate data for serial number 0x%x and subject %s"
-                           % (serial, subject))
+        self.__logger.info("Inserting temporary certificate data for serial number %s and subject %s"
+                           % (str(serial), subject))
 
         try:
             cursor = self.__db.cursor()
@@ -567,9 +568,9 @@ class PostgreSQL(Backend):
             # insert empty data to "register" serial number until the
             # signed certificate can be committed
             dummy_data = {
-                "serial":serial,
-                "subject":subject,
-                "state":self._certificate_status_map["temporary"],
+                "serial": serial,
+                "subject": subject,
+                "state": self._certificate_status_map["temporary"],
             }
             cursor.execute("INSERT INTO certificate (serial_number, subject, state) VALUES "
                            "(%(serial)s, %(subject)s, %(state)s);", dummy_data)
@@ -593,7 +594,7 @@ class PostgreSQL(Backend):
 
     def remove_certificate(self, serial):
         qdata = {
-            "serial":serial,
+            "serial": serial,
         }
 
         self.__logger.info("Removing certificate")
@@ -603,7 +604,7 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE certificate;")
             cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", qdata)
 
-            self.__logger.info("Certificate with serial number 0x%x has been removed from the database" % (serial, ))
+            self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial), ))
 
             cursor.close()
             self.__db.commit()
@@ -634,9 +635,9 @@ class PostgreSQL(Backend):
                 revcert.set_rev_date(self._unix_timestamp_to_asn1_time(revoked[2]))
 
                 crl.add_revoked(revcert)
-                self.__logger.info("Certificate with serial number 0x%x added to revocation list with "
+                self.__logger.info("Certificate with serial number %s added to revocation list with "
                                    "revocation reason %s and revocation date %s" %
-                                   (revoked[0], self._revocation_reason_reverse_map[revoked[1]],
+                                   (str(revoked[0]), self._revocation_reason_reverse_map[revoked[1]],
                                     self._unix_timestamp_to_asn1_time(revoked[2])))
 
             cursor.close()
@@ -655,10 +656,10 @@ class PostgreSQL(Backend):
     def revoke_certificate(self, serial, reason, revocation_date, force=False):
         try:
             qdata = {
-                "serial":serial,
-                "reason":self._revocation_reason_map[reason],
-                "date":revocation_date,
-                "state":self._certificate_status_map["revoked"],
+                "serial": serial,
+                "reason": self._revocation_reason_map[reason],
+                "date": revocation_date,
+                "state": self._certificate_status_map["revoked"],
             }
 
             cursor = self.__db.cursor()
@@ -676,8 +677,8 @@ class PostgreSQL(Backend):
                     cursor.execute("INSERT INTO certificate (serial_number, version, subject, certificate, state) "
                                    "VALUES (%(serial)s, %(version)s, %(subject)s, %(certificate)s, %(state)s);", qdata)
 
-            self.__logger.info("Revoking certificate with serial number 0x%x with revocation reason %s "
-                               "and revocation date %s" % (serial, reason, revocation_date))
+            self.__logger.info("Revoking certificate with serial number %s with revocation reason %s "
+                               "and revocation date %s" % (str(serial), reason, revocation_date))
 
             cursor.execute("UPDATE certificate SET state=%(state)s, revocation_date=to_timestamp(%(date)s), "
                            "revocation_reason=%(reason)s WHERE serial_number=%(serial)s;", qdata)
@@ -694,7 +695,7 @@ class PostgreSQL(Backend):
         cert = None
 
         qdata = {
-            "serial":serial,
+            "serial": serial,
         }
 
         self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial, ))
@@ -726,7 +727,7 @@ class PostgreSQL(Backend):
     def _get_state(self, serial):
         try:
             qdata = {
-                "serial":serial,
+                "serial": serial,
             }
 
             cursor = self.__db.cursor()
@@ -739,13 +740,13 @@ class PostgreSQL(Backend):
             self.__db.commit()
 
             if len(result) > 0:
-                self.__logger.info("Certificate with serial number 0x%x is %s" %
-                                   (serial, self._certificate_status_reverse_map[result[0][0]]))
+                self.__logger.info("Certificate with serial number %s is %s" %
+                                   (str(serial), self._certificate_status_reverse_map[result[0][0]]))
 
                 return result[0][0]
             else:
-                self.__logger.warning("No certificate with serial number 0x%x found in database" %
-                                      (serial, ))
+                self.__logger.warning("No certificate with serial number %s found in database" %
+                                      (str(serial), ))
                 return None
         except psycopg2.Error as error:
             self.__logger.error("Can't read certificate from database: %s" % (error.message, ))
@@ -773,27 +774,27 @@ class PostgreSQL(Backend):
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping certificate with serial number 0x%x" % (res[0], ))
+                    self.__logger.info("Dumping certificate with serial number %s" % (str(res[0]), ))
                     entry = {
-                        "serial_number":str(res[0]),
-                        "version":res[1],
-                        "start_date":res[2],
-                        "end_date":res[3],
-                        "subject":res[4],
-                        "auto_renewable":res[5],
-                        "auto_renew_start_period":res[6],
-                        "auto_renew_validity_period":res[7],
-                        "issuer":res[8],
-                        "keysize":res[9],
-                        "fingerprint_md5":res[10],
-                        "fingerprint_sha1":res[11],
-                        "certificate":res[12],
-                        "signature_algorithm_id":res[13],
-                        "extension":res[14],
-                        "signing_request":res[15],
-                        "state":res[16],
-                        "revocation_date":res[17],
-                        "revocation_reason":res[18],
+                        "serial_number": str(res[0]),
+                        "version": res[1],
+                        "start_date": res[2],
+                        "end_date": res[3],
+                        "subject": res[4],
+                        "auto_renewable": res[5],
+                        "auto_renew_start_period": res[6],
+                        "auto_renew_validity_period": res[7],
+                        "issuer": res[8],
+                        "keysize": res[9],
+                        "fingerprint_md5": res[10],
+                        "fingerprint_sha1": res[11],
+                        "certificate": res[12],
+                        "signature_algorithm_id": res[13],
+                        "extension": res[14],
+                        "signing_request": res[15],
+                        "state": res[16],
+                        "revocation_date": res[17],
+                        "revocation_reason": res[18],
                     }
                     certdump.append(entry)
             dump["certificate"] = certdump
@@ -808,10 +809,10 @@ class PostgreSQL(Backend):
                 for res in result:
                     self.__logger.info("Dumping extension with key id %s" % (res[0], ))
                     entry = {
-                        "hash":res[0],
-                        "name":res[1],
-                        "critical":res[2],
-                        "data":res[3],
+                        "hash": res[0],
+                        "name": res[1],
+                        "critical": res[2],
+                        "data": res[3],
                     }
                     extdump.append(entry)
             dump["extension"] = extdump
@@ -829,8 +830,8 @@ class PostgreSQL(Backend):
                 for res in result:
                     self.__logger.info("Dumping signing algorithm %s with id %u" % (res[1], res[0]))
                     entry = {
-                        "id":str(res[0]),
-                        "algorithm":res[1],
+                        "id": str(res[0]),
+                        "algorithm": res[1],
                     }
                     algodump.append(entry)
             dump["signature_algorithm"] = algodump
@@ -846,8 +847,8 @@ class PostgreSQL(Backend):
                 for res in result:
                     self.__logger.info("Dumping signing request %s" % (res[0], ))
                     entry = {
-                        "hash":res[0],
-                        "request":res[1],
+                        "hash": res[0],
+                        "request": res[1],
                     }
                     csrdump.append(entry)
 
@@ -867,7 +868,7 @@ class PostgreSQL(Backend):
 
         if state:
             qdata = {
-                "state":self._certificate_status_map[state],
+                "state": self._certificate_status_map[state],
             }
 
             self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"], ))
@@ -877,7 +878,7 @@ class PostgreSQL(Backend):
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number 0x%x to result list" % (res[0], ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
@@ -894,7 +895,7 @@ class PostgreSQL(Backend):
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number 0x%x to result list" % (res[0], ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
@@ -981,27 +982,27 @@ class PostgreSQL(Backend):
 
     def _get_raw_certificate_data(self, serial):
         data = {
-            "serial_number":None,
-            "version":None,
-            "start_date":None,
-            "end_date":None,
-            "subject":None,
-            "auto_renewable":None,
-            "auto_renew_start_period":None,
-            "auto_renew_validity_period":None,
-            "issuer":None,
-            "keysize":None,
-            "fingerprint_md5":None,
-            "fingerprint_sha1":None,
-            "certificate":None,
-            "signature_algorithm_id":None,
-            "extension":None,
-            "signing_request":None,
-            "state":None,
-            "revocation_date":None,
-            "revocation_reason":None,
+            "serial_number": None,
+            "version": None,
+            "start_date": None,
+            "end_date": None,
+            "subject": None,
+            "auto_renewable": None,
+            "auto_renew_start_period": None,
+            "auto_renew_validity_period": None,
+            "issuer": None,
+            "keysize": None,
+            "fingerprint_md5": None,
+            "fingerprint_sha1": None,
+            "certificate": None,
+            "signature_algorithm_id": None,
+            "extension": None,
+            "signing_request": None,
+            "state": None,
+            "revocation_date": None,
+            "revocation_reason": None,
         }
-        qdata = { "serial":serial }
+        qdata = {"serial": serial, }
 
         try:
             cursor = self.__db.cursor()
@@ -1016,21 +1017,21 @@ class PostgreSQL(Backend):
             result = cursor.fetchall()
             if len(result) > 0:
                 data = {
-                    "serial_number":"%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
-                    "version":result[0][1] + 1,
-                    "start_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
-                    "end_date":time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
-                    "subject":result[0][4],
-                    "auto_renewable":result[0][5],
-                    "issuer":result[0][8],
-                    "keysize":result[0][9],
-                    "fingerprint_md5":result[0][10],
-                    "fingerprint_sha1":result[0][11],
-                    "certificate":result[0][12],
-                    "signature_algorithm_id":result[0][13],
-                    "extension":result[0][14],
-                    "signing_request":result[0][15],
-                    "state":self._certificate_status_reverse_map[result[0][16]],
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "version": result[0][1] + 1,
+                    "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
+                    "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
+                    "subject": result[0][4],
+                    "auto_renewable": result[0][5],
+                    "issuer": result[0][8],
+                    "keysize": result[0][9],
+                    "fingerprint_md5": result[0][10],
+                    "fingerprint_sha1": result[0][11],
+                    "certificate": result[0][12],
+                    "signature_algorithm_id": result[0][13],
+                    "extension": result[0][14],
+                    "signing_request": result[0][15],
+                    "state": self._certificate_status_reverse_map[result[0][16]],
 
                 }
                 if data["state"] == "revoked":
@@ -1048,10 +1049,14 @@ class PostgreSQL(Backend):
                 if data["extension"]:
                     extlist = []
                     for ext in data["extension"]:
-                        qext = { "hash":ext }
+                        qext = {"hash": ext, }
                         cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%(hash)s;", qext)
                         ext_result = cursor.fetchall()
-                        extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
+                        extlist.append({
+                            "name": ext_result[0][0],
+                            "critical": ext_result[0][1],
+                            "data": ext_result[0][2],
+                        })
                     data["extension"] = extlist
                 else:
                     data["extension"] = []
@@ -1070,27 +1075,27 @@ class PostgreSQL(Backend):
 
     def get_certificate_data(self, serial):
         data = {
-            "serial_number":None,
-            "version":None,
-            "start_date":None,
-            "end_date":None,
-            "subject":None,
-            "auto_renewable":None,
-            "auto_renew_start_period":None,
-            "auto_renew_validity_period":None,
-            "issuer":None,
-            "keysize":None,
-            "fingerprint_md5":None,
-            "fingerprint_sha1":None,
-            "certificate":None,
-            "algorithm":None,
-            "extension":None,
-            "signing_request":None,
-            "state":None,
-            "revocation_date":None,
-            "revocation_reason":None,
+            "serial_number": None,
+            "version": None,
+            "start_date": None,
+            "end_date": None,
+            "subject": None,
+            "auto_renewable": None,
+            "auto_renew_start_period": None,
+            "auto_renew_validity_period": None,
+            "issuer": None,
+            "keysize": None,
+            "fingerprint_md5": None,
+            "fingerprint_sha1": None,
+            "certificate": None,
+            "algorithm": None,
+            "extension": None,
+            "signing_request": None,
+            "state": None,
+            "revocation_date": None,
+            "revocation_reason": None,
         }
-        qdata = {"serial": serial,}
+        qdata = {"serial": serial, }
 
         try:
             cursor = self.__db.cursor()
@@ -1147,10 +1152,14 @@ class PostgreSQL(Backend):
                 if data["extension"]:
                     extlist = []
                     for ext in data["extension"]:
-                        qext = { "hash":ext }
+                        qext = {"hash" :ext, }
                         cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%(hash)s;", qext)
                         ext_result = cursor.fetchall()
-                        extlist.append({ "name":ext_result[0][0], "critical":ext_result[0][1], "data":ext_result[0][2]})
+                        extlist.append({
+                            "name": ext_result[0][0],
+                            "critical": ext_result[0][1],
+                            "data": ext_result[0][2],
+                        })
                     data["extension"] = extlist
                 else:
                     data["extension"] = []
@@ -1188,10 +1197,10 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
 
             qdata = {
-                "serial":serial,
-                "auto_renewable":auto_renew,
-                "auto_renew_start_period":auto_renew_start_period,
-                "auto_renew_validity_period":auto_renew_validity_period,
+                "serial": serial,
+                "auto_renewable": auto_renew,
+                "auto_renew_start_period": auto_renew_start_period,
+                "auto_renew_validity_period": auto_renew_validity_period,
             }
 
             cursor.execute("LOCK TABLE certificate;")
@@ -1208,10 +1217,10 @@ class PostgreSQL(Backend):
                                    "auto_renew_start_period='%(auto_renew_start_period)s days', "
                                    "auto_renewable=%(auto_renewable)s WHERE serial_number=%(serial)s;", qdata)
 
-                    self.__logger.info("Setting auto_renew_start_period of certificate 0x%x to %f days." %
-                                       (serial, qdata["auto_renew_start_period"]))
+                    self.__logger.info("Setting auto_renew_start_period of certificate %s to %f days." %
+                                       (str(serial), qdata["auto_renew_start_period"]))
                     udata = {
-                        "serial":serial,
+                        "serial": serial,
                     }
                     # set auto_renew_validity_period to validity_period of not set
                     if not auto_renew_validity_period:
@@ -1228,11 +1237,11 @@ class PostgreSQL(Backend):
                                    "auto_renew_validity_period='%(auto_renew_validity_period)s days', "
                                    "auto_renewable=%(auto_renewable)s WHERE serial_number=%(serial)s;", qdata)
 
-                    self.__logger.info("Setting auto_renew_validity_period of certificate 0x%x to %f days." %
-                                       (serial, qdata["auto_renew_validity_period"]))
+                    self.__logger.info("Setting auto_renew_validity_period of certificate %s to %f days." %
+                                       (str(serial), qdata["auto_renew_validity_period"]))
 
                     udata = {
-                        "serial":serial,
+                        "serial": serial,
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
@@ -1301,7 +1310,7 @@ class PostgreSQL(Backend):
 
     def _get_signature_algorithm(self, id):
         algo = None
-        qdata = { "id": id }
+        qdata = {"id": id, }
 
         try:
             cursor = self.__db.cursor()
@@ -1323,19 +1332,19 @@ class PostgreSQL(Backend):
 
     def _get_meta_data(self, serial, fields=None):
         result = {
-            "auto_renewable":None,
-            "auto_renew_start_period":None,
-            "auto_renew_validity_period":None,
-            "state":None,
-            "revocation_date":None,
-            "revocation_reason":None,
-            "certificate":None,
-            "signing_request":None,
+            "auto_renewable": None,
+            "auto_renew_start_period": None,
+            "auto_renew_validity_period": None,
+            "state": None,
+            "revocation_date": None,
+            "revocation_reason": None,
+            "certificate": None,
+            "signing_request": None,
         }
         self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial, ))
 
         try:
-            qdata = { "serial":serial, }
+            qdata = { "serial": serial, }
             cursor = self.__db.cursor()
             cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
                            "extract(EPOCH FROM auto_renew_validity_period), state, "

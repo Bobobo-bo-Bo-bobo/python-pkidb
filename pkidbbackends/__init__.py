@@ -63,26 +63,26 @@ class Backend(object):
     }
 
     _certificate_status_map = {
-        "temporary":-1,
-        "pending":0,
-        "valid":1,
-        "revoked":2,
-        "expired":3,
-        "invalid":4,
+        "temporary": -1,
+        "pending": 0,
+        "valid": 1,
+        "revoked": 2,
+        "expired": 3,
+        "invalid": 4,
     }
 
     _revocation_reason_map = {
-        "unspecified":0,
-        "keycompromise":1,
-        "cacompromise":2,
-        "affiliationchanged":3,
-        "superseded":4,
-        "cessationofoperation":5,
-        "certificatehold":6,
-        "unspecified (not used as defined in RFC5280)":7,
-        "removefromcrl":8,
-        "privilegewithdrawn":9,
-        "aacompromise":10,
+        "unspecified": 0,
+        "keycompromise": 1,
+        "cacompromise": 2,
+        "affiliationchanged": 3,
+        "superseded": 4,
+        "cessationofoperation": 5,
+        "certificatehold": 6,
+        "unspecified (not used as defined in RFC5280)": 7,
+        "removefromcrl": 8,
+        "privilegewithdrawn": 9,
+        "aacompromise": 10,
     }
 
     _revocation_reason_reverse_map = {
@@ -475,17 +475,17 @@ class Backend(object):
         certificate = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
 
         dataset = {
-            "subject":self._format_subject(cert.get_subject().get_components()),
-            "version":cert.get_version(),
-            "start_date":self._asn1_time_to_unix_timestamp(cert.get_notBefore()),
-            "end_date":self._asn1_time_to_unix_timestamp(cert.get_notAfter()),
-            "serial":cert.get_serial_number(),
-            "issuer":self._format_subject(cert.get_issuer().get_components()),
-            "pubkey":base64.b64encode(certificate),
-            "fp_md5":hashlib.md5(certificate).hexdigest(),
-            "fp_sha1":hashlib.sha1(certificate).hexdigest(),
-            "keysize":cert.get_pubkey().bits(),
-            "signature_algorithm_id":self._store_signature_algorithm(cert),
+            "subject": self._format_subject(cert.get_subject().get_components()),
+            "version": cert.get_version(),
+            "start_date": self._asn1_time_to_unix_timestamp(cert.get_notBefore()),
+            "end_date": self._asn1_time_to_unix_timestamp(cert.get_notAfter()),
+            "serial": cert.get_serial_number(),
+            "issuer": self._format_subject(cert.get_issuer().get_components()),
+            "pubkey": base64.b64encode(certificate),
+            "fp_md5": hashlib.md5(certificate).hexdigest(),
+            "fp_sha1": hashlib.sha1(certificate).hexdigest(),
+            "keysize": cert.get_pubkey().bits(),
+            "signature_algorithm_id": self._store_signature_algorithm(cert),
         }
 
         # check expiration / validity
@@ -633,7 +633,7 @@ class Backend(object):
 
         # we don't know the signing algorithm so set it to "placeholder"
         algo_id = self._store_signature_algorithm_name("placeholder")
-        meta = { "signature_algorithm_id": algo_id, }
+        meta = {"signature_algorithm_id": algo_id, }
         if start or end:
             if start:
                 meta["start_date"] = start
@@ -679,7 +679,7 @@ class Backend(object):
         :param cakey: X509 object of CA signing key
         :return: X509 object with renewed certificate
         """
-        self.__logger.info("Renewing certificate with serial number 0x%x" % (serial, ))
+        self.__logger.info("Renewing certificate with serial number %s" % (str(serial), ))
 
         # check if the certificate has been revoked
         if self._is_revoked(serial):

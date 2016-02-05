@@ -1698,7 +1698,7 @@ def add_dummy(opts, config, backend):
     if not subject:
         subject = "Placeholder, set for imported certificate with serial number %s" % (str(serial), )
 
-    backend.insert_empty_cert_data(serial, subject, start, end)
+    backend.insert_empty_cert_data(serial, subject, notbefore, notafter)
 
 def search_certificate(opts, config, backend):
     """

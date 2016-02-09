@@ -9,8 +9,8 @@ VERSION=$1
 DIR=$(mktemp -d)
 DESTDIR="${DIR}/python-pkidb-${VERSION}"
 
-mkdir -p ${DESTDIR} && cp -Rp * ${DESTDIR}
-rm -rf ${DESTDIR}/build ${DESTDIR}/.git
+mkdir -p ${DESTDIR} && cp -Rp . ${DESTDIR}
+rm -rf ${DESTDIR}/build ${DESTDIR}/.git ${DESTDIR}/tmp ${DESTDIR}/Documentation ${DESTDIR}/.idea ${DESTDIR}/make_targz ${DESTDIR}/.gitignore
 cd ${DIR} && tar cvzf /tmp/python-pkidb_${VERSION}.orig.tar.gz python-pkidb-${VERSION}
 
 cd 

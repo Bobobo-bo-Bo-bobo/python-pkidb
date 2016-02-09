@@ -1,0 +1,18 @@
+#!/bin/sh
+
+if [ $# -ne 1 ]; then
+  echo "$0 <version>"
+  exit 1
+fi
+
+VERSION=$1
+DIR=$(mktemp -d)
+DESTDIR="${DIR}/python-pkidb-${VERSION}"
+
+mkdir -p ${DESTDIR} && cp -Rp . ${DESTDIR}
+rm -rf ${DESTDIR}/build ${DESTDIR}/.git ${DESTDIR}/tmp ${DESTDIR}/Documentation ${DESTDIR}/.idea ${DESTDIR}/make_targz ${DESTDIR}/.gitignore
+cd ${DIR} && tar cvzf /tmp/python-pkidb_${VERSION}.orig.tar.gz python-pkidb-${VERSION}
+
+cd 
+rm -rf ${DIR}
+echo "--> /tmp/python-pkidb_${VERSION}.orig.tar.gz"

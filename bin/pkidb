@@ -1744,6 +1744,7 @@ Public License Version 3. (http://www.gnu.org/copyleft/gpl.html)
 """ % (__version__, ))
 
 if __name__ == "__main__":
+    failed = False
 
     # parse commandline options
     try:
@@ -1845,7 +1846,11 @@ if __name__ == "__main__":
     except pkidbbackends.PKIDBException as pkidberror:
         sys.stderr.write("Error: Command %s failed: %s\n" % (command, pkidberror.message))
         __logger.error("Command %s failed: %s" % (command, pkidberror.message))
+        failed = True
 
     stop = time.time()
     __logger.info("Command %s finished after %f seconds" % (command, (stop - start)))
-    sys.exit(0)
+    if failed:
+        sys.exit(1)
+    else:
+        sys.exit(0)

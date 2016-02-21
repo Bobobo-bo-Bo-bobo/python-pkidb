@@ -170,10 +170,10 @@ def usage():
                                             If no output file (option -o) has been given it will be written
                                             to standard output.
 
-     -o <output>                            Write new certificate to <output> instead of standard out
+     -o <output>                            Write database dump to <output> instead of standard out.
      --output=<output>
 
-   delete                                   Deletes a certficiate identified by the serial number.
+   delete                                   Deletes a certificate identified by the serial number.
                                             If the serial number is not given on the command line it will be
                                             read from standard input.
 

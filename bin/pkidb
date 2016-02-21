@@ -183,7 +183,7 @@ def usage():
                                             The new certificate will be written to standard output or to a file if
                                             the -o option is used.
 
-     -o <output>                            Write new certificate to <output> instead of standard out
+     -o <output>                            Write certificate to <output> instead of standard out.
      --output=<output>
 
    gencrl                                   Generate certificate revocation list from revoked certificates.

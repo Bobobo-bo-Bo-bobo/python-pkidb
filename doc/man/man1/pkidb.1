@@ -129,7 +129,7 @@ instead of standard output
 
 .BR gencrl
 .RS
-Generate certificate revocation list from revoked certificates. The certificate revocation list will be written to standard output or to a file if the -o option is used.
+Generate certificate revocation list containing information about revoked certificates. The certificate revocation list will be written to standard output or to a file if the -o option is used.
 .RE
 
 .RS
@@ -165,7 +165,7 @@ If there are differences, fix them.
 .RE
 .BR housekeeping
 .RS
-General housekeeping. Checking all certificates in the database for expiration, renew auto renewable certificates (if option -a is used). This should be run at regular intervals.
+General "housekeeping". Checking all certificates in the database for expiration, renew auto renewable certificates (if option -a is used). This should be run at regular intervals.
 .br
 Certificates marked as auto renewable will never be renewed if they have been revoked.
 .RE

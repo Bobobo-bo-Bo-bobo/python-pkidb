@@ -198,7 +198,7 @@ def usage():
    -f                                       Fix errors. Stored data will be replaced with data from the certifiate
    --fix                                    stored in the database.
 
-   housekeeping                             General "housekeeping. Checking all certificates in the database
+   housekeeping                             General "housekeeping". Checking all certificates in the database
                                             for expiration, renew auto renewable certificates (if option -A is used).
                                             This should be run at regular intervals.
 

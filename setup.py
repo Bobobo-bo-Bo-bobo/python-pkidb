@@ -2,7 +2,7 @@
 from distutils.core import setup
 
 
-PKIDB_VERSION = "0.8.12.2"
+PKIDB_VERSION = "0.8.12.3"
 
 PKIDB_SETUP = {
     "name": "pkidb",
@@ -25,9 +25,9 @@ SQLite3 (via python-pysqlite2)""",
                                                      "initialize/pgsql/grant.sh"]),
         ("share/python-pkidb/initialisation/mysql", ["initialize/mysql/mysql.sql"]),
         ("share/python-pkidb/initialisation/sqlite", ["initialize/sqlite/sqlite.sql"]),
-        ("share/doc/python-pkidb-%s/examples" % (PKIDB_VERSION, ), ["examples/config.ini.example",
-                                                                    "examples/migration_openssl_index_txt.py",
-                                                                     "examples/template.example"]),
+        ("share/doc/python-pkidb/examples", ["examples/config.ini.example",
+                                             "examples/migration_openssl_index_txt.py",
+                                             "examples/template.example"]),
     ],
 }
 

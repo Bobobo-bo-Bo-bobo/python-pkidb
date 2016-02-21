@@ -180,15 +180,15 @@ def usage():
    export                                   Dumps base64 encoded X509 data of a certificate (aka PEM format).
                                             The serial number of the certificate must be given.
                                             If not given it will be read from the standard input.
-                                            The new certificate will be written to standard output or to a file if
+                                            The certificate will be written to standard output or to a file if
                                             the -o option is used.
 
      -o <output>                            Write certificate to <output> instead of standard out.
      --output=<output>
 
-   gencrl                                   Generate certificate revocation list from revoked certificates.
-                                            The certificate revocation list will be written to standard output
-                                            or to a file if -o is used.
+   gencrl                                   Generate certificate revocation list containing information about revoked
+                                            certificates. The certificate revocation list will be written to standard
+                                            output or to a file if -o is used.
 
      -o <output>                            Write revocation list to <output> instead of standard output.
      --output=<output>

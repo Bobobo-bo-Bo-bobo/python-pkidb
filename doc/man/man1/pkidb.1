@@ -192,7 +192,7 @@ day instead of the validity period stored in the backend database.
 
 .BR import
 .RS
-Import a certificate. If a file name is given it will be read from the file, otherwise it will be read from stdin.
+Import a certificate. If a file name is given it will be read from the file, otherwise it will be read from standard input.
 .RE
 
 .RS
@@ -353,7 +353,7 @@ List certificates marked as temporary. Temporary certficates are dummy settings 
 .br
 .B \-\-valid\c
 .RS
-List serial numbers of valid certificates. Certificates are considered valid if they are not temporary, not revoked and the validity period (notBefore .. notAfter) has been started and the certificate is not expired.
+List serial numbers of valid certificates. A certificates is considered valid if it is not temporary, not revoked and the validity period (notBefore .. notAfter) has started and the certificate is not expired.
 .RE
 .RE
 

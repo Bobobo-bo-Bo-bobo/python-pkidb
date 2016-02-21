@@ -209,7 +209,7 @@ def usage():
      --period=<period>                      Default is the value given on import that has been stored in the backend.
 
    import                                   Import a certificate. If a file name is given it will be read
-                                            from the file, otherwise it will be read from stdin.
+                                            from the file, otherwise it will be read from standard input.
 
      -a                                     Mark certificate as autorenwable.
      --auto-renew                           The "housekeeping" command will take care of this
@@ -240,22 +240,22 @@ def usage():
      -i                                     List serial numbers of invalid certificates.
      --invalid                              Certficates are considered invalid if their notBefore time is in the future.
 
-     -h                                     Print serial number as hexadecimal number
+     -h                                     Print serial number as hexadecimal number.
      --hex
 
-     -o <output>                            Write serial numbers of listed certificate to <output> instead of stdout
-     --output=<output>
+     -o <output>                            Write serial numbers of listed certificate to <output> instead to standard
+     --output=<output>                      output.
 
      -r                                     List serial numbers of revoked certificates.
      --revoked
 
-     -t                                     List "certificates" marked as temporary
+     -t                                     List "certificates" marked as temporary,
      --temporary                            Temporary certficates are dummy settings used to "lock" serial numbers
                                             during signing of a certificate signing request.
 
      -v                                     List serial numbers of valid certificates.
-     --valid                                Certificates are considered valid if they are not temporary, not revoked
-                                            and the validity period (notBefore .. notAfter) has been started and the
+     --valid                                A certificates is considered valid if it is not temporary, not revoked,
+                                            the validity period (notBefore .. notAfter) has started and the
                                             certificates is not expired.
 
    renew                                    Renew a cerificate. The serial number of the certificate must be given.

@@ -780,8 +780,16 @@ class Backend(object):
         :param fix: fix problems
         :return: tuple of two arrays (ok, notok) containing serial numbers that are ok or not ok
         """
-
         re_sn = re.compile("(\d+)\s\(0x[a-f0-9]+\)")
+        metadata = [ "auto_renewable",
+                     "auto_renew_start_period",
+                     "auto_renew_validity_period",
+                     "state",
+                     "revocation_date",
+                     "revocation_reason",
+                     "certificate",
+                     "signing_request",
+                   ]
 
         ok = []
         notok = []
@@ -797,22 +805,32 @@ class Backend(object):
                 certcontent = self._extract_data(cert)
 
                 # remove meta data fields not found in ASN1 data from certdata
-                for remove in self._metadata:
+                for remove in metadata:
                     if remove in certdbdata:
                         certdbdata.pop(remove)
                     if remove in certcontent:
                         certcontent.pop(remove)
 
                 # calculate fields from certificate data and add it to certdata for comparison
-                certdbdata["start_date"] = self._date_string_to_unix_timestamp(certdbdata["start_date"])
-                certdbdata["end_date"] = self._date_string_to_unix_timestamp(certdbdata["end_date"])
 
+		if "start_date" in certdbdata:
+                    certdbdata["start_date"] = self._date_string_to_unix_timestamp(certdbdata["start_date"])
+                else:
+                    certdbdata["start_date"] = None
+
+                if "end_date" in certdbdata:
+                    certdbdata["end_date"] = self._date_string_to_unix_timestamp(certdbdata["end_date"])
+                else:
+                    certdbdata["end_date"] = None
                 # reformat serial number field
                 certdbdata["serial_number"] = long(re_sn.match(certdbdata["serial_number"]).groups()[0])
 
                 # try to map signature_algorithm_id to algorithm
-                certdbdata["algorithm"] = self._get_signature_algorithm(certdbdata["signature_algorithm_id"])
-                certdbdata.pop("signature_algorithm_id")
+                if "signature_algorithm_id" in certdbdata:
+                    certdbdata["algorithm"] = self._get_signature_algorithm(certdbdata["signature_algorithm_id"])
+                    certdbdata.pop("signature_algorithm_id")
+		else:
+                    certdbdata["algorithm"] = None
 
                 if not certdbdata["algorithm"]:
                     certdbdata["algorithm"] = "<UNKNOWN>"

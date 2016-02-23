@@ -1026,7 +1026,7 @@ class SQLite(Backend):
                 }
                 # check if version is NULL (e.g. it is a dummy)
                 if result[0][1]:
-                    data["version"] = result[0][1]
+                    data["version"] = result[0][1] + 1
                 else:
                     data["version"] = -1
 

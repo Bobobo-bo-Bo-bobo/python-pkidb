@@ -728,6 +728,33 @@ class PostgreSQL(Backend):
 
         return cert
 
+    def _set_state(self, serial, state):
+        try:
+            qdata = {
+                "serial": serial,
+                "state": state,
+            }
+
+            cursor = self.__db.cursor()
+            cursor.execute("SELECT state FROM certificate WHERE serial_number=%(serial)s;", qdata)
+            result = cursor.fetchall()
+
+            oldstate = None
+            if len(result) != 0:
+                oldstate = result[0][0]
+                cursor.execute("UPDATE certificate SET state=%(state)s WHERE serial_number=%(serial)s;", qdata)
+            else:
+                oldstate = None
+
+            cursor.close()
+            self.__db.commit()
+        except psycopg2.Error as error:
+            self.__db.rollback()
+            self.__logger.error("Can't update state for certificate %s: %s" % (serial, error.message))
+            raise PKIDBException(message="Can't update state for certificate %s: %s" % (serial, error.message))
+
+        return None
+
     def _get_state(self, serial):
         try:
             qdata = {
@@ -1020,9 +1047,9 @@ class PostgreSQL(Backend):
                            "FROM certificate WHERE serial_number=%(serial)s;", qdata)
             result = cursor.fetchall()
             if len(result) > 0:
+
                 data = {
                     "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
-                    "version": result[0][1] + 1,
                     "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
                     "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
                     "subject": result[0][4],
@@ -1038,6 +1065,13 @@ class PostgreSQL(Backend):
                     "state": self._certificate_status_reverse_map[result[0][16]],
 
                 }
+
+                # check if version is NULL (e.g. it is a dummy)
+                if result[0][1]:
+                    data["version"] = result[0][1] + 1
+                else:
+                    data["version"] = -1
+
                 if data["state"] == "revoked":
                     data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][17]))
                     data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
@@ -1153,6 +1187,7 @@ class PostgreSQL(Backend):
                     cursor.execute("SELECT request FROM signing_request WHERE hash=%(signing_request)s;", data)
                     csr_result = cursor.fetchall()
                     data["signing_request"] = csr_result[0][0]
+
                 if data["extension"]:
                     extlist = []
                     for ext in data["extension"]:

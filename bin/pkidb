@@ -380,7 +380,7 @@ def usage():
 
   """ % (os.path.basename(sys.argv[0]), configfile))
 
-# uniqify a list but preserve the order
+# unify a list but preserve the order
 # http://www.peterbe.com/plog/uniqifiers-benchmark
 def remove_duplicates(list):
     ordered = []
@@ -803,9 +803,8 @@ def delete_certificate(opts, config, backend):
         serial = trailing[0]
 
     serial = serial_to_number(serial)
-    cert = backend.get_certificate(serial)
 
-    if not cert:
+    if not backend.has_serial_number(serial):
         __logger.error("No certificate with serial number %s found" % (serial, ))
         raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial, ))
 
@@ -1699,6 +1698,7 @@ def add_dummy(opts, config, backend):
         subject = "Placeholder, set for imported certificate with serial number %s" % (str(serial), )
 
     backend.insert_empty_cert_data(serial, subject, notbefore, notafter)
+    backend.set_state(serial, "dummy")
 
 def search_certificate(opts, config, backend):
     """

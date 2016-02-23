@@ -855,8 +855,8 @@ def renew_certificate(opts, config, backend):
     notbefore = time.time()
     notafter = notbefore + 86400. * validity_period
 
-    notbefore = backend._unix_timestamp_to_asn1_time(notbefore)
-    notafter = backend._unix_timestamp_to_asn1_time(notafter)
+    notbefore = backend.unix_timestamp_to_asn1_time(notbefore)
+    notafter = backend.unix_timestamp_to_asn1_time(notafter)
 
     ca_key = load_private_key(config, "ca_private_key", "ca_passphrase")
 
@@ -1442,10 +1442,6 @@ def import_certificate(opts, config, backend):
                 __logger.error("Can't parse delta period option %s: %s" % (val, error.message))
                 raise pkidbbackends.PKIDBException(message="Can't parse delta period option %s: %s"
                                                            % (val, error.message))
-
-            else:
-                __logger.error("Unknown revocation reason %s" % (reason, ))
-                raise pkidbbackends.PKIDBException(message="Unknown revocation reason %s" % (reason, ))
 
     input = None
 

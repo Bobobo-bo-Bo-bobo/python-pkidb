@@ -381,6 +381,14 @@ class Backend(object):
         asn1_time = time.strftime("%Y%m%d%H%M%S%z", time.localtime(timestamp))
         return asn1_time
 
+    def unix_timestamp_to_asn1_time(self, timestamp):
+        """
+        Converts UNIX timestamp to ASN1 GENERALIZEDTIME string
+        :param timestamp: UNIX timestamp
+        :return: ASN1 GENERALIZEDTIME string
+        """
+        return self._unix_timestamp_to_asn1_time(timestamp)
+
     def _date_string_to_unix_timestamp(self, datestring):
         """
         Convert date string in format %a, %d %b %Y %H:%M:%S %z to UNIX epoch

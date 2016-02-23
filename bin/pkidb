@@ -962,7 +962,7 @@ def revoke_certificate(opts, config, backend):
 
     serial = serial_to_number(serial)
 
-    if not backend.has_serial(serial) and not force:
+    if not backend.has_serial_number(serial) and not force:
         __logger.error("Certificate with serial number %s not found in database. If you want to revoke a certificate "
                        "by it's serial number that is not present in the database, use the force option." % (serial, ))
         raise pkidbbackends.PKIDBException(message="Certificate with serial number %s not found in database. "

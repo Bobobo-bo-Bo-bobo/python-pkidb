@@ -290,6 +290,15 @@ class Backend(object):
                  None - on error
         """
         return None
+    def has_serial_number(self, serial):
+        """
+        Check the backend for serial number
+        :param serial: serial number to check for
+        :return: True - if serial number was found
+                 False - if serial number was not found
+                 None - on error
+        """
+        return self._has_serial_number(serial)
 
     def _get_last_serial_number(self):
         """

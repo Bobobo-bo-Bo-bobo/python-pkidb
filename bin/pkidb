@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.12.3"
+__version__ = "0.8.12.4"
 
 shortoptions = {
     "main": "c:hV",
@@ -935,12 +935,12 @@ def revoke_certificate(opts, config, backend):
             if re_asn1_time_string.match(val):
                 # convert to UNIX timestamp
                 rev_date = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
-
-            try:
-                rev_date = float(val)
-            except ValueError as error:
-                __logger.error("Can't parse end time %s: %s" % (val, error.message))
-                raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
+            else:
+                try:
+                    rev_date = float(val)
+                except ValueError as error:
+                    __logger.error("Can't parse end time %s: %s" % (val, error.message))
+                    raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
 
         elif opt in ("-r", "--reason"):
             if val.lower() in backend._revocation_reason_map:
@@ -962,7 +962,7 @@ def revoke_certificate(opts, config, backend):
 
     serial = serial_to_number(serial)
 
-    if not backend.get_certificate(serial) and not force:
+    if not backend.has_serial(serial) and not force:
         __logger.error("Certificate with serial number %s not found in database. If you want to revoke a certificate "
                        "by it's serial number that is not present in the database, use the force option." % (serial, ))
         raise pkidbbackends.PKIDBException(message="Certificate with serial number %s not found in database. "
@@ -1409,13 +1409,13 @@ def import_certificate(opts, config, backend):
             if re_asn1_time_string.match(revtime):
                 # convert to UNIX timestamp
                 revtime = time.mktime(time.strptime(revtime, "%Y%m%d%H%M%SZ"))
-
-            # check timestamp
-            try:
-                revtime = float(revtime)
-            except ValueError as error:
-                __logger.error("Illegal timestamp %s" % (revtime, ))
-                raise pkidbbackends.PKIDBException(message="Illegal timestamp %s" % (revtime, ))
+            else:
+                # check timestamp
+                try:
+                    revtime = float(revtime)
+                except ValueError as error:
+                    __logger.error("Illegal timestamp %s" % (revtime, ))
+                    raise pkidbbackends.PKIDBException(message="Illegal timestamp %s" % (revtime, ))
 
             # treat no reason as unspecified
             if reason == '':
@@ -1666,24 +1666,24 @@ def add_dummy(opts, config, backend):
             if re_asn1_time_string.match(val):
                 # convert to UNIX timestamp
                 notbefore = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
-
-            try:
-                notbefore = float(val)
-            except ValueError as error:
-                __logger.error("Can't parse start time %s: %s" % (val, error.message))
-                raise pkidbbackends.PKIDBException(message="Can't parse start time %s: %s" % (val, error.message))
+            else:
+                try:
+                    notbefore = float(val)
+                except ValueError as error:
+                    __logger.error("Can't parse start time %s: %s" % (val, error.message))
+                    raise pkidbbackends.PKIDBException(message="Can't parse start time %s: %s" % (val, error.message))
 
         elif opt in ("-e", "--end"):
             # ASN1 GENERALIZEDTIME string?
             if re_asn1_time_string.match(val):
                 # convert to UNIX timestamp
                 notafter = time.mktime(time.strptime(val, "%Y%m%d%H%M%SZ"))
-
-            try:
-                notafter = float(val)
-            except ValueError as error:
-                __logger.error("Can't parse end time %s: %s" % (val, error.message))
-                raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
+            else:
+                try:
+                    notafter = float(val)
+                except ValueError as error:
+                    __logger.error("Can't parse end time %s: %s" % (val, error.message))
+                    raise pkidbbackends.PKIDBException(message="Can't parse end time %s: %s" % (val, error.message))
 
         elif opt in ("-S", "--subject"):
             subject = val

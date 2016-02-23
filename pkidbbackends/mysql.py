@@ -708,8 +708,12 @@ class MySQL(Backend):
                 return None
             else:
                 try:
-                    asn1_data = base64.b64decode(result[0][0])
-                    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, asn1_data)
+                    if result[0][0]:
+                        asn1_data = base64.b64decode(result[0][0])
+                        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, asn1_data)
+                    else:
+                        return None
+
                 except OpenSSL.crypto.Error as error:
                     self.__db.rollback()
                     self.__logger.error("Can't parse ASN1 data: %s" % (error.message, ))

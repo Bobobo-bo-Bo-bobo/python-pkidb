@@ -1634,10 +1634,10 @@ def setup_logging(logoptions):
 
         for log in logoptions["logging"]:
             if re_logging.match(logoptions["logging"][log]):
-                (level, logtype, logoptions) = re_logging.match(logoptions["logging"][log]).groups()
+                (level, logtype, logopts) = re_logging.match(logoptions["logging"][log]).groups()
 
                 if logtype.lower() == "file":
-                    handler = logging.FileHandler(logoptions)
+                    handler = logging.FileHandler(logopts)
                     handler.setLevel(_get_loglevel(level))
                     flogformat = logging.Formatter("%(asctime)s " + name +
                                                    " %(name)s:%(lineno)d %(levelname)s: %(message)s",
@@ -1645,7 +1645,7 @@ def setup_logging(logoptions):
                     handler.setFormatter(flogformat)
                     __logger.addHandler(handler)
                 elif logtype.lower() == "syslog":
-                    handler = logging.handlers.SysLogHandler(address="/dev/log", facility=logoptions.lower())
+                    handler = logging.handlers.SysLogHandler(address="/dev/log", facility=logopts.lower())
                     handler.setLevel(_get_loglevel(level))
                     handler.setFormatter(logformat)
                     __logger.addHandler(handler)

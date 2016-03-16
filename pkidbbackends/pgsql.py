@@ -31,15 +31,15 @@ import time
 import OpenSSL
 from pkidbbackends import Backend, PKIDBException
 
+
 class PostgreSQL(Backend):
     __db = None
     __config = None
     __logger = None
 
-    def __connect(self, config):
+    def __connect(self):
         """
         Connects to Database
-        :param config: parsed configuration file
         :return: database object
         """
 
@@ -92,13 +92,13 @@ class PostgreSQL(Backend):
                                               sslmode=sslmode, sslrootcert=sslcacert)
             except psycopg2.Error as error:
                 self.__logger.error("Can't connect to database: %s\n" % (error.message,))
-                raise PKIDBException(message="Error: Can't connect to database: %s" % (error.message, ))
+                raise PKIDBException(message="Error: Can't connect to database: %s" % (error.message,))
         return dbconn
 
     def __init_logger(self, options):
         name = os.path.basename(sys.argv[0])
         logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
-        re_logging=re.compile("(\w+),(\w+):(.*)$")
+        re_logging = re.compile("(\w+),(\w+):(.*)$")
 
         self.__logger = logging.getLogger("pgsql")
         self.__logger.setLevel(logging.INFO)
@@ -113,8 +113,8 @@ class PostgreSQL(Backend):
                         handler = logging.FileHandler(logoptions)
                         handler.setLevel(self._get_loglevel(level))
                         flogformat = logging.Formatter("%(asctime)s " + name +
-                                                      " %(name)s:%(lineno)d %(levelname)s: %(message)s",
-                                                      datefmt='%d %b %Y %H:%M:%S')
+                                                       " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                       datefmt='%d %b %Y %H:%M:%S')
                         handler.setFormatter(flogformat)
                         self.__logger.addHandler(handler)
                     elif logtype.lower() == "syslog":
@@ -125,8 +125,8 @@ class PostgreSQL(Backend):
 
                         self.__logger.addHandler(handler)
                     else:
-                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
-                        raise PKIDBException(message="Unknown logging mechanism %s" % (logtype, ))
+                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype,))
+                        raise PKIDBException(message="Unknown logging mechanism %s" % (logtype,))
 
         else:
             # set default logging
@@ -145,7 +145,7 @@ class PostgreSQL(Backend):
         if not self.__logger:
             self.__init_logger(self.__config)
 
-        self.__db = self.__connect(config)
+        self.__db = self.__connect()
         if not self.__db:
             self.__logger.error("Unable to connect to database")
             raise PKIDBException(message="Unable to connect to database")
@@ -161,7 +161,7 @@ class PostgreSQL(Backend):
             "serial": serial,
         }
 
-        self.__logger.info("Looking for serial number %s in database" % (str(serial), ))
+        self.__logger.info("Looking for serial number %s in database" % (str(serial),))
 
         try:
             cursor = self.__db.cursor()
@@ -170,19 +170,17 @@ class PostgreSQL(Backend):
             result = cursor.fetchall()
 
             if len(result) == 0:
-                self.__logger.info("Serial number %s was not found in the database" % (str(serial), ))
+                self.__logger.info("Serial number %s was not found in the database" % (str(serial),))
                 return False
             else:
-                self.__logger.info("Serial number %s was found in the database" % (str(serial), ))
+                self.__logger.info("Serial number %s was found in the database" % (str(serial),))
                 return True
 
         except psycopg2.Error as error:
-            self.__logger.error("Can't query database for serial number: %s" % (error.message, ))
-            raise PKIDBException(message="Error: Can't query database for serial number: %s" % (error.message, ))
+            self.__logger.error("Can't query database for serial number: %s" % (error.message,))
+            raise PKIDBException(message="Error: Can't query database for serial number: %s" % (error.message,))
 
     def _get_last_serial_number(self):
-        serial = None
-        result = None
 
         self.__logger.info("Looking for last serial number")
         try:
@@ -198,14 +196,14 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger("Can't lookup serial number from database: %s" % (error.message, ))
-            raise PKIDBException(message="Error: Can't lookup serial number from database: %s" % (error.message, ))
+            self.__logger("Can't lookup serial number from database: %s" % (error.message,))
+            raise PKIDBException(message="Error: Can't lookup serial number from database: %s" % (error.message,))
 
         if result >= self._MAX_SERIAL_NUMBER:
-            self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
-            raise PKIDBException(message="Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
+            self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER,))
+            raise PKIDBException(message="Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER,))
         else:
-            self.__logger.info("Last serial number is %s" % (serial, ))
+            self.__logger.info("Last serial number is %s" % (serial,))
 
         return result
 
@@ -229,7 +227,7 @@ class PostgreSQL(Backend):
                 if new_serial:
                     new_serial += 1
 
-        self.__logger.info("New serial number is %s" % (str(new_serial), ))
+        self.__logger.info("New serial number is %s" % (str(new_serial),))
         return new_serial
 
     def _store_extension(self, extlist):
@@ -239,7 +237,7 @@ class PostgreSQL(Backend):
 
         for extension in extlist:
             # primary key is the sha512 hash of name+critical+data
-            pkey = hashlib.sha512(extension[0]+str(extension[1])+extension[2]).hexdigest()
+            pkey = hashlib.sha512(extension[0] + str(extension[1]) + extension[2]).hexdigest()
             extdata = {
                 "hash": pkey,
                 "name": extension[0],
@@ -250,7 +248,7 @@ class PostgreSQL(Backend):
             try:
                 cursor = self.__db.cursor()
                 cursor.execute("LOCK TABLE extension;")
-                cursor.execute("SELECT COUNT(hash) FROM extension WHERE hash='%s';" % (pkey, ))
+                cursor.execute("SELECT COUNT(hash) FROM extension WHERE hash='%s';" % (pkey,))
                 searchresult = cursor.fetchall()
 
                 # no entry found, insert data
@@ -261,17 +259,16 @@ class PostgreSQL(Backend):
                 cursor.close()
                 self.__db.commit()
                 result.append(pkey)
-                self.__logger.info("X509 extension stored in 0x%s" % (pkey, ))
+                self.__logger.info("X509 extension stored in 0x%s" % (pkey,))
             except psycopg2.Error as error:
-                self.__logger.error("Can't look for extension in database: %s" % (error.message, ))
+                self.__logger.error("Can't look for extension in database: %s" % (error.message,))
                 self.__db.rollback()
-                raise PKIDBException(message="Error: Can't look for extension in database: %s" % (error.message, ))
+                raise PKIDBException(message="Error: Can't look for extension in database: %s" % (error.message,))
 
-        self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist), ))
+        self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist),))
         return result
 
     def _store_signature_algorithm_name(self, algoname):
-        algoid = None
         algo = {
             "algorithm": algoname,
         }
@@ -288,8 +285,6 @@ class PostgreSQL(Backend):
                 cursor.execute("INSERT INTO signature_algorithm (algorithm) VALUES (%(algorithm)s);", algo)
                 cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=%(algorithm)s;", algo)
                 result = cursor.fetchall()
-
-                algoid = result[0][0]
             algoid = result[0][0]
 
             self.__logger.info("X509 signature algorithm %s stored as %u in database" % (algo["algorithm"], algoid))
@@ -297,9 +292,9 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't lookup signature algorithm in database: %s" % (error.pgerror, ))
+            self.__logger.error("Can't lookup signature algorithm in database: %s" % (error.pgerror,))
             self.__db.rollback()
-            raise PKIDBException(message="Error: Can't lookup signature algorithm in database: %s" % (error.message, ))
+            raise PKIDBException(message="Error: Can't lookup signature algorithm in database: %s" % (error.message,))
 
         return algoid
 
@@ -318,7 +313,7 @@ class PostgreSQL(Backend):
         try:
             cursor = self.__db.cursor()
             cursor.execute("LOCK TABLE signing_request;")
-            cursor.execute("SELECT COUNT(hash) FROM signing_request WHERE hash='%s'" % (csr_pkey, ))
+            cursor.execute("SELECT COUNT(hash) FROM signing_request WHERE hash='%s'" % (csr_pkey,))
             searchresult = cursor.fetchall()
 
             # no entry found, insert data
@@ -328,11 +323,11 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't lookup signing request: %s" % (error.message, ))
+            self.__logger.error("Can't lookup signing request: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Error: Can't lookup signing request: %s" % (error.message, ))
+            raise PKIDBException(message="Error: Can't lookup signing request: %s" % (error.message,))
 
-        self.__logger.info("Certificate signing request stored as %s" % (csr_pkey, ))
+        self.__logger.info("Certificate signing request stored as %s" % (csr_pkey,))
         return csr_pkey
 
     def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None, validity_period=None):
@@ -349,15 +344,15 @@ class PostgreSQL(Backend):
                 # if the data will not be replaced (the default), return an error if serial number already exists
                 if not replace:
                     self.__logger.error("A certificate with serial number %s already exist\n" %
-                                        (data["serial"], ))
+                                        (data["serial"],))
                     raise PKIDBException(message="Error: A certificate with serial number %s already exist\n" %
-                                     (data["serial"], ))
+                                                 (data["serial"],))
 
                 # data will be replaced
                 else:
                     # delete old dataset
                     self.__logger.info("Replacement flag set, deleting old certificate with serial number %s" %
-                                       (str(data["serial"]), ))
+                                       (str(data["serial"]),))
                     cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", data)
 
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
@@ -392,9 +387,9 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Error: Can't update certificate data in database: %s" % (error.message, ))
+            self.__logger.error("Error: Can't update certificate data in database: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Error: Can't update certificate data in database: %s" % (error.message, ))
+            raise PKIDBException(message="Error: Can't update certificate data in database: %s" % (error.message,))
 
     def housekeeping(self, autorenew=True, validity_period=None, cakey=None):
         self.__logger.info("Running housekeeping")
@@ -415,7 +410,7 @@ class PostgreSQL(Backend):
             # and (notAfter - now) < auto_renew_start_period
             if autorenew:
                 self.__logger.info("Automatic certificate renew requested, looking for valid certificates marked "
-                            "as auto renewable that will in expire in less than auto_renew_start_period days")
+                                   "as auto renewable that will in expire in less than auto_renew_start_period days")
 
                 # update autorenew_period was given check this instead
                 cursor.execute("SELECT serial_number, extract(EPOCH FROM auto_renew_validity_period) FROM "
@@ -423,7 +418,7 @@ class PostgreSQL(Backend):
                                "auto_renewable=True AND state=%(valid)s;", qdata)
 
                 result = cursor.fetchall()
-                self.__logger.info("Found %u certificates eligible for auto renewal" % (len(result), ))
+                self.__logger.info("Found %u certificates eligible for auto renewal" % (len(result),))
 
                 if len(result) > 0:
                     for sn in result:
@@ -433,7 +428,7 @@ class PostgreSQL(Backend):
                                                % (86400. * validity_period, sn[1]))
                             new_end = self._unix_timestamp_to_asn1_time(time.time() + 86400. * validity_period)
                         else:
-                            self.__logger.info("Using validity period of %f sec for renewal" % (sn[1], ))
+                            self.__logger.info("Using validity period of %f sec for renewal" % (sn[1],))
                             new_end = self._unix_timestamp_to_asn1_time(time.time() + sn[1])
 
                         self.__logger.info("Renewing certificate with serial number %s (notBefore=%s, "
@@ -446,12 +441,13 @@ class PostgreSQL(Backend):
                            "FROM certificate WHERE state=%(invalid)s AND "
                            "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from invalid to valid" % (len(result), ))
+            self.__logger.info("%u certificates will be set from invalid to valid" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
                     self.__logger.info("Certificate with serial number %s changed from invalid to valid because "
-                                       "(%f < %f) AND (%f > %f)" % (str(res[0]), res[1], qdata["now"], res[2], qdata["now"]))
+                                       "(%f < %f) AND (%f > %f)" %
+                                       (str(res[0]), res[1], qdata["now"], res[2], qdata["now"]))
 
             cursor.execute("UPDATE certificate SET state=%(valid)s WHERE state=%(invalid)s AND "
                            "(start_date < to_timestamp(%(now)s)) AND (end_date > to_timestamp(%(now)s));", qdata)
@@ -461,7 +457,7 @@ class PostgreSQL(Backend):
             cursor.execute("SELECT serial_number, extract(EPOCH FROM start_date) FROM certificate WHERE "
                            "state=%(valid)s AND (start_date >= to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from valid to invalid" % (len(result), ))
+            self.__logger.info("%u certificates will be set from valid to invalid" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
@@ -476,7 +472,7 @@ class PostgreSQL(Backend):
             cursor.execute("SELECT serial_number, extract(EPOCH FROM end_date) FROM certificate WHERE "
                            "state=%(valid)s AND (end_date <= to_timestamp(%(now)s));", qdata)
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from valid to expired" % (len(result), ))
+            self.__logger.info("%u certificates will be set from valid to expired" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
@@ -489,9 +485,9 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't validate certificates: %s" % (error.message, ))
+            self.__logger.error("Can't validate certificates: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Can't validate certificates: %s" % (error.message, ))
+            raise PKIDBException(message="Can't validate certificates: %s" % (error.message,))
 
     def get_statistics(self):
 
@@ -542,9 +538,9 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't read certifcate informations from database: %s" % (error.message, ))
+            self.__logger.error("Can't read certifcate informations from database: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Can't read certifcate informations from database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't read certifcate informations from database: %s" % (error.message,))
 
         statistics["state"] = state_statistics
         statistics["keysize"] = keysize_statistics
@@ -578,9 +574,9 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't insert new serial number into database: %s" % (error.message, ))
+            self.__logger.error("Can't insert new serial number into database: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Can't insert new serial number into database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't insert new serial number into database: %s" % (error.message,))
 
     def _get_digest(self):
         self.__logger.info("Getting digest algorithm for signature signing from configuration file")
@@ -604,14 +600,14 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE certificate;")
             cursor.execute("DELETE FROM certificate WHERE serial_number=%(serial)s;", qdata)
 
-            self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial), ))
+            self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial),))
 
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't remove certificate from database: %s" % (error.message, ))
+            self.__logger.error("Can't remove certificate from database: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Can't remove certificate from database: %s" % (error.message, ))
+            raise PKIDBException(message="Can't remove certificate from database: %s" % (error.message,))
 
         return None
 
@@ -626,11 +622,11 @@ class PostgreSQL(Backend):
                            "FROM certificate WHERE state=%d" % (self._certificate_status_map["revoked"]))
 
             result = cursor.fetchall()
-            self.__logger.info("%u revoked certificates found in database" % (len(result), ))
+            self.__logger.info("%u revoked certificates found in database" % (len(result),))
 
             for revoked in result:
                 revcert = OpenSSL.crypto.Revoked()
-                revcert.set_serial("%x" % (revoked[0], ))
+                revcert.set_serial("%x" % (revoked[0],))
                 revcert.set_reason(self._revocation_reason_reverse_map[revoked[1]])
                 revcert.set_rev_date(self._unix_timestamp_to_asn1_time(revoked[2]))
 
@@ -644,12 +640,12 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't fetch revoked certificates from backend: %s" % (error.message, ))
-            raise PKIDBException(message="Can't fetch revoked certificates from backend: %s\n" % (error.message, ))
+            self.__logger.error("Can't fetch revoked certificates from backend: %s" % (error.message,))
+            raise PKIDBException(message="Can't fetch revoked certificates from backend: %s\n" % (error.message,))
         except OpenSSL.crypto.Error as x509error:
             self.__db.rollback()
-            self.__logger.error("Can't build revocation list: %s" % (x509error.message, ))
-            raise PKIDBException(message="Can't build revocation list: %s" % (x509error.message, ))
+            self.__logger.error("Can't build revocation list: %s" % (x509error.message,))
+            raise PKIDBException(message="Can't build revocation list: %s" % (x509error.message,))
 
         return crl
 
@@ -671,7 +667,7 @@ class PostgreSQL(Backend):
                 if len(result) == 0:
                     qdata["version"] = 2
                     qdata["subject"] = "Placeholder, set by revoking non-existent certificate with serial number %s " \
-                                       "and using the force flag." % (serial, )
+                                       "and using the force flag." % (serial,)
                     qdata["certificate"] = qdata["subject"]
 
                     cursor.execute("INSERT INTO certificate (serial_number, version, subject, certificate, state) "
@@ -685,20 +681,19 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't update certifcate in backend: %s" % (error.message, ))
+            self.__logger.error("Can't update certifcate in backend: %s" % (error.message,))
             self.__db.rollback()
-            raise PKIDBException(message="Can't update certifcate in backend: %s" % (error.message, ))
+            raise PKIDBException(message="Can't update certifcate in backend: %s" % (error.message,))
 
         return None
 
     def get_certificate(self, serial):
-        cert = None
 
         qdata = {
             "serial": serial,
         }
 
-        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial, ))
+        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial,))
 
         try:
             cursor = self.__db.cursor()
@@ -719,12 +714,12 @@ class PostgreSQL(Backend):
 
                 except OpenSSL.crypto.Error as error:
                     self.__db.rollback()
-                    self.__logger.error("Can't parse ASN1 data: %s" % (error.message, ))
-                    raise PKIDBException(message="Can't parse ASN1 data: %s" % (error.message, ))
+                    self.__logger.error("Can't parse ASN1 data: %s" % (error.message,))
+                    raise PKIDBException(message="Can't parse ASN1 data: %s" % (error.message,))
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't read certificate data from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read certificate data from database: %s" % (error.message, ))
+            self.__logger.error("Can't read certificate data from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read certificate data from database: %s" % (error.message,))
 
         return cert
 
@@ -739,7 +734,6 @@ class PostgreSQL(Backend):
             cursor.execute("SELECT state FROM certificate WHERE serial_number=%(serial)s;", qdata)
             result = cursor.fetchall()
 
-            oldstate = None
             if len(result) != 0:
                 oldstate = result[0][0]
                 cursor.execute("UPDATE certificate SET state=%(state)s WHERE serial_number=%(serial)s;", qdata)
@@ -753,7 +747,7 @@ class PostgreSQL(Backend):
             self.__logger.error("Can't update state for certificate %s: %s" % (serial, error.message))
             raise PKIDBException(message="Can't update state for certificate %s: %s" % (serial, error.message))
 
-        return None
+        return oldstate
 
     def _get_state(self, serial):
         try:
@@ -764,7 +758,7 @@ class PostgreSQL(Backend):
             cursor = self.__db.cursor()
             cursor.execute("SELECT state FROM certificate WHERE serial_number=%(serial)s;", qdata)
 
-            self.__logger.info("Getting state for certificate with serial number 0x%s" % (serial, ))
+            self.__logger.info("Getting state for certificate with serial number 0x%s" % (serial,))
 
             result = cursor.fetchall()
             cursor.close()
@@ -777,11 +771,11 @@ class PostgreSQL(Backend):
                 return result[0][0]
             else:
                 self.__logger.warning("No certificate with serial number %s found in database" %
-                                      (str(serial), ))
+                                      (str(serial),))
                 return None
         except psycopg2.Error as error:
-            self.__logger.error("Can't read certificate from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read certificate from database: %s" % (error.message, ))
+            self.__logger.error("Can't read certificate from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read certificate from database: %s" % (error.message,))
 
     def dump_database(self):
         self.__logger.info("Dumping backend database")
@@ -801,11 +795,11 @@ class PostgreSQL(Backend):
                            "fingerprint_sha1, certificate, signature_algorithm_id, extension, signing_request, "
                            "state, extract(EPOCH FROM revocation_date), revocation_reason FROM certificate;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u certificates" % (len(result), ))
+            self.__logger.info("Dumping %u certificates" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping certificate with serial number %s" % (str(res[0]), ))
+                    self.__logger.info("Dumping certificate with serial number %s" % (str(res[0]),))
                     entry = {
                         "serial_number": str(res[0]),
                         "version": res[1],
@@ -835,10 +829,10 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE extension;")
             cursor.execute("SELECT hash, name, critical, data FROM extension;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u extensions" % (len(result), ))
+            self.__logger.info("Dumping %u extensions" % (len(result),))
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping extension with key id %s" % (res[0], ))
+                    self.__logger.info("Dumping extension with key id %s" % (res[0],))
                     entry = {
                         "hash": res[0],
                         "name": res[1],
@@ -855,9 +849,9 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE signature_algorithm;")
             cursor.execute("SELECT id, algorithm FROM signature_algorithm;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u signature algorithms" % (len(result), ))
+            self.__logger.info("Dumping %u signature algorithms" % (len(result),))
 
-            if len(result)>0:
+            if len(result) > 0:
                 for res in result:
                     self.__logger.info("Dumping signing algorithm %s with id %u" % (res[1], res[0]))
                     entry = {
@@ -873,10 +867,10 @@ class PostgreSQL(Backend):
             cursor.execute("SELECT hash, request FROM signing_request;")
             result = cursor.fetchall()
 
-            self.__logger.info("Dumping %u certificate signing requests" % (len(result), ))
-            if len(result)>0:
+            self.__logger.info("Dumping %u certificate signing requests" % (len(result),))
+            if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping signing request %s" % (res[0], ))
+                    self.__logger.info("Dumping signing request %s" % (res[0],))
                     entry = {
                         "hash": res[0],
                         "request": res[1],
@@ -889,34 +883,34 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't read from backend database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read from backend database: %s" % (error.message, ))
+            self.__logger.error("Can't read from backend database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read from backend database: %s" % (error.message,))
 
         return dump
 
     def list_serial_number_by_state(self, state):
-        sn_list =  []
+        sn_list = []
 
         if state:
             qdata = {
                 "state": self._certificate_status_map[state],
             }
 
-            self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"], ))
+            self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"],))
             try:
                 cursor = self.__db.cursor()
                 cursor.execute("SELECT serial_number FROM certificate WHERE state=%(state)s;", qdata)
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]),))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
                 self.__db.commit()
             except psycopg2.Error as error:
-                self.__logger.error("Can't get list of serial numbers: %s" % (error.message, ))
-                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message, ))
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.message,))
+                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message,))
 
         else:
             self.__logger.info("Getting all serial numbers")
@@ -926,14 +920,14 @@ class PostgreSQL(Backend):
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]),))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
                 self.__db.commit()
             except psycopg2.Error as error:
-                self.__logger.error("Can't get list of serial numbers: %s" % (error.message, ))
-                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message, ))
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.message,))
+                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message,))
 
         return sn_list
 
@@ -957,7 +951,7 @@ class PostgreSQL(Backend):
                                "%(signature_algorithm_id)s, %(extension)s, %(signing_request)s, "
                                "%(state)s, to_timestamp(%(revocation_date)s), %(revocation_reason)s);", cert)
 
-            self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]), ))
+            self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]),))
             self.__logger.info("Forcing reindexing on certificate table")
             cursor.execute("REINDEX TABLE certificate FORCE;")
 
@@ -966,7 +960,7 @@ class PostgreSQL(Backend):
             for ext in dump["extension"]:
                 cursor.execute("INSERT INTO extension (hash, name, critical, data) VALUES "
                                "(%(hash)s, %(name)s, %(critical)s, %(data)s);", ext)
-            self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]), ))
+            self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]),))
             self.__logger.info("Forcing reindexing on table extension")
             cursor.execute("REINDEX TABLE extension FORCE;")
 
@@ -975,7 +969,7 @@ class PostgreSQL(Backend):
             for csr in dump["signing_request"]:
                 cursor.execute("INSERT INTO signing_request (hash, request) VALUES "
                                "(%(hash)s, %(request)s);", csr)
-            self.__logger.info("%u rows restored for signing_request table" % (len(dump["signing_request"]), ))
+            self.__logger.info("%u rows restored for signing_request table" % (len(dump["signing_request"]),))
 
             self.__logger.info("Forcing reindexing on table signing_request")
             cursor.execute("REINDEX TABLE signing_request FORCE;")
@@ -985,8 +979,8 @@ class PostgreSQL(Backend):
             cursor.execute("LOCK TABLE signature_algorithm;")
             for sigalgo in dump["signature_algorithm"]:
                 cursor.execute("INSERT INTO signature_algorithm (id, algorithm) "
-                                "VALUES (%(id)s, %(algorithm)s);", sigalgo)
-            self.__logger.info("%u rows restored for signature_algorithm table" % (len(dump["signature_algorithm"]), ))
+                               "VALUES (%(id)s, %(algorithm)s);", sigalgo)
+            self.__logger.info("%u rows restored for signature_algorithm table" % (len(dump["signature_algorithm"]),))
 
             # fetch last sequence number
             cursor.execute("SELECT id FROM signature_algorithm ORDER BY id DESC LIMIT 1;")
@@ -997,8 +991,8 @@ class PostgreSQL(Backend):
             else:
                 newsequence = long(result[0][0]) + 1
 
-            self.__logger.info("Readjusting primary key counter to %u" % (newsequence, ))
-            cursor.execute("ALTER SEQUENCE signature_algorithm_id_seq RESTART WITH %u;" % (newsequence, ))
+            self.__logger.info("Readjusting primary key counter to %u" % (newsequence,))
+            cursor.execute("ALTER SEQUENCE signature_algorithm_id_seq RESTART WITH %u;" % (newsequence,))
 
             self.__logger.info("Forcing reindexing on table signature_algorithm")
             cursor.execute("REINDEX TABLE signature_algorithm FORCE;")
@@ -1006,33 +1000,12 @@ class PostgreSQL(Backend):
             cursor.close()
             self.__db.commit()
         except psycopg2.Error as error:
-            self.__logger.error("Can't restore database from dump: %s" % (error.message, ))
-            raise PKIDBException(message="Can't restore database from dump: %s\n" % (error.message, ))
+            self.__logger.error("Can't restore database from dump: %s" % (error.message,))
+            raise PKIDBException(message="Can't restore database from dump: %s\n" % (error.message,))
 
         return True
 
     def _get_raw_certificate_data(self, serial):
-        data = {
-            "serial_number": None,
-            "version": None,
-            "start_date": None,
-            "end_date": None,
-            "subject": None,
-            "auto_renewable": None,
-            "auto_renew_start_period": None,
-            "auto_renew_validity_period": None,
-            "issuer": None,
-            "keysize": None,
-            "fingerprint_md5": None,
-            "fingerprint_sha1": None,
-            "certificate": None,
-            "signature_algorithm_id": None,
-            "extension": None,
-            "signing_request": None,
-            "state": None,
-            "revocation_date": None,
-            "revocation_reason": None,
-        }
         qdata = {"serial": serial, }
 
         try:
@@ -1049,7 +1022,7 @@ class PostgreSQL(Backend):
             if len(result) > 0:
 
                 data = {
-                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0])),
                     "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
                     "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
                     "subject": result[0][4],
@@ -1108,31 +1081,10 @@ class PostgreSQL(Backend):
             self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
                                 % (serial, error.message))
             raise PKIDBException(message="Can't lookup certificate with serial number %s in database: %s"
-                                 % (serial, error.message))
+                                         % (serial, error.message))
         return data
 
     def get_certificate_data(self, serial):
-        data = {
-            "serial_number": None,
-            "version": None,
-            "start_date": None,
-            "end_date": None,
-            "subject": None,
-            "auto_renewable": None,
-            "auto_renew_start_period": None,
-            "auto_renew_validity_period": None,
-            "issuer": None,
-            "keysize": None,
-            "fingerprint_md5": None,
-            "fingerprint_sha1": None,
-            "certificate": None,
-            "algorithm": None,
-            "extension": None,
-            "signing_request": None,
-            "state": None,
-            "revocation_date": None,
-            "revocation_reason": None,
-        }
         qdata = {"serial": serial, }
 
         try:
@@ -1150,7 +1102,7 @@ class PostgreSQL(Backend):
             if len(result) > 0:
 
                 data = {
-                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0])),
                     "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
                     "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
                     "subject": result[0][4],
@@ -1191,7 +1143,7 @@ class PostgreSQL(Backend):
                 if data["extension"]:
                     extlist = []
                     for ext in data["extension"]:
-                        qext = {"hash" :ext, }
+                        qext = {"hash": ext, }
                         cursor.execute("SELECT name, critical, data FROM extension WHERE hash=%(hash)s;", qext)
                         ext_result = cursor.fetchall()
                         extlist.append({
@@ -1212,7 +1164,7 @@ class PostgreSQL(Backend):
             self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
                                 % (serial, error.message))
             raise PKIDBException(message="Can't lookup certificate with serial number %s in database: %s"
-                             % (serial, error.message))
+                                         % (serial, error.message))
 
         return data
 
@@ -1226,7 +1178,7 @@ class PostgreSQL(Backend):
     def set_certificate_metadata(self, serial, auto_renew=None, auto_renew_start_period=None,
                                  auto_renew_validity_period=None):
 
-        if auto_renew == None and not auto_renew_start_period and not auto_renew_validity_period:
+        if auto_renew is None and not auto_renew_start_period and not auto_renew_validity_period:
             return False
 
         if not self.get_certificate(serial):
@@ -1244,11 +1196,10 @@ class PostgreSQL(Backend):
 
             cursor.execute("LOCK TABLE certificate;")
             auto_renewable = auto_renew
-            if auto_renewable == None:
+            if auto_renewable is None:
                 # setting auto_renew_start_period or auto_renew_validity_period implicitly sets the auto_renew flag
                 if auto_renew_start_period or auto_renew_validity_period:
                     qdata["auto_renewable"] = True
-                    auto_renewable = True
 
                 if auto_renew_start_period:
                     qdata["auto_renew_start_period"] = float(qdata["auto_renew_start_period"])
@@ -1268,7 +1219,7 @@ class PostgreSQL(Backend):
                                        "auto_renew_validity_period='%(auto_renew_validity_period)s days' "
                                        "WHERE serial_number=%(serial)s AND auto_renew_validity_period IS NULL;", udata)
                         self.__logger.info("Setting auto_renew_validity_period to %f days if not already set." %
-                                           (udata["auto_renew_validity_period"], ))
+                                           (udata["auto_renew_validity_period"],))
 
                 if auto_renew_validity_period:
                     qdata["auto_renew_validity_period"] = float(qdata["auto_renew_validity_period"])
@@ -1284,19 +1235,21 @@ class PostgreSQL(Backend):
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
-                        udata["auto_renew_start_period"] = float(self._get_from_config_global("auto_renew_start_period"))
+                        udata["auto_renew_start_period"] = float(
+                            self._get_from_config_global("auto_renew_start_period"))
                         cursor.execute("UPDATE certificate SET "
                                        "auto_renew_start_period='%(auto_renew_start_period)s days' "
                                        "WHERE serial_number=%(serial)s AND auto_renew_start_period IS NULL;", udata)
                         self.__logger.info("Setting auto_renew_start_period to %f days if not already set." %
-                                           (udata["auto_renew_start_period"], ))
+                                           (udata["auto_renew_start_period"],))
 
-            if auto_renew == True:
+            # auto_renew is _NEVER_ None because the default for the SQL backend is False
+            if auto_renew:
                 # setting auto_renewable flag also sets auto_renew_start_period and auto_renew_validity_period
                 if not auto_renew_start_period:
                     auto_renew_start_period = float(self._get_from_config_global("auto_renew_start_period"))
                     self.__logger.info("Setting auto_renew_start_period from configuration file to %s" %
-                                       (auto_renew_start_period, ))
+                                       (auto_renew_start_period,))
 
                     if not auto_renew_start_period:
                         cursor.close()
@@ -1310,7 +1263,7 @@ class PostgreSQL(Backend):
                 if not auto_renew_validity_period:
                     auto_renew_validity_period = float(self._get_from_config_global("validity_period"))
                     self.__logger.info("Setting auto_renew_validity_period from configuration file to %s" %
-                                       (auto_renew_validity_period, ))
+                                       (auto_renew_validity_period,))
 
                     if not auto_renew_validity_period:
                         cursor.close()
@@ -1330,8 +1283,7 @@ class PostgreSQL(Backend):
                                    (qdata["auto_renewable"], qdata["auto_renew_start_period"],
                                     qdata["auto_renew_validity_period"]))
 
-            # explicitly check for False to avoid None
-            elif auto_renew == False:
+            elif not auto_renew:
                 # disabling auto_renew flag also removes auto_renew_start_period and auto_renew_validity_period
                 qdata["auto_renew_start_period"] = None
                 qdata["auto_renew_validity_period"] = None
@@ -1342,14 +1294,13 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't update auto_renew parameters: %s" % (error.message, ))
-            raise PKIDBException(message="Can't update auto_renew parameters: %s\n" % (error.message, ))
+            self.__logger.error("Can't update auto_renew parameters: %s" % (error.message,))
+            raise PKIDBException(message="Can't update auto_renew parameters: %s\n" % (error.message,))
 
         return True
 
-    def _get_signature_algorithm(self, id):
-        algo = None
-        qdata = {"id": id, }
+    def _get_signature_algorithm(self, algo_id):
+        qdata = {"id": algo_id, }
 
         try:
             cursor = self.__db.cursor()
@@ -1364,8 +1315,8 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (id, error.message))
-            raise PKIDBException(message="Can't lookup algorithm id %u in database: %s" % (id, error.message))
+            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (algo_id, error.message))
+            raise PKIDBException(message="Can't lookup algorithm id %u in database: %s" % (algo_id, error.message))
 
         return algo
 
@@ -1380,10 +1331,10 @@ class PostgreSQL(Backend):
             "certificate": None,
             "signing_request": None,
         }
-        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial, ))
+        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial,))
 
         try:
-            qdata = { "serial": serial, }
+            qdata = {"serial": serial, }
             cursor = self.__db.cursor()
             cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
                            "extract(EPOCH FROM auto_renew_validity_period), state, "
@@ -1404,8 +1355,8 @@ class PostgreSQL(Backend):
                 result["signing_request"] = qresult[0][7]
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
-            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message, ))
+            self.__logger.error("Can't fetch metadata from backend: %s" % (error.message,))
+            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message,))
 
         if not fields:
             return result
@@ -1447,7 +1398,6 @@ class PostgreSQL(Backend):
                         else:
                             query = "UPDATE certificate SET %s=%%(%s)s WHERE serial_number=%%(serial)s;" % (meta, meta)
 
-
                         self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], serial))
                         cursor.execute(query, data)
                     else:
@@ -1458,8 +1408,8 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Failed to set meta data in database: %s" % (error.message, ))
-            raise PKIDBException(message="Failed to set meta data in database: %s" % (error.message, ))
+            self.__logger.error("Failed to set meta data in database: %s" % (error.message,))
+            raise PKIDBException(message="Failed to set meta data in database: %s" % (error.message,))
 
         return None
 
@@ -1478,7 +1428,7 @@ class PostgreSQL(Backend):
 
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't search subject in database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't search subject in database: %s" % (error.message, ))
+            self.__logger.error("Can't search subject in database: %s" % (error.message,))
+            raise PKIDBException(message="Can't search subject in database: %s" % (error.message,))
 
         return serials

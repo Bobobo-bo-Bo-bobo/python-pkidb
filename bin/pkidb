@@ -397,11 +397,10 @@ def remove_duplicates(duplist):
     return ordered
 
 
-def list_certificates(opts, config, dbbackend):
+def list_certificates(opts, dbbackend):
     """
     List certificates from backend
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -460,11 +459,10 @@ def list_certificates(opts, config, dbbackend):
         sys.stdout.write(sn_dump + '\n')
 
 
-def backup_database(opts, config, dbbackend):
+def backup_database(opts, dbbackend):
     """
     Exports the database backend as JSON
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -502,7 +500,7 @@ def backup_database(opts, config, dbbackend):
         sys.stdout.write(json_dump + "\n")
 
 
-def healthcheck(opts, config, dbbackend):
+def healthcheck(opts, dbbackend):
     fix = False
 
     try:
@@ -527,11 +525,10 @@ def healthcheck(opts, config, dbbackend):
     __logger.info("%u certificates checked, %u problems found, %u problems repaired" % (total, found, repaired))
 
 
-def restore_database(opts, config, dbbackend):
+def restore_database(opts, dbbackend):
     """
     Restore a database from JSON dump
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -545,7 +542,6 @@ def restore_database(opts, config, dbbackend):
     if len(opttrailing) == 1:
         inputdata = opttrailing[0]
 
-    json_data = None
     if inputdata:
         try:
             fd = open(inputdata, "r")
@@ -570,11 +566,10 @@ def restore_database(opts, config, dbbackend):
         dbbackend.restore_database(data)
 
 
-def set_certificate_metadata(opts, config, dbbackend):
+def set_certificate_metadata(opts, dbbackend):
     """
     Set certificate meta data in the backend.
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -613,7 +608,6 @@ def set_certificate_metadata(opts, config, dbbackend):
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException(message="Unknown option %s" % (option,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -628,11 +622,10 @@ def set_certificate_metadata(opts, config, dbbackend):
         raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial,))
 
 
-def export_certificate(opts, config, dbbackend):
+def export_certificate(opts, dbbackend):
     """
     Export a certificate identified by the serial number
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -651,7 +644,6 @@ def export_certificate(opts, config, dbbackend):
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException("Unknown option %s" % (option,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -680,11 +672,10 @@ def export_certificate(opts, config, dbbackend):
         sys.stdout.write(pem_data)
 
 
-def show_certificate(opts, config, dbbackend):
+def show_certificate(opts, dbbackend):
     """
     Shows certificate information identified by the serial number
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
@@ -703,7 +694,6 @@ def show_certificate(opts, config, dbbackend):
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException(message="Unknown option %s" % (option,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -738,7 +728,6 @@ def _print_interval(interval):
     :param interval: interval in seconds
     :return: string
     """
-    string = ""
 
     days = math.floor(interval / 86400)
     hours = math.floor((interval - 86400 * days) / 3600)
@@ -795,15 +784,13 @@ Certificate signing request: %s
     return result
 
 
-def delete_certificate(opts, config, dbbackend):
+def delete_certificate(opts, dbbackend):
     """
     Deletes a certificate identified by the serial number
     :param opts: options
-    :param config: configuration
     :param dbbackend: backend
     :return:
     """
-    output = None
 
     try:
         (optionval, opttrailing) = getopt.getopt(opts, shortoptions["delete"], longoptions["delete"])
@@ -811,7 +798,6 @@ def delete_certificate(opts, config, dbbackend):
         __logger.error("Can't parse command line: %s" % (dberror.msg,))
         raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (dberror.msg,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -860,7 +846,6 @@ def renew_certificate(opts, config, dbbackend):
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException(message="Unknown option %s" % (option,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -927,11 +912,10 @@ def serial_to_number(serial):
     return serial
 
 
-def revoke_certificate(opts, config, dbbackend):
+def revoke_certificate(opts, dbbackend):
     """
     Revoke a certificate identified by the serial number
     :param opts: options
-    :param config: configurationd
     :param dbbackend: backend
     :return: None
     """
@@ -1030,7 +1014,6 @@ def generate_certificate_revocation_list(opts, config, dbbackend):
     # CRL.export() parameter digest is available in pyopenssl 0.15
     if OpenSSL.__version__ >= "0.15":
 
-        crl_digest = None
         if "crl_digest" in config["global"]:
             crl_digest = config["global"]["crl_digest"]
 
@@ -1067,12 +1050,10 @@ def sign_certificate(opts, config, dbbackend):
 
     output = None
     extensions = []
-    inputdata = None
     notbefore = None
     valid_for = None
-    templatedata = {"global": {}, "extension": [], }
+    templatedata = {"global": {}, "extension": [],}
 
-    re_asn1_time_string = re.compile("^\d{14}Z$")
     re_oid = re.compile("[0-9\.]+")
     re_ca_flag = re.compile("CA:([A-Za-z]+)(.*)")
 
@@ -1089,11 +1070,6 @@ def sign_certificate(opts, config, dbbackend):
                 __logger.error("Illegal number of fields for extension (expect:%u got %u)" % (4, len(ext)))
                 raise pkidbbackends.PKIDBException(message="Illegal number of fields for extension (expect:%u got %u)"
                                                            % (4, len(ext)))
-
-            name = None
-            subject = None
-            issuer = None
-            data = None
 
             name = ext[0]
             if ext[1] in ("1", "True"):
@@ -1214,7 +1190,6 @@ def sign_certificate(opts, config, dbbackend):
                         if "critical" in parsed[key]:
                             critical = True
 
-                        data = ''
                         if "data" in parsed[key]:
                             data = parsed[key]["data"]
                         elif "data:base64" in parsed[key]:
@@ -1344,7 +1319,6 @@ def load_public_key(config, keyname):
     :return: X509 object representing CA public key
     """
 
-    result = None
     try:
         fd = open(config["global"][keyname], "r")
         data = fd.read()
@@ -1372,7 +1346,6 @@ def load_private_key(config, keyname, passphrase):
     :return: private CA key as PKey object or None
     """
 
-    result = None
     key_passphrase = config["global"][passphrase]
 
     try:
@@ -1387,8 +1360,9 @@ def load_private_key(config, keyname, passphrase):
     try:
         result = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, data, passphrase=key_passphrase)
     except OpenSSL.crypto.Error as sslerror:
-        __logger.error("Can't load private key. Wrong password ?")
-        raise pkidbbackends.PKIDBException(message="Can't load private key. Wrong password?")
+        __logger.error("Can't load private key. Wrong password ? (%s)" % (sslerror.message,))
+        raise pkidbbackends.PKIDBException(message="Can't load private key. Wrong password? (%s)" %
+                                                   (sslerror.message,))
 
     return result
 
@@ -1412,7 +1386,6 @@ def import_certificate(opts, config, dbbackend):
     csr = None
     revoked = None
     autorenewable = False
-    autorenew_period = float(config["global"]["validity_period"])
     auto_renew_start_period = float(config["global"]["auto_renew_start_period"])
 
     for (option, value) in optionval:
@@ -1471,8 +1444,6 @@ def import_certificate(opts, config, dbbackend):
                 raise pkidbbackends.PKIDBException(message="Can't parse delta period option %s: %s"
                                                            % (value, getopterror.message))
 
-    inputdata = None
-
     # discard autorenew_period if imported certificate is not marked as autorenewable
     if not autorenewable:
         autorenew_period = None
@@ -1509,11 +1480,10 @@ def import_certificate(opts, config, dbbackend):
     dbbackend.store_certificate(cert, csr, revoked, autorenew=autorenewable, validity_period=auto_renew_start_period)
 
 
-def housekeeping(opts, config, dbbackend):
+def housekeeping(opts, dbbackend):
     """
     Check certificates in the backend for expiration, auto renew autorenewable certificates.
     :param opts: options for import
-    :param config: parsed configuration file
     :param dbbackend: backend object
     :return: None
     """
@@ -1545,11 +1515,10 @@ def housekeeping(opts, config, dbbackend):
     return None
 
 
-def remove_certificate(opts, config, dbbackend):
+def remove_certificate(opts, dbbackend):
     """
     Remove certificate identified by the serial number.
     :param opts: options for import
-    :param config: parsed configuration file
     :param dbbackend: backend object
     :return: None
     """
@@ -1559,7 +1528,6 @@ def remove_certificate(opts, config, dbbackend):
         __logger.error("Can't parse command line: %s" % (getopterror.msg,))
         raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (getopterror.msg,))
 
-    serial = None
     if len(opttrailing) == 0:
         serial = sys.stdin.read()
     else:
@@ -1567,19 +1535,17 @@ def remove_certificate(opts, config, dbbackend):
 
     serial = serial_to_number(serial)
 
-    stats = dbbackend.remove_certificate(serial)
+    dbbackend.remove_certificate(serial)
 
 
-def print_statistics(opts, config, dbbackend):
+def print_statistics(dbbackend):
     """
     Print statistics of certificates in the backend database.
-    :param opts: options for import
-    :param config: parsed configuration file
     :param dbbackend: backend object
     :return: None
     """
     try:
-        (optionval, opttrailing) = getopt.getopt(opts, shortoptions["statistics"], longoptions["statistics"])
+        pass
     except getopt.GetoptError as getopterror:
         __logger.error("Can't parse command line: %s" % (getopterror.msg,))
         raise pkidbbackends.PKIDBException(message="Can't parse command line: %s" % (getopterror.msg,))
@@ -1662,11 +1628,10 @@ def setup_logging(logoptions):
         __logger.addHandler(handler)
 
 
-def add_dummy(opts, config, dbbackend):
+def add_dummy(opts, dbbackend):
     """
     Add dummy certificate identified by it's serial number.
     :param opts: options for import
-    :param config: parsed configuration file
     :param dbbackend: backend object
     :return: None
     """
@@ -1674,7 +1639,6 @@ def add_dummy(opts, config, dbbackend):
     notbefore = None
     notafter = None
     subject = None
-    serial = None
 
     re_asn1_time_string = re.compile("^\d{14}Z$")
 
@@ -1728,15 +1692,13 @@ def add_dummy(opts, config, dbbackend):
     dbbackend.set_state(serial, "dummy")
 
 
-def search_certificate(opts, config, dbbackend):
+def search_certificate(opts, dbbackend):
     """
     Search database for subject.
     :param opts: options for import
-    :param config: parsed configuration file
     :param dbbackend: backend object
     :return: None
     """
-    searchstring = None
 
     try:
         (optionval, opttrailing) = getopt.getopt(opts, shortoptions["search"], longoptions["search"])
@@ -1840,35 +1802,35 @@ if __name__ == "__main__":
         elif command == "import":
             import_certificate(trailing[1:], options, backend)
         elif command == "housekeeping":
-            housekeeping(trailing[1:], options, backend)
+            housekeeping(trailing[1:], backend)
         elif command == "statistics":
-            print_statistics(trailing[1:], options, backend)
+            print_statistics(backend)
         elif command == "gencrl":
             generate_certificate_revocation_list(trailing[1:], options, backend)
         elif command == "revoke":
-            revoke_certificate(trailing[1:], options, backend)
+            revoke_certificate(trailing[1:], backend)
         elif command == "renew":
             renew_certificate(trailing[1:], options, backend)
         elif command == "export":
-            export_certificate(trailing[1:], options, backend)
+            export_certificate(trailing[1:], backend)
         elif command == "backup":
-            backup_database(trailing[1:], options, backend)
+            backup_database(trailing[1:], backend)
         elif command == "list":
-            list_certificates(trailing[1:], options, backend)
+            list_certificates(trailing[1:], backend)
         elif command == "restore":
-            restore_database(trailing[1:], options, backend)
+            restore_database(trailing[1:], backend)
         elif command == "delete":
-            delete_certificate(trailing[1:], options, backend)
+            delete_certificate(trailing[1:], backend)
         elif command == "show":
-            show_certificate(trailing[1:], options, backend)
+            show_certificate(trailing[1:], backend)
         elif command == "set":
-            set_certificate_metadata(trailing[1:], options, backend)
+            set_certificate_metadata(trailing[1:], backend)
         elif command == "healthcheck":
-            healthcheck(trailing[1:], options, backend)
+            healthcheck(trailing[1:], backend)
         elif command == "add-dummy":
-            add_dummy(trailing[1:], options, backend)
+            add_dummy(trailing[1:], backend)
         elif command == "search":
-            search_certificate(trailing[1:], options, backend)
+            search_certificate(trailing[1:], backend)
         else:
             sys.stderr.write("Error: Unknown command %s\n" % (command,))
             __logger.error("Unknown command %s" % (command,))

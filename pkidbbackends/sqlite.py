@@ -40,7 +40,7 @@ class SQLite(Backend):
     def __init_logger(self, options):
         name = os.path.basename(sys.argv[0])
         logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
-        re_logging=re.compile("(\w+),(\w+):(.*)$")
+        re_logging = re.compile("(\w+),(\w+):(.*)$")
 
         self.__logger = logging.getLogger("sqlite")
         self.__logger.setLevel(logging.INFO)
@@ -55,8 +55,8 @@ class SQLite(Backend):
                         handler = logging.FileHandler(logoptions)
                         handler.setLevel(self._get_loglevel(level))
                         flogformat = logging.Formatter("%(asctime)s " + name +
-                                                      " %(name)s:%(lineno)d %(levelname)s: %(message)s",
-                                                      datefmt='%d %b %Y %H:%M:%S')
+                                                       " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                       datefmt='%d %b %Y %H:%M:%S')
                         handler.setFormatter(flogformat)
                         self.__logger.addHandler(handler)
                     elif logtype.lower() == "syslog":
@@ -67,7 +67,7 @@ class SQLite(Backend):
 
                         self.__logger.addHandler(handler)
                     else:
-                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
+                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype,))
         else:
             # set default logging
             # initialize logging subsystem
@@ -79,7 +79,6 @@ class SQLite(Backend):
             self.__logger.addHandler(handler)
 
     def __connect(self, config):
-        db = None
         try:
             db = sqlite3.connect(config["sqlite3"]["database"])
         except sqlite3.Error as error:
@@ -109,12 +108,12 @@ class SQLite(Backend):
 
     def _get_state(self, serial):
         try:
-            qdata = (serial, )
+            qdata = (serial,)
 
             cursor = self.__db.cursor()
             cursor.execute("SELECT state FROM certificate WHERE serial_number=?;", qdata)
 
-            self.__logger.info("Getting state for certificate with serial number %s" % (str(serial), ))
+            self.__logger.info("Getting state for certificate with serial number %s" % (str(serial),))
 
             result = cursor.fetchall()
             cursor.close()
@@ -127,17 +126,16 @@ class SQLite(Backend):
                 return result[0][0]
             else:
                 self.__logger.warning("No certificate with serial number %s found in database" %
-                                      (str(serial), ))
+                                      (str(serial),))
                 return None
         except sqlite3.Error as error:
-            self.__logger.error("Can't read certificate from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read certificate from database: %s" % (error.message, ))
-
+            self.__logger.error("Can't read certificate from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read certificate from database: %s" % (error.message,))
 
     def _has_serial_number(self, serial):
-        query = (serial, )
+        query = (serial,)
 
-        self.__logger.info("Looking for serial number %s in database" % (str(serial), ))
+        self.__logger.info("Looking for serial number %s in database" % (str(serial),))
 
         try:
             cursor = self.__db.cursor()
@@ -145,19 +143,17 @@ class SQLite(Backend):
             result = cursor.fetchall()
 
             if len(result) == 0:
-                self.__logger.info("Serial number %s was not found in the database" % (str(serial), ))
+                self.__logger.info("Serial number %s was not found in the database" % (str(serial),))
                 return False
             else:
-                self.__logger.info("Serial number %s was found in the database" % (str(serial), ))
+                self.__logger.info("Serial number %s was found in the database" % (str(serial),))
                 return True
 
         except sqlite3.Error as error:
-            self.__logger.error("Can't query database for serial number: %s" % (error.message, ))
-            raise PKIDBException(message="Can't query database for serial number: %s\n" % (error.message, ))
+            self.__logger.error("Can't query database for serial number: %s" % (error.message,))
+            raise PKIDBException(message="Can't query database for serial number: %s\n" % (error.message,))
 
     def _get_last_serial_number(self):
-        serial = None
-        result = None
 
         self.__logger.info("Looking for last serial number")
         try:
@@ -174,15 +170,15 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger("Can't lookup serial number from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't lookup serial number from database: %s" % (error.message, ))
+            self.__logger("Can't lookup serial number from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't lookup serial number from database: %s" % (error.message,))
 
         if result >= self._MAX_SERIAL_NUMBER:
-            self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
-            raise PKIDBException(message="Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER, ))
+            self.__logger.error("Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER,))
+            raise PKIDBException(message="Maximal serial number of %u reached" % (self._MAX_SERIAL_NUMBER,))
 
         else:
-            self.__logger.info("Last serial number is %s" % (str(serial), ))
+            self.__logger.info("Last serial number is %s" % (str(serial),))
 
         return result
 
@@ -206,7 +202,7 @@ class SQLite(Backend):
                 if new_serial:
                     new_serial += 1
 
-        self.__logger.info("New serial number is %s" % (str(new_serial), ))
+        self.__logger.info("New serial number is %s" % (str(new_serial),))
         return new_serial
 
     def _store_extension(self, extlist):
@@ -216,12 +212,12 @@ class SQLite(Backend):
 
         for extension in extlist:
             # primary key is the sha512 hash of name+critical+data
-            pkey = hashlib.sha512(extension[0]+str(extension[1])+extension[2]).hexdigest()
+            pkey = hashlib.sha512(extension[0] + str(extension[1]) + extension[2]).hexdigest()
             extdata = (pkey, extension[0], str(extension[1]), base64.b64encode(extension[2]))
 
             try:
                 cursor = self.__db.cursor()
-                cursor.execute("SELECT COUNT(hash) FROM extension WHERE hash='%s';" % (pkey, ))
+                cursor.execute("SELECT COUNT(hash) FROM extension WHERE hash='%s';" % (pkey,))
                 searchresult = cursor.fetchall()
 
                 # no entry found, insert data
@@ -232,31 +228,28 @@ class SQLite(Backend):
                 cursor.close()
                 self.__db.commit()
                 result.append(pkey)
-                self.__logger.info("X509 extension stored in 0x%s" % (pkey, ))
+                self.__logger.info("X509 extension stored in 0x%s" % (pkey,))
             except sqlite3.Error as error:
                 self.__db.rollback()
-                self.__logger.error("Can't look for extension in database: %s" % (error.message, ))
-                raise PKIDBException(message="Can't look for extension in database: %s" % (error.message, ))
+                self.__logger.error("Can't look for extension in database: %s" % (error.message,))
+                raise PKIDBException(message="Can't look for extension in database: %s" % (error.message,))
 
-        self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist), ))
+        self.__logger.info("%u X509 extensions had been stored in the backend" % (len(extlist),))
         return result
 
     def _store_signature_algorithm_name(self, algoname):
-        algoid = None
         algo = algoname
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=?;", (algo, ))
+            cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=?;", (algo,))
             result = cursor.fetchall()
 
             # no entry found?
             if len(result) == 0:
-                cursor.execute("INSERT INTO signature_algorithm (algorithm) VALUES (?);", (algo, ))
-                cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=?;", (algo, ))
+                cursor.execute("INSERT INTO signature_algorithm (algorithm) VALUES (?);", (algo,))
+                cursor.execute("SELECT id FROM signature_algorithm WHERE algorithm=?;", (algo,))
                 result = cursor.fetchall()
-
-                algoid = result[0][0]
             algoid = result[0][0]
 
             self.__logger.info("X509 signature algorithm %s stored as %u in database" % (algo, algoid))
@@ -265,8 +258,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't lookup signature algorithm in database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't lookup signature algorithm in database: %s" % (error.message, ))
+            self.__logger.error("Can't lookup signature algorithm in database: %s" % (error.message,))
+            raise PKIDBException(message="Can't lookup signature algorithm in database: %s" % (error.message,))
 
         return algoid
 
@@ -284,7 +277,7 @@ class SQLite(Backend):
         # check if csr already exists
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT COUNT(hash) FROM signing_request WHERE hash='%s'" % (csr_pkey, ))
+            cursor.execute("SELECT COUNT(hash) FROM signing_request WHERE hash='%s'" % (csr_pkey,))
             searchresult = cursor.fetchall()
 
             # no entry found, insert data
@@ -296,10 +289,10 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't lookup signing request: %s" % (error.message, ))
-            raise PKIDBException(message="Can't lookup signing request: %s" % (error.message, ))
+            self.__logger.error("Can't lookup signing request: %s" % (error.message,))
+            raise PKIDBException(message="Can't lookup signing request: %s" % (error.message,))
 
-        self.__logger.info("Certificate signing request stored as %s" % (csr_pkey, ))
+        self.__logger.info("Certificate signing request stored as %s" % (csr_pkey,))
         return csr_pkey
 
     def store_certificate(self, cert, csr=None, revoked=None, replace=False, autorenew=None, validity_period=None):
@@ -315,16 +308,16 @@ class SQLite(Backend):
                 # if the data will not be replaced (the default), return an error if serial number already exists
                 if not replace:
                     self.__logger.error("A certificate with serial number %s already exist\n" %
-                                        (data["serial"], ))
+                                        (data["serial"],))
                     raise PKIDBException(message="A certificate with serial number %s already exist" %
-                                         (data["serial "], ))
+                                                 (data["serial "],))
 
                 # data will be replaced
                 else:
                     # delete old dataset
                     self.__logger.info("Replacement flag set, deleting old certificate with serial number %s" %
-                                       (str(data["serial"]), ))
-                    cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (data["serial"], ))
+                                       (str(data["serial"]),))
+                    cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (data["serial"],))
 
             cursor.execute("INSERT INTO certificate (serial_number, version, start_date, end_date, "
                            "subject, fingerprint_md5, fingerprint_sha1, certificate, state, issuer, "
@@ -349,7 +342,7 @@ class SQLite(Backend):
                 cursor.execute("UPDATE certificate SET revocation_reason=?, "
                                "revocation_date=?, state=? WHERE "
                                "serial_number=?;", (data["revreason"], data["revtime"], data["state"],
-                                                             data["serial"]))
+                                                    data["serial"]))
 
             if "extension" in data:
                 self.__logger.info("X509 extensions found, storing extensions in database")
@@ -366,8 +359,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't update certificate data in database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't update certificate data in database: %s" % (error.message, ))
+            self.__logger.error("Can't update certificate data in database: %s" % (error.message,))
+            raise PKIDBException(message="Can't update certificate data in database: %s" % (error.message,))
 
     def housekeeping(self, autorenew=True, validity_period=None, cakey=None):
         self.__logger.info("Running housekeeping")
@@ -387,15 +380,15 @@ class SQLite(Backend):
             # and (notAfter - now) < auto_renew_start_period
             if autorenew:
                 self.__logger.info("Automatic certificate renew requested, looking for valid certificates marked "
-                            "as auto renewable that will in expire in less than auto_renew_start_period days")
+                                   "as auto renewable that will in expire in less than auto_renew_start_period days")
 
                 # update autorenew_period was given check this instead
                 cursor.execute("SELECT serial_number, extract(EPOCH FROM auto_renew_validity_period) FROM "
                                "certificate WHERE (end_date - now())<auto_renew_start_period AND "
-                               "auto_renewable=True AND state=?;", (qdata["valid"], ))
+                               "auto_renewable=True AND state=?;", (qdata["valid"],))
 
                 result = cursor.fetchall()
-                self.__logger.info("Found %u certificates eligible for auto renewal" % (len(result), ))
+                self.__logger.info("Found %u certificates eligible for auto renewal" % (len(result),))
 
                 if len(result) > 0:
                     for sn in result:
@@ -405,7 +398,7 @@ class SQLite(Backend):
                                                % (86400. * validity_period, sn[1]))
                             new_end = self._unix_timestamp_to_asn1_time(time.time() + 86400. * validity_period)
                         else:
-                            self.__logger.info("Using validity period of %f sec for renewal" % (sn[1], ))
+                            self.__logger.info("Using validity period of %f sec for renewal" % (sn[1],))
                             new_end = self._unix_timestamp_to_asn1_time(time.time() + sn[1])
 
                         self.__logger.info("Renewing certificate with serial number %s (notBefore=%s, "
@@ -418,7 +411,7 @@ class SQLite(Backend):
                            "(start_date < ?) AND (end_date > ?);",
                            (qdata["invalid"], qdata["now"], qdata["now"]))
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from invalid to valid" % (len(result), ))
+            self.__logger.info("%u certificates will be set from invalid to valid" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
@@ -435,7 +428,7 @@ class SQLite(Backend):
             cursor.execute("SELECT serial_number, start_date FROM certificate WHERE state=? AND "
                            "(start_date >= ?);", (qdata["valid"], qdata["now"]))
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from valid to invalid" % (len(result), ))
+            self.__logger.info("%u certificates will be set from valid to invalid" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
@@ -450,7 +443,7 @@ class SQLite(Backend):
             cursor.execute("SELECT serial_number, end_date FROM certificate WHERE state=? AND "
                            "(end_date <= ?);", (qdata["valid"], qdata["now"]))
             result = cursor.fetchall()
-            self.__logger.info("%u certificates will be set from valid to expired" % (len(result), ))
+            self.__logger.info("%u certificates will be set from valid to expired" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
@@ -464,8 +457,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't validate certificates: %s" % (error.message, ))
-            raise PKIDBException(message="Can't validate certificates: %s\n" % (error.message, ))
+            self.__logger.error("Can't validate certificates: %s" % (error.message,))
+            raise PKIDBException(message="Can't validate certificates: %s\n" % (error.message,))
 
     def get_statistics(self):
 
@@ -517,8 +510,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't read certifcate informations from database:%s" % (error.message, ))
-            raise PKIDBException(message="Can't read certifcate informations from database:%s" % (error.message, ))
+            self.__logger.error("Can't read certifcate informations from database:%s" % (error.message,))
+            raise PKIDBException(message="Can't read certifcate informations from database:%s" % (error.message,))
 
         statistics["state"] = state_statistics
         statistics["keysize"] = keysize_statistics
@@ -552,8 +545,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't insert new serial number into database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't insert new serial number into database: %s" % (error.message, ))
+            self.__logger.error("Can't insert new serial number into database: %s" % (error.message,))
+            raise PKIDBException(message="Can't insert new serial number into database: %s" % (error.message,))
 
     def _get_digest(self):
         self.__logger.info("Getting digest algorithm for signature signing from configuration file")
@@ -570,16 +563,16 @@ class SQLite(Backend):
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (serial, ))
+            cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (serial,))
 
-            self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial), ))
+            self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial),))
 
             cursor.close()
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't remove certificate from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't remove certificate from database: %s" % (error.message, ))
+            self.__logger.error("Can't remove certificate from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't remove certificate from database: %s" % (error.message,))
 
         return None
 
@@ -594,11 +587,11 @@ class SQLite(Backend):
                            "FROM certificate WHERE state=%d" % (self._certificate_status_map["revoked"]))
 
             result = cursor.fetchall()
-            self.__logger.info("%u revoked certificates found in database" % (len(result), ))
+            self.__logger.info("%u revoked certificates found in database" % (len(result),))
 
             for revoked in result:
                 revcert = OpenSSL.crypto.Revoked()
-                revcert.set_serial("%x" % (revoked[0], ))
+                revcert.set_serial("%x" % (revoked[0],))
                 revcert.set_reason(self._revocation_reason_reverse_map[revoked[1]])
                 revcert.set_rev_date(self._unix_timestamp_to_asn1_time(revoked[2]))
 
@@ -612,12 +605,12 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't fetch revoked certificates from backend: %s" % (error.message, ))
-            raise PKIDBException(message="Can't fetch revoked certificates from backend: %s" % (error.message, ))
+            self.__logger.error("Can't fetch revoked certificates from backend: %s" % (error.message,))
+            raise PKIDBException(message="Can't fetch revoked certificates from backend: %s" % (error.message,))
         except OpenSSL.crypto.Error as x509error:
             self.__db.rollback()
-            self.__logger.error("Can't build revocation list: %s" % (x509error.message, ))
-            raise PKIDBException(message="Can't build revocation list: %s" % (x509error.message, ))
+            self.__logger.error("Can't build revocation list: %s" % (x509error.message,))
+            raise PKIDBException(message="Can't build revocation list: %s" % (x509error.message,))
 
         return crl
 
@@ -638,7 +631,7 @@ class SQLite(Backend):
                 if len(result) == 0:
                     qdata["version"] = 2
                     qdata["subject"] = "Placeholder, set by revoking non-existent certificate with serial number %s " \
-                                       "and using the force flag." % (serial, )
+                                       "and using the force flag." % (serial,)
                     qdata["certificate"] = qdata["subject"]
 
                     cursor.execute("INSERT INTO certificate (serial_number, version, subject, certificate, state) "
@@ -654,23 +647,22 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't update certifcate in backend: %s" % (error.message, ))
-            raise PKIDBException(message="Can't update certifcate in backend: %s" % (error.message, ))
+            self.__logger.error("Can't update certifcate in backend: %s" % (error.message,))
+            raise PKIDBException(message="Can't update certifcate in backend: %s" % (error.message,))
 
         return None
 
     def get_certificate(self, serial):
-        cert = None
 
         qdata = {
             "serial": serial,
         }
 
-        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial, ))
+        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial,))
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT certificate FROM certificate WHERE serial_number=?;", (qdata["serial"], ))
+            cursor.execute("SELECT certificate FROM certificate WHERE serial_number=?;", (qdata["serial"],))
             result = cursor.fetchall()
             cursor.close()
             self.__db.commit()
@@ -687,11 +679,11 @@ class SQLite(Backend):
 
                 except OpenSSL.crypto.Error as error:
                     self.__db.rollback()
-                    self.__logger.error("Can't parse ASN1 data: %s" % (error.message, ))
-                    raise PKIDBException(message="Can't parse ASN1 data: %s" % (error.message, ))
+                    self.__logger.error("Can't parse ASN1 data: %s" % (error.message,))
+                    raise PKIDBException(message="Can't parse ASN1 data: %s" % (error.message,))
         except sqlite3.Error as error:
-            self.__logger.error("Can't read certificate data from database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read certificate data from database: %s" % (error.message, ))
+            self.__logger.error("Can't read certificate data from database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read certificate data from database: %s" % (error.message,))
 
         return cert
 
@@ -712,11 +704,11 @@ class SQLite(Backend):
                            "fingerprint_sha1, certificate, signature_algorithm_id, extension, signing_request, "
                            "state, revocation_date, revocation_reason FROM certificate;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u certificates" % (len(result), ))
+            self.__logger.info("Dumping %u certificates" % (len(result),))
 
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping certificate with serial number %s" % (str(res[0]), ))
+                    self.__logger.info("Dumping certificate with serial number %s" % (str(res[0]),))
                     # check if extension row is not empty
                     if res[14]:
                         entry = {
@@ -779,10 +771,10 @@ class SQLite(Backend):
             extdump = []
             cursor.execute("SELECT hash, name, critical, data FROM extension;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u extensions" % (len(result), ))
+            self.__logger.info("Dumping %u extensions" % (len(result),))
             if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping extension with key id %s" % (res[0], ))
+                    self.__logger.info("Dumping extension with key id %s" % (res[0],))
                     entry = {
                         "hash": res[0],
                         "name": res[1],
@@ -805,9 +797,9 @@ class SQLite(Backend):
             algodump = []
             cursor.execute("SELECT id, algorithm FROM signature_algorithm;")
             result = cursor.fetchall()
-            self.__logger.info("Dumping %u signature algorithms" % (len(result), ))
+            self.__logger.info("Dumping %u signature algorithms" % (len(result),))
 
-            if len(result)>0:
+            if len(result) > 0:
                 for res in result:
                     self.__logger.info("Dumping signing algorithm %s with id %u" % (res[1], res[0]))
                     entry = {
@@ -822,10 +814,10 @@ class SQLite(Backend):
             cursor.execute("SELECT hash, request FROM signing_request;")
             result = cursor.fetchall()
 
-            self.__logger.info("Dumping %u certificate signing requests" % (len(result), ))
-            if len(result)>0:
+            self.__logger.info("Dumping %u certificate signing requests" % (len(result),))
+            if len(result) > 0:
                 for res in result:
-                    self.__logger.info("Dumping signing request %s" % (res[0], ))
+                    self.__logger.info("Dumping signing request %s" % (res[0],))
                     entry = {
                         "hash": res[0],
                         "request": res[1],
@@ -838,35 +830,35 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't read from backend database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't read from backend database: %s" % (error.message, ))
+            self.__logger.error("Can't read from backend database: %s" % (error.message,))
+            raise PKIDBException(message="Can't read from backend database: %s" % (error.message,))
 
         return dump
 
     def list_serial_number_by_state(self, state):
-        sn_list =  []
+        sn_list = []
 
         if state:
             qdata = {
                 "state": self._certificate_status_map[state],
             }
 
-            self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"], ))
+            self.__logger.info("Getting serial numbers for certificates with state %u" % (qdata["state"],))
             try:
                 cursor = self.__db.cursor()
-                cursor.execute("SELECT serial_number FROM certificate WHERE state=?;", (qdata["state"], ))
+                cursor.execute("SELECT serial_number FROM certificate WHERE state=?;", (qdata["state"],))
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]),))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
                 self.__db.commit()
             except sqlite3.Error as error:
                 self.__db.rollback()
-                self.__logger.error("Can't get list of serial numbers: %s" % (error.message, ))
-                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message, ))
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.message,))
+                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message,))
 
         else:
             self.__logger.info("Getting all serial numbers")
@@ -876,15 +868,15 @@ class SQLite(Backend):
 
                 result = cursor.fetchall()
                 for res in result:
-                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]), ))
+                    self.__logger.info("Adding serial number %s to result list" % (str(res[0]),))
                     sn_list.append(str(res[0]))
 
                 cursor.close()
                 self.__db.commit()
             except sqlite3.Error as error:
                 self.__db.rollback()
-                self.__logger.error("Can't get list of serial numbers: %s" % (error.message, ))
-                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message, ))
+                self.__logger.error("Can't get list of serial numbers: %s" % (error.message,))
+                raise PKIDBException(message="Can't get list of serial numbers: %s" % (error.message,))
 
         return sn_list
 
@@ -918,7 +910,7 @@ class SQLite(Backend):
                                 cert["signature_algorithm_id"], cert["extension"], cert["signing_request"],
                                 cert["state"], cert["revocation_date"], cert["revocation_reason"]))
 
-            self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]), ))
+            self.__logger.info("%u rows restored for certificate table" % (len(dump["certificate"]),))
             self.__logger.info("Forcing reindexing on certificate table")
             cursor.execute("REINDEX certificate;")
 
@@ -927,7 +919,7 @@ class SQLite(Backend):
             for ext in dump["extension"]:
                 cursor.execute("INSERT INTO extension (hash, name, critical, data) VALUES "
                                "(?, ?, ?, ?);", (ext["hash"], ext["name"], ext["critical"], ext["data"]))
-            self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]), ))
+            self.__logger.info("%u rows restored for extension table" % (len(dump["extension"]),))
             self.__logger.info("Forcing reindexing on table extension")
             cursor.execute("REINDEX extension;")
 
@@ -936,7 +928,7 @@ class SQLite(Backend):
             for csr in dump["signing_request"]:
                 cursor.execute("INSERT INTO signing_request (hash, request) VALUES "
                                "(?, ?);", (csr["hash"], csr["request"]))
-            self.__logger.info("%u rows restored for signing_request table" % (len(dump["signing_request"]), ))
+            self.__logger.info("%u rows restored for signing_request table" % (len(dump["signing_request"]),))
 
             self.__logger.info("Forcing reindexing on table signing_request")
             cursor.execute("REINDEX signing_request;")
@@ -945,8 +937,8 @@ class SQLite(Backend):
             self.__logger.info("Restoring signature_algorithm table")
             for sigalgo in dump["signature_algorithm"]:
                 cursor.execute("INSERT INTO signature_algorithm (id, algorithm) "
-                                "VALUES (?, ?);", (sigalgo["id"], sigalgo["algorithm"]))
-            self.__logger.info("%u rows restored for signature_algorithm table" % (len(dump["signature_algorithm"]), ))
+                               "VALUES (?, ?);", (sigalgo["id"], sigalgo["algorithm"]))
+            self.__logger.info("%u rows restored for signature_algorithm table" % (len(dump["signature_algorithm"]),))
 
             # fetch last sequence number
             cursor.execute("SELECT id FROM signature_algorithm ORDER BY id DESC LIMIT 1;")
@@ -957,8 +949,8 @@ class SQLite(Backend):
             else:
                 newsequence = long(result[0][0]) + 1
 
-            self.__logger.info("Readjusting primary key counter to %u" % (newsequence, ))
-            cursor.execute("UPDATE sqlite_sequence SET seq=%u WHERE name='signature_algorithm';" % (newsequence, ))
+            self.__logger.info("Readjusting primary key counter to %u" % (newsequence,))
+            cursor.execute("UPDATE sqlite_sequence SET seq=%u WHERE name='signature_algorithm';" % (newsequence,))
             self.__logger.info("Forcing reindexing on table signature_algorithm")
             cursor.execute("REINDEX signature_algorithm;")
 
@@ -966,33 +958,12 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't restore database from dump: %s" % (error.message, ))
-            raise PKIDBException(message="Can't restore database from dump: %s" % (error.message, ))
+            self.__logger.error("Can't restore database from dump: %s" % (error.message,))
+            raise PKIDBException(message="Can't restore database from dump: %s" % (error.message,))
 
         return True
 
     def get_certificate_data(self, serial):
-        data = {
-            "serial_number": None,
-            "version": None,
-            "start_date": None,
-            "end_date": None,
-            "subject": None,
-            "auto_renewable": None,
-            "auto_renew_start_period": None,
-            "auto_renew_validity_period": None,
-            "issuer": None,
-            "keysize": None,
-            "fingerprint_md5": None,
-            "fingerprint_sha1": None,
-            "certificate": None,
-            "algorithm": None,
-            "extension": None,
-            "signing_request": None,
-            "state": None,
-            "revocation_date": None,
-            "revocation_reason": None,
-        }
         qdata = {"serial": serial, }
 
         try:
@@ -1005,11 +976,11 @@ class SQLite(Backend):
                            "fingerprint_sha1, certificate, algorithm, extension, signing_request, "
                            "state, revocation_date, revocation_reason "
                            "FROM certificate INNER JOIN signature_algorithm ON signature_algorithm_id=id "
-                           "WHERE serial_number=?;", (qdata["serial"], ))
+                           "WHERE serial_number=?;", (qdata["serial"],))
             result = cursor.fetchall()
             if len(result) > 0:
                 data = {
-                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0]) ),
+                    "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0])),
                     "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][2])),
                     "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(result[0][3])),
                     "subject": result[0][4],
@@ -1046,7 +1017,7 @@ class SQLite(Backend):
                     data["auto_renewable"] = False
 
                 if data["signing_request"]:
-                    cursor.execute("SELECT request FROM signing_request WHERE hash=?;", (data["signing_request"], ))
+                    cursor.execute("SELECT request FROM signing_request WHERE hash=?;", (data["signing_request"],))
                     csr_result = cursor.fetchall()
                     data["signing_request"] = csr_result[0][0]
 
@@ -1056,7 +1027,7 @@ class SQLite(Backend):
                     data["extension"] = data["extension"].split(",")
                     for ext in data["extension"]:
                         qext = {"hash": ext, }
-                        cursor.execute("SELECT name, critical, data FROM extension WHERE hash=?;", (qext["hash"], ))
+                        cursor.execute("SELECT name, critical, data FROM extension WHERE hash=?;", (qext["hash"],))
                         ext_result = cursor.fetchall()
                         extlist.append({
                             "name": ext_result[0][0],
@@ -1076,7 +1047,7 @@ class SQLite(Backend):
             self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
                                 % (serial, error.message))
             raise PKIDBException(message="Can't lookup certificate with serial number %s in database: %s"
-                                % (serial, error.message))
+                                         % (serial, error.message))
 
         return data
 
@@ -1090,7 +1061,7 @@ class SQLite(Backend):
     def set_certificate_metadata(self, serial, auto_renew=None, auto_renew_start_period=None,
                                  auto_renew_validity_period=None):
 
-        if auto_renew == None and not auto_renew_start_period and not auto_renew_validity_period:
+        if auto_renew is None and not auto_renew_start_period and not auto_renew_validity_period:
             return False
 
         if not self.get_certificate(serial):
@@ -1106,7 +1077,7 @@ class SQLite(Backend):
                 "auto_renew_validity_period": auto_renew_validity_period,
             }
 
-            if auto_renew == None:
+            if auto_renew is None:
                 # setting auto_renew_start_period or auto_renew_validity_period implicitly sets the auto_renew flag
                 if auto_renew_start_period or auto_renew_validity_period:
                     qdata["auto_renewable"] = True
@@ -1120,7 +1091,7 @@ class SQLite(Backend):
                                    (qdata["auto_renew_start_period"], qdata["auto_renewable"], qdata["serial"]))
 
                     self.__logger.info("Setting auto_renew_start_period of certificate %s to %f days." %
-                                       (str(serial), qdata["auto_renew_start_period"]/86400.))
+                                       (str(serial), qdata["auto_renew_start_period"] / 86400.))
                     udata = {
                         "serial": serial,
                     }
@@ -1133,7 +1104,7 @@ class SQLite(Backend):
                                        "WHERE serial_number=? AND auto_renew_validity_period IS NULL;",
                                        (udata["auto_renew_validity_period"], udata["serial"]))
                         self.__logger.info("Setting auto_renew_validity_period to %f days if not already set." %
-                                           (udata["auto_renew_validity_period"]/86400., ))
+                                           (udata["auto_renew_validity_period"] / 86400.,))
 
                 if auto_renew_validity_period:
                     qdata["auto_renew_validity_period"] = float(qdata["auto_renew_validity_period"]) * 86400.
@@ -1143,42 +1114,43 @@ class SQLite(Backend):
                                    (qdata["auto_renew_validity_period"], qdata["auto_renewable"], qdata["serial"]))
 
                     self.__logger.info("Setting auto_renew_validity_period of certificate %s to %f days." %
-                                       (str(serial), qdata["auto_renew_validity_period"]/86400.))
+                                       (str(serial), qdata["auto_renew_validity_period"] / 86400.))
 
                     udata = {
-                        "serial":  serial,
+                        "serial": serial,
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
-                        udata["auto_renew_start_period"] = float(self._get_from_config_global("auto_renew_start_period")) \
-                                                              * 86400.
+                        udata["auto_renew_start_period"] = float(
+                            self._get_from_config_global("auto_renew_start_period")) \
+                                                           * 86400.
                         cursor.execute("UPDATE certificate SET "
                                        "auto_renew_start_period=? "
                                        "WHERE serial_number=? AND auto_renew_start_period IS NULL;",
                                        (udata["auto_renew_start_period"], udata["serial"]))
                         self.__logger.info("Setting auto_renew_start_period to %f days if not already set." %
-                                           (udata["auto_renew_start_period"]/86400., ))
+                                           (udata["auto_renew_start_period"] / 86400.,))
 
-            if auto_renew == True:
+            if auto_renew:
                 # setting auto_renewable flag also sets auto_renew_start_period and auto_renew_validity_period
                 if not auto_renew_start_period:
                     auto_renew_start_period = float(self._get_from_config_global("auto_renew_start_period")) * 86400.
                     self.__logger.info("Setting auto_renew_start_period from configuration file to %s" %
-                                       (auto_renew_start_period, ))
+                                       (auto_renew_start_period,))
 
                     if not auto_renew_start_period:
                         cursor.close()
                         self.__db.rollback()
                         self.__logger.error("Can't lookup option auto_renew_start_period from configuration file.")
                         raise PKIDBException(message="Error: Can't lookup option auto_renew_start_period "
-                                             "from configuration file.")
+                                                     "from configuration file.")
 
                     qdata["auto_renew_start_period"] = auto_renew_start_period
 
                 if not auto_renew_validity_period:
                     auto_renew_validity_period = float(self._get_from_config_global("validity_period")) * 86400.
                     self.__logger.info("Setting auto_renew_validity_period from configuration file to %s" %
-                                       (auto_renew_validity_period, ))
+                                       (auto_renew_validity_period,))
 
                     if not auto_renew_validity_period:
                         cursor.close()
@@ -1192,16 +1164,16 @@ class SQLite(Backend):
                                "auto_renew_start_period=?, "
                                "auto_renew_validity_period=? "
                                "WHERE serial_number=?;",
-                               (qdata["auto_renewable"], qdata["auto_renew_start_period"]/86400.,
-                                qdata["auto_renew_validity_period"]/86400., qdata["serial"]))
+                               (qdata["auto_renewable"], qdata["auto_renew_start_period"] / 86400.,
+                                qdata["auto_renew_validity_period"] / 86400., qdata["serial"]))
 
                 self.__logger.info("Setting auto_renewable to %s (auto_renew_start_period is %s days and "
                                    "auto_renew_validity_period is %s days)" %
-                                   (qdata["auto_renewable"], qdata["auto_renew_start_period"]/86400.,
-                                    qdata["auto_renew_validity_period"]/86400.))
+                                   (qdata["auto_renewable"], qdata["auto_renew_start_period"] / 86400.,
+                                    qdata["auto_renew_validity_period"] / 86400.))
 
             # explicitly check for False to avoid None
-            elif auto_renew == False:
+            elif not auto_renew:
                 # disabling auto_renew flag also removes auto_renew_start_period and auto_renew_validity_period
                 qdata["auto_renew_start_period"] = None
                 qdata["auto_renew_validity_period"] = None
@@ -1212,18 +1184,17 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't update auto_renew parameters: %s" % (error.message, ))
-            sys.stderr.write("Error: Can't update auto_renew parameters: %s\n" % (error.message, ))
+            self.__logger.error("Can't update auto_renew parameters: %s" % (error.message,))
+            sys.stderr.write("Error: Can't update auto_renew parameters: %s\n" % (error.message,))
 
         return True
 
-    def _get_signature_algorithm(self, id):
-        algo = None
-        qdata = {"id":id, }
+    def _get_signature_algorithm(self, algo_id):
+        qdata = {"id": algo_id,}
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("SELECT algorithm FROM signature_algorithm WHERE id=?;", (qdata["id"], ))
+            cursor.execute("SELECT algorithm FROM signature_algorithm WHERE id=?;", (qdata["id"],))
             result = cursor.fetchall()
             if len(result) == 0:
                 algo = None
@@ -1234,8 +1205,8 @@ class SQLite(Backend):
             self.__db.commit()
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (id, error.message))
-            raise PKIDBException(message="Can't lookup algorithm id %u in database: %s" % (id, error.message))
+            self.__logger.error("Can't lookup algorithm id %u in database: %s" % (algo_id, error.message))
+            raise PKIDBException(message="Can't lookup algorithm id %u in database: %s" % (algo_id, error.message))
 
         return algo
 
@@ -1250,7 +1221,7 @@ class SQLite(Backend):
             "certificate": None,
             "signing_request": None,
         }
-        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial, ))
+        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial,))
 
         try:
             qdata = {"serial": serial, }
@@ -1258,7 +1229,7 @@ class SQLite(Backend):
             cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
                            "extract(EPOCH FROM auto_renew_validity_period), state, "
                            "extract(EPOCH FROM revocation_date), revocation_reason, certificate, signing_request "
-                           "FROM certificate WHERE serial_number=?;", (qdata["serial"], ))
+                           "FROM certificate WHERE serial_number=?;", (qdata["serial"],))
             qresult = cursor.fetchall()
             cursor.close()
             self.__db.commit()
@@ -1274,8 +1245,8 @@ class SQLite(Backend):
                 result["signing_request"] = qresult[0][7]
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't fetch metadata from backend: %s" % (error.message, ))
-            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message, ))
+            self.__logger.error("Can't fetch metadata from backend: %s" % (error.message,))
+            raise PKIDBException(message="Can't fetch metadata from backend: %s" % (error.message,))
 
         if not fields:
             return result
@@ -1309,7 +1280,7 @@ class SQLite(Backend):
             for meta in metadata:
                 if meta != "serial":
                     if meta in self._metadata:
-                        query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta, )
+                        query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta,)
                         self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], serial))
 
                         cursor.execute(query, (data[meta], data["serial"]))
@@ -1320,7 +1291,7 @@ class SQLite(Backend):
             cursor.close()
             self.__db.commit()
         except sqlite3.Error as error:
-            self.__logger.error("Failed to set meta data in database: %s" % (error.message, ))
+            self.__logger.error("Failed to set meta data in database: %s" % (error.message,))
             self.__db.rollback()
 
         return None
@@ -1330,7 +1301,7 @@ class SQLite(Backend):
         try:
             query = {"search": searchstring, }
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE ?;", (query["search"], ))
+            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE ?;", (query["search"],))
             result = cursor.fetchall()
             cursor.close()
             self.__db.commit()
@@ -1340,7 +1311,7 @@ class SQLite(Backend):
 
         except sqlite3.Error as error:
             self.__db.rollback()
-            self.__logger.error("Can't search subject in database: %s" % (error.message, ))
-            raise PKIDBException(message="Can't search subject in database: %s" % (error.message, ))
+            self.__logger.error("Can't search subject in database: %s" % (error.message,))
+            raise PKIDBException(message="Can't search subject in database: %s" % (error.message,))
 
         return serials

@@ -28,10 +28,12 @@ import time
 import re
 import OpenSSL
 
-__all__ = [ "pgsql", "sqlite", "mysql" ]
+__all__ = ["pgsql", "sqlite", "mysql"]
+
 
 class PKIDBException(Exception):
     message = None
+
     def __init__(self, *args, **kwargs):
         super(PKIDBException, self).__init__(args, kwargs)
         if "message" in kwargs:
@@ -43,8 +45,8 @@ class PKIDBException(Exception):
         super(PKIDBException, self).__str__()
         return self.message
 
-class Backend(object):
 
+class Backend(object):
     # Note: RFC 3280 (4.1.2.2  Serial number) states the serial number
     # must be:
     #  * unique
@@ -54,7 +56,7 @@ class Backend(object):
     _MAX_SERIAL_NUMBER = 0x7fffffffffffffff
 
     _certificate_status_reverse_map = {
-       -1: "temporary",
+        -1: "temporary",
         0: "pending",
         1: "valid",
         2: "revoked",
@@ -88,17 +90,17 @@ class Backend(object):
     }
 
     _revocation_reason_reverse_map = {
-        0:"unspecified",
-        1:"keycompromise",
-        2:"cacompromise",
-        3:"affiliationchanged",
-        4:"superseded",
-        5:"cessationofoperation",
-        6:"certificatehold",
-        7:"unspecified (not used as defined in RFC5280)",
-        8:"removefromcrl",
-        9:"privilegewithdrawn",
-        10:"aacompromise",
+        0: "unspecified",
+        1: "keycompromise",
+        2: "cacompromise",
+        3: "affiliationchanged",
+        4: "superseded",
+        5: "cessationofoperation",
+        6: "certificatehold",
+        7: "unspecified (not used as defined in RFC5280)",
+        8: "removefromcrl",
+        9: "privilegewithdrawn",
+        10: "aacompromise",
     }
 
     _keyusage_list = [
@@ -128,22 +130,23 @@ class Backend(object):
     ]
 
     # known meta data fields
-    _metadata = [ "auto_renewable",
-                  "auto_renew_start_period",
-                  "auto_renew_validity_period",
-                  "state",
-                  "revocation_date",
-                  "revocation_reason",
-                  "certificate",
-                  "signing_request",
-                  "start_date",
-                  "end_date",
-                  "signature_algorithm_id",
-                ]
+    _metadata = ["auto_renewable",
+                 "auto_renew_start_period",
+                 "auto_renew_validity_period",
+                 "state",
+                 "revocation_date",
+                 "revocation_reason",
+                 "certificate",
+                 "signing_request",
+                 "start_date",
+                 "end_date",
+                 "signature_algorithm_id",
+                 ]
 
     __logger = None
 
-    def _get_loglevel(self, string):
+    @staticmethod
+    def _get_loglevel(string):
         """
         Returns value of loglevel for logging from string
         :param string: string
@@ -162,8 +165,8 @@ class Backend(object):
         elif string.lower() == "critical":
             return logging.CRITICAL
         else:
-            sys.stderr.write("Error: Unknown log level %s\n" % (string, ))
-            raise PKIDBException(message="Unknown log level %s" % (string, ))
+            sys.stderr.write("Error: Unknown log level %s\n" % (string,))
+            raise PKIDBException(message="Unknown log level %s" % (string,))
 
     def __init_logger(self, options):
         """
@@ -173,7 +176,7 @@ class Backend(object):
         """
         name = os.path.basename(sys.argv[0])
         logformat = logging.Formatter(name + " %(name)s:%(lineno)d %(levelname)s: %(message)s")
-        re_logging=re.compile("(\w+),(\w+):(.*)$")
+        re_logging = re.compile("(\w+),(\w+):(.*)$")
 
         self.__logger = logging.getLogger("__init__")
         self.__logger.setLevel(logging.INFO)
@@ -188,8 +191,8 @@ class Backend(object):
                         handler = logging.FileHandler(logoptions)
                         handler.setLevel(self._get_loglevel(level))
                         flogformat = logging.Formatter("%(asctime)s " + name +
-                                                      " %(name)s:%(lineno)d %(levelname)s: %(message)s",
-                                                      datefmt='%d %b %Y %H:%M:%S')
+                                                       " %(name)s:%(lineno)d %(levelname)s: %(message)s",
+                                                       datefmt='%d %b %Y %H:%M:%S')
                         handler.setFormatter(flogformat)
                         self.__logger.addHandler(handler)
                     elif logtype.lower() == "syslog":
@@ -200,8 +203,8 @@ class Backend(object):
 
                         self.__logger.addHandler(handler)
                     else:
-                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype, ))
-                        raise PKIDBException(message="Unknown logging mechanism %s" % (logtype, ))
+                        sys.stderr.write("Error: Unknown logging mechanism %s\n" % (logtype,))
+                        raise PKIDBException(message="Unknown logging mechanism %s" % (logtype,))
         else:
             # set default logging
             # initialize logging subsystem
@@ -354,14 +357,14 @@ class Backend(object):
         :return: None
         """
 
-    def _format_subject(self, subject):
+    @staticmethod
+    def _format_subject(subject):
         """
         Returns the subject as string from the tuple obtained from X509.get_subject().get_components()
         :param subject: subject tuple
         :return: string
         """
 
-        result = ""
         intermediate = []
         for pair in subject:
             intermediate.append('='.join(pair))
@@ -371,7 +374,8 @@ class Backend(object):
 
         return result
 
-    def _unix_timestamp_to_asn1_time(self, timestamp):
+    @staticmethod
+    def _unix_timestamp_to_asn1_time(timestamp):
         """
         Converts UNIX timestamp to ASN1 GENERALIZEDTIME string
         :param timestamp: UNIX timestamp
@@ -408,11 +412,12 @@ class Backend(object):
 
                 stamp += 3600.0 * tz
             except ValueError as error:
-                self.__logger.error("Can't convert %s to UNIX timestamp" % (datestring, ))
-                raise PKIDBException(message="Can't convert %s to UNIX timestamp" % (datestring, ))
+                self.__logger.error("Can't convert %s to UNIX timestamp: %s" % (datestring, error.message))
+                raise PKIDBException(message="Can't convert %s to UNIX timestamp: %s" % (datestring, error.message))
         return stamp
 
-    def _asn1_time_to_unix_timestamp(self, asn1_time):
+    @staticmethod
+    def _asn1_time_to_unix_timestamp(asn1_time):
         """
         Converts ASN1 GENERALIZEDTIME string to UNIX timestamp
         :param asn1_time: ASN1 GENERALIZEDTIME string
@@ -425,10 +430,10 @@ class Backend(object):
         # YYYYMMDDhhmmssZ
         # YYYYMMDDhhmmss+hhmm
         # YYYYMMDDhhmmss-hhmm
-        re_asn1_with_Z = re.compile("^\d{14}Z$")
+        re_asn1_with_z = re.compile("^\d{14}Z$")
         re_asn1_with_offset = re.compile("^(\d{14})[+|-](\d{4})$")
 
-        if re_asn1_with_Z.match(asn1_time):
+        if re_asn1_with_z.match(asn1_time):
             timestamp = time.mktime(time.strptime(asn1_time, "%Y%m%d%H%M%SZ"))
         elif re_asn1_with_offset.match(asn1_time):
             # although time.strftime supports %z time.strptime does not
@@ -479,13 +484,12 @@ class Backend(object):
         :param cert: X509 object
         :return: primary key of signature algorithm in lookup table
         """
-        algoid = None
         algo = "undefined"
 
         try:
             algo = cert.get_signature_algorithm()
         except ValueError as error:
-            self.__logger.warning("Undefined signature algorithm in certificate data")
+            self.__logger.warning("Undefined signature algorithm in certificate data: %s" % (error.message,))
 
         algoid = self._store_signature_algorithm_name(algo)
 
@@ -552,7 +556,7 @@ class Backend(object):
         """
         Check validity of certificates stored in the backend and update certificate status.
         :param autorenew: Renew autorenewable certificates
-        :param autorenew_period: Set new validity period for autorenewable certificates
+        :param validity_period: Set new validity period for autorenewable certificates
         :param cakey: CA private key for signing renewed certificates
         :return: None
         """
@@ -571,15 +575,15 @@ class Backend(object):
         :return: digest (type string)
         """
 
-    def sign_request(self, csr, notBefore, notAfter, cakey, issuer, extensions, digest=None):
+    def sign_request(self, csr, notbefore, notafter, cakey, issuer, extensions, digest=None):
         """
         Create a certificate from a certificate signing request,
         :param csr: X509Request object of certificate signing request
-        :param notBefore: start of validity period in days from now (can be None)
-        :param notAfter: end of validity period in days
+        :param notbefore: start of validity period in days from now (can be None)
+        :param notafter: end of validity period in days
         :param cakey: X509 object of CA signing key
         :param issuer: X509Name object containing the subject of CA
-        :param extension: list of x509 extension
+        :param extensions: list of x509 extension
         :param digest: digest for signing, if None it will be take from configuration
         :return: signed certificate as X509 object
         """
@@ -588,7 +592,7 @@ class Backend(object):
         newcert = OpenSSL.crypto.X509()
 
         # SSL version 3, count starts at 0
-        newcert.set_version(3-1)
+        newcert.set_version(3 - 1)
 
         # copy subject from signing request
         newcert.set_subject(csr.get_subject())
@@ -597,8 +601,8 @@ class Backend(object):
         newcert.set_pubkey(csr.get_pubkey())
 
         # set validity period
-        newcert.gmtime_adj_notBefore(notBefore * 86400)
-        newcert.gmtime_adj_notAfter(notAfter * 86400)
+        newcert.gmtime_adj_notBefore(notbefore * 86400)
+        newcert.gmtime_adj_notAfter(notafter * 86400)
 
         newcert.set_issuer(issuer)
 
@@ -618,7 +622,6 @@ class Backend(object):
             newcert.add_extensions(extensions)
 
         # sign new certificate
-        signdigest = None
         if digest:
             signdigest = digest
         else:
@@ -692,36 +695,35 @@ class Backend(object):
         :return: None
         """
 
-    def renew_certificate(self, serial, notBefore, notAfter, cakey):
+    def renew_certificate(self, serial, notbefore, notafter, cakey):
         """
         Renew a certificate identified by serial number
         :param serial: serial number
-        :param notBefore: start of validity period as ASN1 GERNERALIZEDTIME string
-        :param notAfter: end of validity period as ASN1 GENERALIZEDTIME string
+        :param notbefore: start of validity period as ASN1 GERNERALIZEDTIME string
+        :param notafter: end of validity period as ASN1 GENERALIZEDTIME string
         :param cakey: X509 object of CA signing key
         :return: X509 object with renewed certificate
         """
-        self.__logger.info("Renewing certificate with serial number %s" % (str(serial), ))
+        self.__logger.info("Renewing certificate with serial number %s" % (str(serial),))
 
         # check if the certificate has been revoked
         if self._is_revoked(serial):
             self.__logger.error("Certificate with serial number %s can't be renewed, "
-                                "it has been revoked" % (serial, ))
+                                "it has been revoked" % (serial,))
             raise PKIDBException(message="Certificate with serial number %s can't be renewed, "
-                                "it has been revoked" % (serial, ))
+                                         "it has been revoked" % (serial,))
 
         newcert = self.get_certificate(serial)
         if newcert:
-
             # set new validity dates
-            newcert.set_notBefore(notBefore)
-            newcert.set_notAfter(notAfter)
+            newcert.set_notBefore(notbefore)
+            newcert.set_notAfter(notafter)
 
             # resign certificate using the same signature algorithm
             newcert.sign(cakey, newcert.get_signature_algorithm())
 
             self.__logger.info("Certificate with serial number %s is now valid from %s til %s" %
-                               (serial, notBefore, notAfter))
+                               (serial, notbefore, notafter))
 
             # commit new certificate
             self.store_certificate(newcert, replace=True)
@@ -781,10 +783,10 @@ class Backend(object):
         :return: value or None
         """
 
-    def _get_signature_algorithm(self, id):
+    def _get_signature_algorithm(self, algo_id):
         """
         Get signature algorithm name based on its id
-        :param id: id
+        :param algo_id: id
         :return: name
         """
 
@@ -795,15 +797,15 @@ class Backend(object):
         :return: tuple of two arrays (ok, notok) containing serial numbers that are ok or not ok
         """
         re_sn = re.compile("(\d+)\s\(0x[a-f0-9]+\)")
-        metadata = [ "auto_renewable",
-                     "auto_renew_start_period",
-                     "auto_renew_validity_period",
-                     "state",
-                     "revocation_date",
-                     "revocation_reason",
-                     "certificate",
-                     "signing_request",
-                   ]
+        metadata = ["auto_renewable",
+                    "auto_renew_start_period",
+                    "auto_renew_validity_period",
+                    "state",
+                    "revocation_date",
+                    "revocation_reason",
+                    "certificate",
+                    "signing_request",
+                    ]
 
         ok = []
         notok = []
@@ -818,7 +820,7 @@ class Backend(object):
                     cert = self.get_certificate(serial)
                     if not cert:
                         self.__logger.info("Empty certificate data from backend for serial number %s, skipping"
-                                           % (serial, ))
+                                           % (serial,))
                         continue
 
                     certdbdata = self._get_raw_certificate_data(serial)
@@ -879,8 +881,7 @@ class Backend(object):
                     if "extension" in certcontent:
                         reformatted = []
                         for ext in certcontent["extension"]:
-                            extdata = {}
-                            extdata["name"] = ext[0]
+                            extdata = {"name": ext[0]}
                             if ext[1] == 1:
                                 extdata["critical"] = True
                             else:
@@ -896,7 +897,7 @@ class Backend(object):
                         if certdbdata[data] != certcontent[data]:
                             self.__logger.warning("Content for %s differ (%s vs. %s) for serial number %s" %
                                                   (data, certdbdata[data], certcontent[data], serial))
-                            if not serial in notok:
+                            if serial not in notok:
                                 notok.append(serial)
 
                             if data == "serial_number":
@@ -926,29 +927,29 @@ class Backend(object):
                                         self._set_meta_data(serial, metadata)
                                         # force rewrite of certificate data
                                         self.__logger.info("Regenerating and storing certificate data "
-                                                           "for serial number %s." % (serial, ))
+                                                           "for serial number %s." % (serial,))
                                         self.store_certificate(cert, replace=True)
                                         repaired.append(serial)
                                 else:
                                     self.__logger.error("Failed to get meta data for certificate with serial number %s"
-                                                        % (serial, ))
+                                                        % (serial,))
                         else:
-                            if not serial in ok:
+                            if serial not in ok:
                                 ok.append(serial)
                             self.__logger.info("Content of %s is o.k. for serial number %s" % (data, serial))
                 else:
                     self.__logger.info("Skipping %s certificate %s" % (certstate, serial))
         except Exception as error:
-            self.__logger.error("Error while processing certifcate data: %s" % (error.message, ))
-            raise PKIDBException(message="Error: Error while processing certifcate data: %s" % (error.message, ))
+            self.__logger.error("Error while processing certifcate data: %s" % (error.message,))
+            raise PKIDBException(message="Error: Error while processing certifcate data: %s" % (error.message,))
 
-        return (ok, notok, repaired)
+        return ok, notok, repaired
 
     def _get_meta_data(self, serial, fields=None):
         """
         Fetch metadata from backend
         :param serial: serial number to look up the meta data
-        :param field: if field is None or empty all metadata are returned, otherwise the requested fields
+        :param fields: if field is None or empty all metadata are returned, otherwise the requested fields
         :return: dictionary of metadata
         """
 

@@ -510,8 +510,11 @@ class PostgreSQL(Backend):
             for element in result:
                 state_statistics[self._certificate_status_reverse_map[element[0]]] = element[1]
 
+            qdata = {"state": self._certificate_status_map["valid"], }
+
             self.__logger.info("Getting key sizes")
-            cursor.execute("SELECT keysize, COUNT(keysize) FROM certificate GROUP BY keysize;")
+            cursor.execute("SELECT keysize, COUNT(keysize) FROM certificate WHERE state=%(state)s GROUP BY keysize;",
+                           qdata)
             result = cursor.fetchall()
 
             for element in result:
@@ -520,7 +523,7 @@ class PostgreSQL(Backend):
             self.__logger.info("Getting signature algorithms")
             cursor.execute("SELECT algorithm, COUNT(algorithm) FROM signature_algorithm INNER JOIN "
                            "certificate ON certificate.signature_algorithm_id=signature_algorithm.id "
-                           "GROUP BY algorithm;")
+                           "WHERE certificate.state=%(state)s GROUP BY algorithm;", qdata)
             result = cursor.fetchall()
 
             for element in result:

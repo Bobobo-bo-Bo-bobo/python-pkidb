@@ -506,11 +506,14 @@ class MySQL(Backend):
             cursor.execute("SELECT state, COUNT(state) FROM certificate GROUP BY state;")
             result = cursor.fetchall()
 
+            qdata = {"state": self._certificate_status_map["valid"], }
+
             for element in result:
                 state_statistics[self._certificate_status_reverse_map[element[0]]] = element[1]
 
             self.__logger.info("Getting key sizes")
-            cursor.execute("SELECT keysize, COUNT(keysize) FROM certificate GROUP BY keysize;")
+            cursor.execute("SELECT keysize, COUNT(keysize) FROM certificate WHERE state=%s GROUP BY keysize;",
+                           (qdata["state"], ))
             result = cursor.fetchall()
 
             for element in result:
@@ -519,7 +522,7 @@ class MySQL(Backend):
             self.__logger.info("Getting signature algorithms")
             cursor.execute("SELECT algorithm, COUNT(algorithm) FROM signature_algorithm INNER JOIN "
                            "certificate ON certificate.signature_algorithm_id=signature_algorithm.id "
-                           "GROUP BY algorithm;")
+                           "WHERE certificate.state=%s GROUP BY algorithm;", (qdata["state"], ))
             result = cursor.fetchall()
 
             for element in result:

@@ -1,4 +1,4 @@
-.TH pkdib 1 "December 26th, 2015" "Version 0.8.0"
+.TH pkdib 1 "December 26th, 2015" "Version 0.8.13"
 .SH NAME
 pkidb - PKI system based on a SQL database backend
 
@@ -512,6 +512,17 @@ Remove auto renewable flag from certificate meta data.
 .RE
 .RE
 
+.RS
+.B \-c \c
+.I signing_request
+.br
+.B \-\-csr=\c
+.I signing_request
+.RS
+Set certificate signing request.
+.RE
+.RE
+
 .RE
 .RE
 
@@ -585,7 +596,7 @@ is a comma separated list of:
 .RS
 Comma separated list of extended key usage bits. Prefix 
 .I critical: 
-can be used to set the critical flag. Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5. Known extended key usage bits are defined in RFC 55280:
+can be used to set the critical flag. Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5. Known extended key usage bits are defined in RFC 5280:
 .RS
 
 .I serverAuth
@@ -752,6 +763,9 @@ in the configuration or the template file.
 .RS
 .RS
 Print small summary of stored certificates. Output will be written to standard output.
+.br
+.B Note: \c
+Only the keysizes and hashing algorithm of valid certificates are shown.
 .RE
 
 

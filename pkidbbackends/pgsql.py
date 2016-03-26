@@ -1179,9 +1179,9 @@ class PostgreSQL(Backend):
             return None
 
     def set_certificate_metadata(self, serial, auto_renew=None, auto_renew_start_period=None,
-                                 auto_renew_validity_period=None):
+                                 auto_renew_validity_period=None, csr=None):
 
-        if auto_renew is None and not auto_renew_start_period and not auto_renew_validity_period:
+        if auto_renew is None and not auto_renew_start_period and not auto_renew_validity_period and not csr:
             return False
 
         if not self.get_certificate(serial):
@@ -1198,11 +1198,20 @@ class PostgreSQL(Backend):
             }
 
             cursor.execute("LOCK TABLE certificate;")
+
+            if csr:
+                # insert CSR into certificate_signing_request and return unique key
+                csr_id = self._store_request(csr)
+                qdata["csr"] = csr_id
+                cursor.execute("UPDATE certificate SET signing_request=%(csr)s WHERE serial_number=%(serial)s;", qdata)
+
             auto_renewable = auto_renew
             if auto_renewable is None:
                 # setting auto_renew_start_period or auto_renew_validity_period implicitly sets the auto_renew flag
                 if auto_renew_start_period or auto_renew_validity_period:
                     qdata["auto_renewable"] = True
+                else:
+                    qdata["auto_renewable"] = False
 
                 if auto_renew_start_period:
                     qdata["auto_renew_start_period"] = float(qdata["auto_renew_start_period"])

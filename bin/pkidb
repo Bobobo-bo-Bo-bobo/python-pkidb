@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.12.4"
+__version__ = "0.8.13"
 
 shortoptions = {
     "main": "c:hV",
@@ -52,7 +52,7 @@ shortoptions = {
     "restore": "",
     "delete": "",
     "show": "o:",
-    "set": "aAP:V:",
+    "set": "ac:AP:V:",
     "healthcheck": "f",
     "add-dummy": "s:e:S:",
     "search": "",
@@ -75,7 +75,7 @@ longoptions = {
     "restore": [],
     "delete": [],
     "show": ["output="],
-    "set": ["auto-renew", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
+    "set": ["auto-renew", "csr=", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
     "healthcheck": ["fix"],
     "add-dummy": ["start=", "end=", "subject="],
     "search": [],
@@ -318,6 +318,9 @@ def usage():
      -a                                     Remove auto renewable flag from certificate meta data.
      --no-auto-renew
 
+     -c <signing_request>                   Set certificate signing request.
+     --csr=<signing_request>
+
    show                                     Shows information of a certificate identified by the serial number.
                                             The serial number of the certificate must be given on the command line or
                                             will be read from the standard input.
@@ -342,7 +345,7 @@ def usage():
      -K [critical:]:<flags>                 Comma separated list of extended key usage bits.
      --extended-keyusage=[critical:]<flags> Prefix critical: can be used to set the critical flag.
                                             Additionally dotted numeric OID are allowed too, e.g. 1.2.3.4.5
-                                            Known extended key usage bits are (defined in RFC 55280):
+                                            Known extended key usage bits are (defined in RFC 5280):
                                             serverAuth, clientAuth, codeSigning, emailProtection, timeStamping,
                                             msCodeInd, msCodeCom, msCTLSign, msSGC, msEFS, nsSGC
 
@@ -577,6 +580,7 @@ def set_certificate_metadata(opts, dbbackend):
     auto_renew = None
     auto_renew_start_period = None
     auto_renew_validity_period = None
+    csr = None
 
     try:
         (optionval, opttrailing) = getopt.getopt(opts, shortoptions["set"], longoptions["set"])
@@ -589,6 +593,18 @@ def set_certificate_metadata(opts, dbbackend):
             auto_renew = True
         elif option in ("-a", "--no-auto-renew"):
             auto_renew = False
+        elif option in ("-c", "--csr"):
+            try:
+                fd = open(value, "r")
+                csrdata = fd.read()
+                fd.close()
+            except IOError as getopterror:
+                __logger.error("Can't read certificate signing request from %s: %s" % (value, getopterror.strerror))
+                raise pkidbbackends.PKIDBException(message="Can't read certificate signing request from %s: %s"
+                                                           % (value, getopterror.strerror))
+
+            csr = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csrdata)
+
         elif option in ("-P", "--auto-renew-start-period"):
             try:
                 auto_renew_start_period = float(value)
@@ -616,7 +632,8 @@ def set_certificate_metadata(opts, dbbackend):
     serial = serial_to_number(serial)
     cert = dbbackend.set_certificate_metadata(serial, auto_renew=auto_renew,
                                               auto_renew_start_period=auto_renew_start_period,
-                                              auto_renew_validity_period=auto_renew_validity_period)
+                                              auto_renew_validity_period=auto_renew_validity_period, csr=csr)
+
     if not cert:
         __logger.error("No certificate with serial number %s found" % (serial,))
         raise pkidbbackends.PKIDBException(message="No certificate with serial number %s found" % (serial,))

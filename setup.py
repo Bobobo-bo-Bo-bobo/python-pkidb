@@ -16,7 +16,7 @@ SQLite3 (via python-pysqlite2)""",
     "author_email": "python-pkidb@ypbind.de",
     "scripts": ["bin/pkidb"],
     "packages": ["pkidbbackends"],
-    "package_data": {"pkidbbackends" : ["pkidbbackends/*.py"], },
+    "package_data": {"pkidbbackends": ["pkidbbackends/*.py"], },
     "license": open("LICENSE").read(),
     "data_files": [
         ("share/man/man1", ["doc/man/man1/pkidb.1"]),

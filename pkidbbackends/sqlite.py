@@ -1190,7 +1190,7 @@ class SQLite(Backend):
         return True
 
     def _get_signature_algorithm(self, algo_id):
-        qdata = {"id": algo_id,}
+        qdata = {"id": algo_id, }
 
         try:
             cursor = self.__db.cursor()

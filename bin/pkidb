@@ -1052,7 +1052,7 @@ def sign_certificate(opts, config, dbbackend):
     extensions = []
     notbefore = None
     valid_for = None
-    templatedata = {"global": {}, "extension": [],}
+    templatedata = {"global": {}, "extension": [], }
 
     re_oid = re.compile("[0-9\.]+")
     re_ca_flag = re.compile("CA:([A-Za-z]+)(.*)")

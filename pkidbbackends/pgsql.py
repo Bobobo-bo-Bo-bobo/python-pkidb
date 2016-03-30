@@ -85,11 +85,36 @@ class PostgreSQL(Backend):
             try:
                 # use ssl certificate
                 if sslcert and sslkey:
-                    dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port,
-                                              sslmode=sslmode, sslrootcert=sslcacert, sslcert=sslcert, sslkey=sslkey)
+                    try:
+                        dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host,
+                                                  port=port, sslmode=sslmode, sslrootcert=sslcacert, sslcert=sslcert,
+                                                  sslkey=sslkey)
+                    except TypeError:
+                        # as psycopg2 does not have the option to check the version of PostgreSQL library
+                        # we have to rely on the TypeError exception to check if the sslrootcert parameter
+                        # can be used. sslrootcert can be used onn PostgreSQL version >= 8.3 (see RT#563)
+                        # For instance RedhatEnterprise Linux 6 ships version 8.1.
+                        self.__logger.warning("TypeError while connecting to database. "
+                                              "Looks like a old PostgreSQL version (< 8.4), "
+                                              "disabling sslrootcert parameter")
+                        dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host,
+                                                  port=port, sslmode=sslmode, sslcert=sslcert, sslkey=sslkey)
+
                 else:
-                    dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host, port=port,
-                                              sslmode=sslmode, sslrootcert=sslcacert)
+                    try:
+                        dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host,
+                                                  port=port, sslmode=sslmode, sslrootcert=sslcacert)
+                    except TypeError:
+                        # as psycopg2 does not have the option to check the version of PostgreSQL library
+                        # we have to rely on the TypeError exception to check if the sslrootcert parameter
+                        # can be used. sslrootcert can be used onn PostgreSQL version >= 8.3 (see RT#563)
+                        # For instance RedhatEnterprise Linux 6 ships version 8.1.
+                        self.__logger.warning("TypeError while connecting to database. "
+                                              "Looks like a old PostgreSQL version (< 8.4), "
+                                              "disabling sslrootcert parameter")
+                        dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host,
+                                                  port=port, sslmode=sslmode, sslcert=sslcert, sslkey=sslkey)
+
             except psycopg2.Error as error:
                 self.__logger.error("Can't connect to database: %s\n" % (error.message,))
                 raise PKIDBException(message="Error: Can't connect to database: %s" % (error.message,))

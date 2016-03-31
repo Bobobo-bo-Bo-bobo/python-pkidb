@@ -1138,7 +1138,7 @@ of the database connection.
 .RS
 .I sslmode
 .RS
-SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html). Valid values are:
+SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html). Valid values for PostgreSQL 8.4 or newer are:
 .RS
 .I disable
 .br
@@ -1176,6 +1176,29 @@ Use SSL and check if the server certificate has been signed by the correct CA.
 Use SSL and check the server name in the certificate and the signing CA of the server certificate.
 .RE
 .RE
+
+.B Note: \c
+PostgreSQL 8.3 or older only support:
+.RS
+.I allow
+.br
+.RS
+Try non-SSL connection, if this fails try to connect using SSL.
+.RE
+
+.I prefer
+.br
+.RS
+Try SSL connection, if this fails try to connect using without using SSL.
+.RE
+
+.I require
+.br
+.RS
+Only use SSL connection.
+.RE
+.RE
+
 .RE
 .RE
 
@@ -1184,6 +1207,9 @@ Use SSL and check the server name in the certificate and the signing CA of the s
 .br
 .RS
 Path to the CA public key file (PEM format).
+.br
+.B Note: \c
+This requires PostgreSQL 8.4 or newer, as the client library doesn't support this parameter.
 .RE
 .RE
 
@@ -1192,6 +1218,9 @@ Path to the CA public key file (PEM format).
 .br
 .RS
 Path to the client certificate (PEM format) for client authentication with SSL certificate.
+.br
+.B Note: \c
+This requires PostgreSQL 8.4 or newer, as the client library doesn't support this parameter.
 .RE
 .RE
 
@@ -1200,6 +1229,9 @@ Path to the client certificate (PEM format) for client authentication with SSL c
 .br
 .RS
 Path to the client certificate key file (PKCS#1 format) for client authentication with SSL certificate.
+.br
+.B Note: \c
+This requires PostgreSQL 8.4 or newer, as the client library doesn't support this parameter.
 .RE
 .RE
 

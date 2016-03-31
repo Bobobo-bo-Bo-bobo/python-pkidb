@@ -113,7 +113,7 @@ class PostgreSQL(Backend):
                                               "Looks like a old PostgreSQL version (< 8.4), "
                                               "disabling sslrootcert parameter")
                         dbconn = psycopg2.connect(database=database, user=user, password=passphrase, host=host,
-                                                  port=port, sslmode=sslmode, sslcert=sslcert, sslkey=sslkey)
+                                                  port=port, sslmode=sslmode)
 
             except psycopg2.Error as error:
                 self.__logger.error("Can't connect to database: %s\n" % (error.message,))

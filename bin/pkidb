@@ -1735,6 +1735,146 @@ def search_certificate(opts, dbbackend):
             sys.stdout.write("%s\n" % (long(res),))
 
 
+def valid_mysql_config(mysql_cfg):
+    """
+    Check if the mysql configuration contains the required minimal options.
+    :param mysql_cfg: MySQL configuration
+    :return: True or False
+    """
+    mysql_options = mysql_cfg.keys()
+    if ("host" in mysql_options) and \
+            ("port" in mysql_options) and \
+            ("database" in mysql_options) and \
+            ("user" in mysql_options) and \
+            ("passphrase" in mysql_options):
+
+        # check for unknown configuration
+        # remove known options
+        mysql_options.remove("host")
+        mysql_options.remove("port")
+        mysql_options.remove("database")
+        mysql_options.remove("user")
+        mysql_options.remove("passphrase")
+
+        if "sslcacert" in mysql_options:
+            mysql_options.remove("sslcacert")
+
+        if "sslcert" in mysql_options:
+            mysql_options.remove("sslcert")
+
+        if "sslkey" in mysql_options:
+            mysql_options.remove("sslkey")
+
+        if len(mysql_options) > 0:
+            __logger.error("Unknown options for mysql backend: %s" % (",".join(mysql_options), ))
+            return False
+
+        return True
+    else:
+        __logger.error("Missing configuration for mysql backend.")
+        return False
+
+
+def valid_pgsql_config(pgsql_cfg):
+    """
+    Check if the pgsql configuration contains the required minimal options.
+    :param pgsql_cfg: PostgreSQL configuration
+    :return: True or False
+    """
+    pgsql_sslmode_list = ("disable", "allow", "prefer", "require", "verify-ca", "verify-full")
+
+    pgsql_options = pgsql_cfg.keys()
+    if ("host" in pgsql_options) and \
+            ("port" in pgsql_options) and \
+            ("database" in pgsql_options) and \
+            ("user" in pgsql_options) and \
+            ("passphrase" in pgsql_options):
+
+        # check for unknown configuration
+        # remove known options
+        pgsql_options.remove("host")
+        pgsql_options.remove("port")
+        pgsql_options.remove("database")
+        pgsql_options.remove("user")
+        pgsql_options.remove("passphrase")
+
+        if "sslcacert" in pgsql_options:
+            pgsql_options.remove("sslcacert")
+
+        if "sslcert" in pgsql_options:
+            pgsql_options.remove("sslcert")
+
+        if "sslkey" in pgsql_options:
+            pgsql_options.remove("sslkey")
+
+        if "sslmode" in pgsql_options:
+            # check for valid sslmode settings
+            if pgsql_cfg["sslmode"] not in pgsql_sslmode_list:
+                __logger.error("Unknown sslmode for pgsql: %s" % (pgsql_cfg["sslmode"], ))
+                return False
+
+            pgsql_options.remove("sslmode")
+
+        if len(pgsql_options) > 0:
+            __logger.error("Unknown options for pgsql backend: %s" % (",".join(pgsql_options), ))
+            return False
+
+        return True
+    else:
+        __logger.error("Missing configuration for pgsql backend.")
+        return False
+
+
+def valid_sqlite3_config(sqlite3_cfg):
+    """
+    Check if the sqlite3 configuration contains the required minimal options.
+    :param sqlite3_cfg: SQLite3 configuration
+    :return: True or False
+    """
+    sqlite3_options = sqlite3_cfg.keys()
+    if "database" not in sqlite3_options:
+        __logger.error("Missing configuration for sqlite3 backend")
+        return False
+
+    return True
+
+
+def valid_options(opts):
+    """
+    Basic validation of parsed options
+    :param opts: dictionary containing basic options
+    :return: True or False
+    """
+    # At least the global and a database backend should be defined
+    if "global" not in opts:
+        __logger.error("No global section found in configuration.")
+        return False
+
+    # A database backend should always be defined
+    if "backend" not in opts["global"]:
+        __logger.error("No backend found in configuration.")
+        return False
+
+    # check for supported backends
+    if opts["global"]["backend"] not in ("mysql", "pgsql", "sqlite3"):
+        __logger.error("Unsupported database backend %s" % (opts["global"]["backend"], ))
+        return False
+    else:
+        # check if configuration contains the corresponding configuration section for the selected backend
+        if opts["global"]["backend"] not in opts:
+            __logger.error("Database backend %s found in global section but without configuration" %
+                           (opts["global"]["backend"], ))
+            return False
+        else:
+            # check minimal configuration depending on the database backend
+            if opts["global"]["backend"] == "mysql":
+                return valid_mysql_config(opts["mysql"])
+            elif opts["global"]["backend"] == "pgsql":
+                return valid_pgsql_config(opts["pgsql"])
+            else:
+                return valid_sqlite3_config(opts["sqlite3"])
+
+
 def version():
     """
     Shows version.
@@ -1778,8 +1918,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     options = parseoptions(configfile)
-    setup_logging(options)
+
     # FIXME: Validate options
+    if valid_options(options):
+        pass
+
+    setup_logging(options)
 
     backend = None
 

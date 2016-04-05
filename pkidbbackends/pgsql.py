@@ -97,10 +97,10 @@ class PostgreSQL(Backend):
                         # For instance RedhatEnterprise Linux 6 ships version 8.1.
                         self.__logger.error("TypeError while connecting to database. "
                                             "Looks like a old PostgreSQL version (< 8.4), "
-                                            "which doesn't support sslkey/sslcert/sslmode)."
+                                            "which doesn't support sslkey/sslcert/sslmode).")
                         raise PKIDBException(message="TypeError while connecting to database. "
                                              "Looks like a old PostgreSQL version (< 8.4), "
-                                             "which doesn't support sslkey/sslcert/sslmode)."
+                                             "which doesn't support sslkey/sslcert/sslmode).")
 
                 else:
                     try:

@@ -1947,6 +1947,14 @@ def set_missing_options_to_default(config):
         if "crl_validity_period" not in config["global"]:
             config["global"]["crl_validity_period"] = "7"
 
+        # set default logging
+        if "logging" not in config:
+            config["logging"] = {"default_logging": "info,syslog:user", }
+        else:
+            # section was in configuration file but it is empty
+            if len(config["logging"].keys()) == 0:
+                config["logging"] = {"default_logging": "info,syslog:user", }
+
         # set defaults for backends
         if "backend" in config["global"]:
             if config["global"]["backend"] == "mysql":

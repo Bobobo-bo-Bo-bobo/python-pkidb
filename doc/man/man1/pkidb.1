@@ -834,6 +834,10 @@ The passphrase to decrypt the private key of the CA certificate.
 Default message digest to use for certificate signing. See 
 .IR dgst "(1)
 for a complete list of supported message digest algorithm of the current OpenSSL installation.
+.br
+Default digest is
+.B sha512\c
+ .
 .RE
 .RE
 
@@ -849,6 +853,9 @@ Method to generate new serial numbers, possible options are:
 .I increment\c
  \- Increment the last serial number.
 
+The default for the serial number generator is 
+.B random\c
+ .
 .RE
 .RE
 
@@ -857,6 +864,10 @@ Method to generate new serial numbers, possible options are:
 .br
 .RS
 The number of days to make a certificate valid.
+.br
+Default is 
+.B 1095\c
+ days (3 years).
 .RE
 .RE
 
@@ -867,6 +878,10 @@ The number of days to make a certificate valid.
 For auto renewable certificates, the auto renewable will be run if less then
 .I auto_renew_start_period
 days are left til expiration.
+.br
+The default is 
+.B 14\c
+ days.
 .RE
 .RE
 
@@ -901,6 +916,10 @@ The passphrase to decrypt the private key of the certificate used to sign the re
 .br
 .RS
 The number of days before the next CRL is due.
+.br
+Default is 
+.B 7\c
+ days.
 .RE
 .RE
 
@@ -911,6 +930,10 @@ The number of days before the next CRL is due.
 Message digest algorithm to sign the certificate revocation list. See 
 .IR dgst "(1)
 for a list of valid digest algorithm for the current OpenSSL version.
+.br
+The default digest is 
+.B md5\c
+ .
 .br
 .I Note:
 Changing the message digest algorithm for CRL list signing is only supported since version 0.15 of pyOpenSSL!
@@ -929,7 +952,7 @@ section is optional and contains options for logging. A unique user defined stri
 .br
 If no 
 .B logging
-section has been given (or it is empty) the default will be used (Destination: syslog, Facility: user)
+section has been given (or it is empty) the default will be used (Destination: syslog, Facility: user, Log level: information)
 
 .RS
 
@@ -995,22 +1018,23 @@ The
 .B mysql
 section contains configuration settings for the MySQL backend.
 At least 
-.I host\c
-,
-.I port\c
-,
 .I database\c
 ,
 .I user
 and
 .I password
 must be set.
+.br
 
 .RS
 .I host
 .br
 .RS
 The host or IP address to connect to.
+.br
+Default is 
+.B localhost\c
+ .
 .RE
 .RE
 
@@ -1018,7 +1042,11 @@ The host or IP address to connect to.
 .I port
 .br
 .RS
-The port mysqld is running on (usually 3306).
+The port mysqld is running on.
+.br
+Default is 
+.B 3306\c
+ (the MySQL default port).
 .RE
 .RE
 
@@ -1082,10 +1110,6 @@ The
 .B pgsql
 section contains configuration settings for the PostgreSQL backend.
 At least 
-.I host\c
-,
-.I port\c
-,
 .I database\c
 ,
 .I user
@@ -1098,6 +1122,11 @@ must be set.
 .br
 .RS
 The host or IP address to connect to.
+.br
+Default is 
+.B
+localhost\c
+ .
 .RE
 .RE
 
@@ -1105,7 +1134,12 @@ The host or IP address to connect to.
 .I port
 .br
 .RS
-The port postgres is running on (usually 5432).
+The port postgres is running on.
+.br
+Default is 
+.B 5432\c
+ (the default port for PostgreSQL).
+
 .RE
 .RE
 
@@ -1138,7 +1172,9 @@ of the database connection.
 .RS
 .I sslmode
 .RS
-SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html). Valid values for PostgreSQL 8.4 or newer are:
+SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html).
+.br
+Valid values for PostgreSQL 8.4 or newer are:
 .RS
 .I disable
 .br

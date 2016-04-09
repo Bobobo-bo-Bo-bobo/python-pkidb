@@ -1875,6 +1875,90 @@ def valid_options(opts):
                 return valid_sqlite3_config(opts["sqlite3"])
 
 
+def set_mysql_defaults(config):
+    """
+    Set default settings for MySQL backend
+    :param config: dictionary of configuration
+    :return: dictionary of configuration
+    """
+    if "mysql" in config:
+        if "host" not in config["mysql"]:
+            config["mysql"]["host"] = "localhost"
+
+        if "port" not in config["mysql"]:
+            config["mysql"]["port"] = "3306"
+
+    return config
+
+
+def set_pgsql_defaults(config):
+    """
+    Set default settings for PostgreSQL backend
+    :param config: dictionary of configuration
+    :return: dictionary of configuration
+    """
+    if "pgsql" in config:
+        if "host" not in config["pgsql"]:
+            config["pgsql"]["host"] = "localhost"
+
+        if "port" not in config["pgsql"]:
+            config["pgsql"]["port"] = "5432"
+
+    return config
+
+
+def set_sqlite3_defaults(config):
+    """
+    Set default settings for SQLite3 backend
+    :param config: dictionary of configuration
+    :return: dictionary of configuration
+    """
+
+    # No defaults for SQLite3
+    return config
+
+
+def set_missing_options_to_default(config):
+    """
+    Set missing values to default settings.
+    :param config: dictionary containing configuration file
+    :return: dictionary containing configuration with missing fields set to default values
+    """
+
+    if "global" in config:
+        # set global defaults
+        if "digest" not in config["global"]:
+            config["global"]["digest"] = "sha512"
+
+        if "serial_number" not in config["global"]:
+            config["global"]["serial_number"] = "random"
+
+        if "validity_period" not in config["global"]:
+            config["global"]["validity_period"] = "1095"
+
+        if "auto_renew_start_period" not in config["global"]:
+            config["global"]["auto_renew_start_period"] = 14
+
+        # CRL digest is MD5 instead more secure hashing algorithm because
+        # pyOpenSSL <0.15 only supports md5
+        if "crl_digest" not in config["global"]:
+            config["global"]["crl_digest"] = "md5"
+
+        if "crl_validity_period" not in config["global"]:
+            config["global"]["crl_validity_period"] = "7"
+
+        # set defaults for backends
+        if "backend" in config["global"]:
+            if config["global"]["backend"] == "mysql":
+                config = set_mysql_defaults(config)
+            elif config["global"]["backend"] == "pgsql":
+                config = set_pgsql_defaults(config)
+            elif config["global"]["backend"] == "sqlite3":
+                config = set_sqlite3_defaults(config)
+
+    return config
+
+
 def version():
     """
     Shows version.
@@ -1919,9 +2003,12 @@ if __name__ == "__main__":
 
     options = parseoptions(configfile)
 
-    # FIXME: Validate options
-    if valid_options(options):
-        pass
+    # set missing values to default values
+    options = set_missing_options_to_default(options)
+
+    if not valid_options(options):
+        __logger.error("Can't parse configuration.")
+        raise pkidbbackends.PKIDBException("Can't parse configuration.")
 
     setup_logging(options)
 

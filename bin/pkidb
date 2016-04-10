@@ -91,6 +91,42 @@ else:
     import configparser
 
 
+# map environment variables to configuration
+environment_to_configuration = {
+    "PKIDB_GLOBAL_BACKEND": {"section": "global", "key": "backend"},
+    "PKIDB_GLOBAL_CA_PUBLIC_KEY": {"section": "global", "key": "ca_public_key"},
+    "PKIDB_GLOBAL_CA_PRIVATE_KEY": {"section": "global", "key": "ca_private_key"},
+    "PKIDB_GLOBAL_CA_PASSPHRASE": {"section": "global", "key": "ca_passphrase"},
+    "PKIDB_GLOBAL_DIGEST": {"section": "global", "key": "digest"},
+    "PKIDB_GLOBAL_SERIAL_NUMBER": {"section": "global", "key": "serial_number"},
+    "PKIDB_GLOBAL_VALIDITY_PERIOD": {"section": "global", "key": "validity_period"},
+    "PKIDB_GLOBAL_AUTO_RENEW_START_PERIOD": {"section": "global", "key": "auto_renew_start_period"},
+    "PKIDB_GLOBAL_CRL_PUBLIC_KEY": {"section": "global", "key": "crl_public_key"},
+    "PKIDB_GLOBAL_CRL_PRIVATE_KEY": {"section": "global", "key": "crl_private_key"},
+    "PKIDB_GLOBAL_CRL_PASSPHRASE": {"section": "global", "key": "crl_passphrase"},
+    "PKIDB_GLOBAL_CRL_VALIDITY_PERIOD": {"section": "global", "key": "crl_validity_period"},
+    "PKIDB_GLOBAL_CRL_DIGEST": {"section": "global", "key": "crl_digest"},
+    "PKIDB_PGSQL_HOST": {"section": "pgsql", "key": "host"},
+    "PKIDB_PGSQL_PORT": {"section": "pgsql", "key": "port"},
+    "PKIDB_PGSQL_DATABASE": {"section": "pgsql", "key": "database"},
+    "PKIDB_PGSQL_USER": {"section": "pgsql", "key": "user"},
+    "PKIDB_PGSQL_PASSPHRASE": {"section": "pgsql", "key": "passphrase"},
+    "PKIDB_PGSQL_SSLMODE": {"section": "pgsql", "key": "sslmode"},
+    "PKIDB_PGSQL_SSLCACERT": {"section": "pgsql", "key": "sslcacert"},
+    "PKIDB_PGSQL_SSLCERT": {"section": "pgsql", "key": "sslcert"},
+    "PKIDB_PGSQL_SSLKEY": {"section": "pgsql", "key": "sslkey"},
+    "PKIDB_MYSQL_HOST": {"section": "mysql", "key": "host"},
+    "PKIDB_MYSQL_PORT": {"section": "mysql", "key": "port"},
+    "PKIDB_MYSQL_DATABASE": {"section": "mysql", "key": "database"},
+    "PKIDB_MYSQL_USER": {"section": "mysql", "key": "user"},
+    "PKIDB_MYSQL_PASSPHRASE": {"section": "mysql", "key": "passphrase"},
+    "PKIDB_MYSQL_SSLCACERT": {"section": "mysql", "key": "sslcacert"},
+    "PKIDB_MYSQL_SSLCERT": {"section": "mysql", "key": "sslcert"},
+    "PKIDB_MYSQL_SSLKEY": {"section": "mysql", "key": "sslkey"},
+    "PKIDB_SQLITE3_DATABASE": {"section": "sqlite3", "key": "database"},
+}
+
+
 def mapconfigsections(config, section):
     """
     helper function to map ini sections and values
@@ -1967,6 +2003,53 @@ def set_missing_options_to_default(config):
     return config
 
 
+def set_configuration(config, section, key, value):
+    """
+    Set configuration key in section to value.
+    :param config: configuration dictionary
+    :param section: section
+    :param key: key
+    :param value: value
+    :return: updated configuration dictionary
+    """
+    if section not in config:
+        config[section] = {}
+
+    config[section][key] = value
+    return config
+
+
+def merge_configuration_from_environment(config):
+    """
+    Insert configuration settings from environment in existing configuration.
+    :param config: dictionary containing the current configuration
+    :return: dictionary containing the configuration merged with settings from environment variables
+    """
+    env_keys = os.environ.keys()
+    env_to_config_keys = environment_to_configuration.keys()
+    for env_key in env_keys:
+        if env_key in env_to_config_keys:
+            section = environment_to_configuration[env_key]["section"]
+            key = environment_to_configuration[env_key]["key"]
+            value = os.environ[env_key]
+            if section in config:
+                if key in config[section]:
+                    __logger.warning("%s:%s overwritten from environment variable %s." % (section, key, env_key))
+            config = set_configuration(config, section, key, value)
+
+        # handle PKIDB_LOGGING_* environment
+        elif env_key.find("PKIDB_LOGGING_") == 0:
+            section = "logging"
+            key = env_key.replace("PKIDB_LOGGING_", "")
+            value = os.environ[env_key]
+            if section in config:
+                if key in config[section]:
+                    __logger.warning("%s:%s overwritten from environment variable %s." % (section, key, env_key))
+            config = set_configuration(config, section, key, value)
+
+    return config
+
+
 def version():
     """
     Shows version.
@@ -2009,7 +2092,11 @@ if __name__ == "__main__":
         sys.stderr.write("Error: Can't open configuration file %s for reading\n" % (configfile,))
         sys.exit(1)
 
+    # parse configuration file
     options = parseoptions(configfile)
+
+    # merge settings from environment
+    options = merge_configuration_from_environment(options)
 
     # set missing values to default values
     options = set_missing_options_to_default(options)

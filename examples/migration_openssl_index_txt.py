@@ -52,12 +52,23 @@ if __name__ == "__main__":
 	    serial = split_line[2]
             revoked_asn1 = None
 
-        print("pkidb add-dummy --subject=\"%s\" --end=%s 0x%s" % (subject, notafter, serial))
+        print("# check for certificate with serial number %s in the backend database" % (serial, ))
+	print("pkidb show 0x%s >/dev/null 2>&1" % (serial, ))
+        print("if [ $? -ne 0 ]; then")
+        print("    pkidb add-dummy --subject=\"%s\" --end=%s 0x%s" % (subject, notafter, serial))
+        print("fi")
+        print("")
+
 	if revoked_asn1:
             # either run revoke --force or add-dummy followed by revoke
             # use add-dummy followed by revoke to preserve start date and
             # certificate subject
-            print("pkidb revoke --revocation-date=%s 0x%s" % (revoked_asn1, serial))
+	    # OpenSSL stores the time in DATETIME format:
+ 	    #
+	    # YYMMDDhhmmssZ
+	    #
+            revoked_stamp = long(time.mktime(time.strptime(revoked_asn1, TIMEFORMAT)))
+            print("pkidb revoke --revocation-date=%s 0x%s" % (revoked_stamp, serial))
 
     sys.exit(0)
 

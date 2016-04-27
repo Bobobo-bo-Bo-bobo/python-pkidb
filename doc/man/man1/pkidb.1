@@ -776,6 +776,12 @@ section and a backend specific section based on the backend selected in the
 .B global
 section. As it will contain sensitive informations like the path and the password for the private key of your certificate authority, access to this configuration file should be restricted!
 
+Instead of using configuration settins in the configuration file, environment variables can be used instead (e.g. if run inside a docker or LXC container) or to replace single configuration settings.
+
+Except for the logging, every setting can be given as environment variable.
+
+If both the configuration file and environment variables are present for a configuration the environment variable will override the setting from the configuration file.
+
 .BR global
 .RS
 .RS
@@ -788,7 +794,11 @@ section contains general configuration settings.
 .RS
 .I backend
 .br
+
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_BACKEND
+.br
 Which database backend to use. Possible options are:
 
 .I mysql\c
@@ -806,6 +816,9 @@ Which database backend to use. Possible options are:
 .RS
 .I ca_public_key
 .br
+Environment variable:
+.I PKIDB_GLOBAL_CA_PUBLIC_KEY
+.br
 .RS
 Absolute path to the public key of the CA certificate.
 .RE
@@ -815,6 +828,9 @@ Absolute path to the public key of the CA certificate.
 .I ca_private_key
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CA_PRIVATE_KEY
+.br
 Absoulte path to the private key of the CA certificate.
 .RE
 .RE
@@ -823,6 +839,9 @@ Absoulte path to the private key of the CA certificate.
 .I ca_passphrase
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CA_PASSPHRASE
+.br
 The passphrase to decrypt the private key of the CA certificate.
 .RE
 .RE
@@ -831,6 +850,9 @@ The passphrase to decrypt the private key of the CA certificate.
 .I digest
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_DIGEST
+.br
 Default message digest to use for certificate signing. See 
 .IR dgst "(1)
 for a complete list of supported message digest algorithm of the current OpenSSL installation.
@@ -845,6 +867,9 @@ Default digest is
 .I serial_number
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_SERIAL_NUMBER
+.br
 Method to generate new serial numbers, possible options are:
 
 .I random\c
@@ -863,6 +888,9 @@ The default for the serial number generator is
 .I validity_period
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_VALIDITY_PERIOD
+.br
 The number of days to make a certificate valid.
 .br
 Default is 
@@ -875,6 +903,9 @@ Default is
 .I auto_renew_start_period
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_AUTO_RENEW_START_PERIOD
+.br
 For auto renewable certificates, the auto renewable will be run if less then
 .I auto_renew_start_period
 days are left til expiration.
@@ -889,6 +920,9 @@ The default is
 .I crl_public_key
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CRL_PUBLIC_KEY
+.br
 The absolute path to the public key for the certificate to sign the certificate revocation list. This can be the same as the CA certificate but it best practices recommend a separate certificate with a shorter
 validity period.
 .RE
@@ -898,6 +932,9 @@ validity period.
 .I crl_private_key
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CRL_PRIVATE_KEY
+.br
 The absolute path to the private key for the certificate to sign the certificate revocation list. This can be the same as the CA certificate but it best practices recommend a separate certificate with a shorter
 validity period.
 .RE
@@ -907,6 +944,9 @@ validity period.
 .I crl_passphrase
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CRL_PASSPHRASE
+.br
 The passphrase to decrypt the private key of the certificate used to sign the revocation list.
 .RE
 .RE
@@ -915,6 +955,9 @@ The passphrase to decrypt the private key of the certificate used to sign the re
 .I crl_validity_period
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CRL_VALIDITY_PERIOD
+.br
 The number of days before the next CRL is due.
 .br
 Default is 
@@ -927,6 +970,9 @@ Default is
 .I crl_digest
 .br
 .RS
+Environment variable:
+.I PKIDB_GLOBAL_CRL_DIGEST
+.br
 Message digest algorithm to sign the certificate revocation list. See 
 .IR dgst "(1)
 for a list of valid digest algorithm for the current OpenSSL version.
@@ -936,7 +982,7 @@ The default digest is
  .
 .br
 .I Note:
-Changing the message digest algorithm for CRL list signing is only supported since version 0.15 of pyOpenSSL!
+Changing the message digest algorithm for CRL signing is only supported since version 0.15 of pyOpenSSL!
 .RE
 .RE
 
@@ -1030,6 +1076,9 @@ must be set.
 .I host
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_HOST
+.br
 The host or IP address to connect to.
 .br
 Default is 
@@ -1042,6 +1091,9 @@ Default is
 .I port
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_PORT
+.br
 The port mysqld is running on.
 .br
 Default is 
@@ -1054,6 +1106,9 @@ Default is
 .I database
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_DATABASE
+.br
 Name of the database to connect to.
 .RE
 .RE
@@ -1062,6 +1117,9 @@ Name of the database to connect to.
 .I user
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_USER
+.br
 The user name for the database connection.
 .RE
 .RE
@@ -1070,6 +1128,9 @@ The user name for the database connection.
 .I passphrase
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_PASSPHRASE
+.br
 The password for the 
 .I user
 of the database connection.
@@ -1080,6 +1141,9 @@ of the database connection.
 .I sslcacert
 .br
 .RS
+Environment variable:
+.I PPKIDB_MYSQL_SSLCACERT
+.br
 Path to the CA public key file (PEM format).
 .RE
 .RE
@@ -1088,6 +1152,9 @@ Path to the CA public key file (PEM format).
 .I sslcert
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_SSLCERT
+.br
 Path to the client certificate (PEM format) for client authentication with SSL certificate.
 .RE
 .RE
@@ -1096,6 +1163,9 @@ Path to the client certificate (PEM format) for client authentication with SSL c
 .I sslkey
 .br
 .RS
+Environment variable:
+.I PKIDB_MYSQL_SSLKEY
+.br
 Path to the client certificate key file (PKCS#1 format) for client authentication with SSL certificate.
 .RE
 .RE
@@ -1121,6 +1191,9 @@ must be set.
 .I host
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_HOST
+.br
 The host or IP address to connect to.
 .br
 Default is 
@@ -1134,6 +1207,9 @@ localhost\c
 .I port
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_PORT
+.br
 The port postgres is running on.
 .br
 Default is 
@@ -1147,6 +1223,9 @@ Default is
 .I database
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_DATABASE
+.br
 Name of the database to connect to.
 .RE
 .RE
@@ -1155,6 +1234,9 @@ Name of the database to connect to.
 .I user
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_USER
+.br
 The user name for the database connection.
 .RE
 .RE
@@ -1163,6 +1245,9 @@ The user name for the database connection.
 .I passphrase
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_PASSPHRASE
+.br
 The password for the 
 .I user
 of the database connection.
@@ -1172,6 +1257,9 @@ of the database connection.
 .RS
 .I sslmode
 .RS
+Environment variable:
+.I PKIDB_PGSQL_SSLMODE
+.br
 SSL protection level (see http://www.postgresql.org/docs/current/static/libpq-ssl.html).
 .br
 Valid values for PostgreSQL 8.4 or newer are:
@@ -1242,6 +1330,9 @@ Only use SSL connection.
 .I sslcacert
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_SSLCACERT
+.br
 Path to the CA public key file (PEM format).
 .br
 .B Note: \c
@@ -1253,6 +1344,9 @@ This requires PostgreSQL 8.4 or newer, as the client library doesn't support thi
 .I sslcert
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_SSLCERT
+.br
 Path to the client certificate (PEM format) for client authentication with SSL certificate.
 .br
 .B Note: \c
@@ -1264,6 +1358,9 @@ This requires PostgreSQL 8.4 or newer, as the client library doesn't support thi
 .I sslkey
 .br
 .RS
+Environment variable:
+.I PKIDB_PGSQL_SSLKEY
+.br
 Path to the client certificate key file (PKCS#1 format) for client authentication with SSL certificate.
 .br
 .B Note: \c
@@ -1289,6 +1386,9 @@ options must be set.
 .I database
 .br
 .RS
+Environment variable:
+.I PKIDB_SQLITE3_DATABASE
+.br
 The absolute path to the SQLite3 database file
 .RE
 .RE

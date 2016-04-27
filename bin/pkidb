@@ -75,7 +75,7 @@ longoptions = {
     "restore": [],
     "delete": [],
     "show": ["output="],
-    "set": ["auto-renew", "csr=", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validty-period="],
+    "set": ["auto-renew", "csr=", "no-auto-renew", "auto-renew-start-period=", "auto-renew-validity-period="],
     "healthcheck": ["fix"],
     "add-dummy": ["start=", "end=", "subject="],
     "search": [],
@@ -649,7 +649,7 @@ def set_certificate_metadata(opts, dbbackend):
                 raise pkidbbackends.PKIDBException(message="Can't convert option to a number: %s" %
                                                            (getopterror.message,))
 
-        elif option in ("-V", "--auto-renew-validty-period"):
+        elif option in ("-V", "--auto-renew-validity-period"):
             try:
                 auto_renew_validity_period = float(value)
             except ValueError as getopterror:

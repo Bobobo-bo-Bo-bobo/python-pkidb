@@ -2088,12 +2088,11 @@ if __name__ == "__main__":
             sys.stderr.write("Error: Unknown option %s" % (opt,))
             sys.exit(1)
 
-    if not os.access(configfile, os.R_OK):
-        sys.stderr.write("Error: Can't open configuration file %s for reading\n" % (configfile,))
-        sys.exit(1)
-
-    # parse configuration file
-    options = parseoptions(configfile)
+    if os.access(configfile, os.R_OK):
+        # parse configuration file
+        options = parseoptions(configfile)
+    else:
+        options = {}
 
     # merge settings from environment
     options = merge_configuration_from_environment(options)

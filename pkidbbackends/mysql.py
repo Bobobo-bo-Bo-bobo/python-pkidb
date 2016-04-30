@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # This version is
-#   Copyright (C) 2015 Andreas Maus
+#   Copyright (C) 2015-2016 Andreas Maus
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

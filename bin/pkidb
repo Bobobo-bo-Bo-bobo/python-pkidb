@@ -2125,6 +2125,9 @@ if __name__ == "__main__":
         else:
             __logger.error("Unknown backend type %s" % (options["global"]["backend"],))
             sys.exit(1)
+    else:
+        __logger.error("No database backend defined.")
+        sys.exit(1)
 
     if len(trailing) == 0:
         sys.stderr.write("Error: Missing command\n")

@@ -37,7 +37,7 @@ configfile = "/etc/pkidb/config.ini"
 __version__ = "0.8.13"
 
 shortoptions = {
-    "main": "c:hV",
+    "main": "c:hVs:",
     "sign": "b:o:s:v:E:S:k:K:t:",
     "import": "c:r:a:p:d:",
     "housekeeping": "ap:",
@@ -59,7 +59,7 @@ shortoptions = {
 }
 
 longoptions = {
-    "main": ["config=", "help", "version"],
+    "main": ["config=", "help", "version", "site="],
     "sign": ["output=", "start-in=", "valid-for=", "extension=", "san=", "keyusage=", "extended-keyusage=",
              "basic-constraint=", "template="],
     "import": ["csr=", "revoked=", "auto-renew", "period=", "delta="],
@@ -164,7 +164,7 @@ def parseoptions(optfile):
         for section in config.sections():
             result[section] = mapconfigsections(config, section)
     except configparser.Error as cfgerror:
-        sys.stderr.write("Error: Can't parse ini file %s: %s\n" % (optfile, cfgerror.message))
+        sys.stderr.write("Error: Can't parse configuration file %s: %s\n" % (optfile, cfgerror.message))
         result = None
     return result
 
@@ -179,6 +179,9 @@ def usage():
 
   -c <cfg>                                  Use configuration file instead of the default
   --config=<cfg>                            Default: %s
+
+  -s <site>                                 Use configuration for <site>
+  --site=<site>                             Default: Use global configuration
 
   -h                                        This text
   --help
@@ -2065,8 +2068,59 @@ Public License Version 3. (http://www.gnu.org/copyleft/gpl.html)
 """ % (__version__,))
 
 
+def parse_site_configuration(optdict):
+    """
+    Check for defined sites in optdict, read(if defined and not empty)
+    read site configuration and add it to optdict
+    :param optdict: dictionary of options
+    :return: dictionary of options with site configuration added
+    """
+    # build mapping site name -> site configuration
+    sites = {}
+
+    if "global" in optdict:
+        if "sites" in optdict["global"]:
+            site_list = optdict["global"]["sites"].strip().split()
+            for sitedef in site_list:
+                (site_name, site_config_file) = sitedef.split(":", )
+                if site_name in sites:
+                    __logger.warning("Site configuration for %s already defined, will be overwritten by "
+                                     "new configuration" % (site_name, ))
+
+                sites[site_name] = site_config_file
+
+    for site in sites:
+        site_configuration = parseoptions(sites[site])
+        if site_configuration is not None:
+            dict_key = "site:%s" % (site, )
+            optdict[dict_key] = site_configuration
+
+    return optdict
+
+
+def merge_site_configuration(optdict, site):
+    """
+    Merge configuration for site
+    :param optdict: dictionary of options
+    :param site: site to merge
+    :return: merged option dictionary
+    """
+    if site:
+        dict_key = "site:%s" % (site, )
+        if dict_key in optdict:
+            # merge site specific configuration keys
+            for site_key in optdict[dict_key]:
+                optdict[site_key] = optdict[dict_key][site_key]
+        else:
+            __logger.error("No configuration found for requested site %s" % (site, ))
+            raise pkidbbackends.PKIDBException(message="No configuration found for requested site %s" % (site, ))
+
+    return optdict
+
+
 if __name__ == "__main__":
     failed = False
+    selected_site = None
 
     # parse commandline options
     try:
@@ -2081,6 +2135,8 @@ if __name__ == "__main__":
             sys.exit(0)
         elif opt in ("-c", "--config"):
             configfile = val
+        elif opt in ("-s", "--site"):
+            selected_site = val
         elif opt in ("-V", "--version"):
             version()
             sys.exit(0)
@@ -2094,11 +2150,18 @@ if __name__ == "__main__":
     else:
         options = {}
 
+    # read site configuration (if defined)
+    options = parse_site_configuration(options)
+
     # merge settings from environment
     options = merge_configuration_from_environment(options)
 
     # set missing values to default values
     options = set_missing_options_to_default(options)
+
+    # if a specific site is requested, merge its configuration
+    if selected_site:
+        options = merge_site_configuration(options, selected_site)
 
     if not valid_options(options):
         __logger.error("Can't parse configuration.")

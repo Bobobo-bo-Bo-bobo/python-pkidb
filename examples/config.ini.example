@@ -2,6 +2,14 @@
 # file as it contains critical informations!
 
 [global]
+# list of sites and their configuration files
+# if empty or not set the global configuration will be used
+# format: <sitename>:/path/to/site/config/file ...
+# sitenames should only countain digits, letters, -, _, .
+# 
+# site configuration will be merged with global configuration
+sites = "site1:/etc/pkidb/sites/site1.ini site.remote:/etc/pkidb/sites/remote.site.ini"
+
 # backend - to store data
 # 
 # mysql - MySQL

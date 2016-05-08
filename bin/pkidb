@@ -2167,8 +2167,9 @@ if __name__ == "__main__":
         # default site
         if "global" in options:
             if "default_site" in options["global"]:
-                default_size = options["global"]["default_site"].strip()
-                options = merge_site_configuration(options, default_site)
+                default_site = options["global"]["default_site"].strip()
+                if default_site != "":
+                    options = merge_site_configuration(options, default_site)
 
     if not valid_options(options):
         __logger.error("Can't parse configuration.")

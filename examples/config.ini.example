@@ -10,6 +10,11 @@
 # site configuration will be merged with global configuration
 sites = "site1:/etc/pkidb/sites/site1.ini site.remote:/etc/pkidb/sites/remote.site.ini"
 
+# default_site is the site configuration to use if no site is requested
+# on the command line. default_site and its configuration
+# file must be defined in the site variable
+default_site = "site1"
+
 # backend - to store data
 # 
 # mysql - MySQL

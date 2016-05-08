@@ -181,7 +181,7 @@ def usage():
   --config=<cfg>                            Default: %s
 
   -s <site>                                 Use configuration for <site>
-  --site=<site>                             Default: Use global configuration
+  --site=<site>                             Default: Use global configuration or default site (if set and not empty)
 
   -h                                        This text
   --help
@@ -2162,6 +2162,13 @@ if __name__ == "__main__":
     # if a specific site is requested, merge its configuration
     if selected_site:
         options = merge_site_configuration(options, selected_site)
+    else:
+        # if a default_site has been defined merge configuration from
+        # default site
+        if "global" in options:
+            if "default_site" in options["global"]:
+                default_size = options["global"]["default_site"].strip()
+                options = merge_site_configuration(options, default_site)
 
     if not valid_options(options):
         __logger.error("Can't parse configuration.")

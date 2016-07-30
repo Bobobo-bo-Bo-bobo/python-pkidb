@@ -1,11 +1,11 @@
 # make sure to set correct access rights to this
-# file as it contains critical informations!
+# file as it contains critical information!
 
 [global]
 # list of sites and their configuration files
 # if empty or not set the global configuration will be used
-# format: <sitename>:/path/to/site/config/file ...
-# sitenames should only countain digits, letters, -, _, .
+# format: <site_name>:/path/to/site/config/file ...
+# site names should only contain digits, letters, -, _, .
 # 
 # site configuration will be merged with global configuration
 sites = "site1:/etc/pkidb/sites/site1.ini site.remote:/etc/pkidb/sites/remote.site.ini"
@@ -15,7 +15,7 @@ sites = "site1:/etc/pkidb/sites/site1.ini site.remote:/etc/pkidb/sites/remote.si
 # file must be defined in the site variable
 default_site = "site1"
 
-# backend - to store data
+# back end - to store data
 # 
 # mysql - MySQL
 # sqlite3 - SQLite3
@@ -39,16 +39,16 @@ serial_number = random
 # default validity period for new certificates
 validity_period = 1095
 
-# renew autorenwable certificates if less than auto_renew_start_period days left
+# renew automatically renewable certificates if less than auto_renew_start_period days left
 auto_renew_start_period = 1
 
-# path to crl signing certificarte and private
+# path to crl signing certificate and private
 # key and the passphrase protecting it
 crl_public_key = /path/to/public/crl/certificate
 crl_private_key = /path/to/private/crl/certificate
 crl_passphrase = AssembleTheMinions!
 
-# numver of days before the next crl is due
+# number of days before the next crl is due
 crl_validity_period = 30
 
 # message digest to use for crl signing
@@ -69,7 +69,7 @@ crl_digest = sha512
 log_warn_to_file=warning,file:/var/log/pkidb.log
 log_to_syslog=info,syslog:user
 
-# Backend configurations
+# Back end configurations
 [pgsql]
 host = 127.0.0.1
 port = 5432

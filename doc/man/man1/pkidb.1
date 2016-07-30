@@ -1,6 +1,6 @@
 .TH pkdib 1 "December 26th, 2015" "Version 0.8.13"
 .SH NAME
-pkidb - PKI system based on a SQL database backend
+pkidb - PKI system based on a SQL database back end
 
 .SH SYNOPSIS
 .B
@@ -16,7 +16,7 @@ command [
 
 .SH DESCRIPTION
 
-pkidb is a PKI tool to issue and manage certificates and certificate livecycle
+pkidb is a PKI tool to issue and manage certificates and certificate live cycle
 
 .SH OPTIONS
 .B \-V
@@ -85,8 +85,8 @@ is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the forma
 
 .BR backup
 .RS
-Dumps the content of the backend database in JSON format.
-This can be used to backup the PKI database and is the only supported way to migrate between different backend types.
+Dumps the content of the back end database in JSON format.
+This can be used to backup the PKI database and is the only supported way to migrate between different back end types.
 If no output file (option -o) has been given it will be written to standard output.
 .RE
 
@@ -105,7 +105,7 @@ instead of standard output.
 
 .BR delete
 .RS
-Deletes a certficiate identified by the serial number. If the serial number is not given on the command line it will be read from standard input.
+Deletes a certificate identified by the serial number. If the serial number is not given on the command line it will be read from standard input.
 .RE
 
 .BR export
@@ -147,7 +147,7 @@ instead of standard output
 .RE
 .BR healthcheck
 .RS
-Verify integrity of the stored certifiate data. This is done by extracting the certificate data from the certificate stored in the database and compare the values against the database.
+Verify integrity of the stored certificate data. This is done by extracting the certificate data from the certificate stored in the database and compare the values against the database.
 .RE
 
 .RS
@@ -186,7 +186,7 @@ Certificates marked as auto renewable will be renewed.
 .RS
 Certificates marked as auto renewable will be renewed for
 .I period
-day instead of the validity period stored in the backend database.
+day instead of the validity period stored in the back end database.
 .RE
 .RE
 
@@ -231,7 +231,7 @@ days.
 .RS
 Certificates marked as auto renewable will be renewed for
 .I period
-day instead of the default validity period definde in the configuration file.
+day instead of the default validity period defined in the configuration file.
 .RE
 
 .B \-r \c
@@ -303,7 +303,7 @@ Print serial number as hexadecimal number.
 .br
 .B \-\-invalid\c
 .RS
-List serial numbers of invalid certificates. Certficates are considered invalid if their notBefore time is in the future.
+List serial numbers of invalid certificates. Certificates are considered invalid if their notBefore time is in the future.
 .RE
 .RE
 
@@ -333,7 +333,7 @@ List serial numbers of revoked certificates.
 .br
 .B \-\-temporary\c
 .RS
-List certificates marked as temporary. Temporary certficates are dummy settings used to lock serial numbers during signing of a certificate signing request.
+List certificates marked as temporary. Temporary certificates are dummy settings used to lock serial numbers during signing of a certificate signing request.
 .RE
 .RE
 
@@ -348,7 +348,7 @@ List serial numbers of valid certificates. A certificates is considered valid if
 
 .BR renew
 .RS
-Renew a cerificate. The serial number of the certificate must be given. If not given it will be read from the standard input. The new certificate will be written to standard output or to a file if the -o option is used.
+Renew a certificate. The serial number of the certificate must be given. If not given it will be read from the standard input. The new certificate will be written to standard output or to a file if the -o option is used.
 .RE
 
 .RS
@@ -431,7 +431,7 @@ can be one of:
 .I aACompromise
 .RE
 
-If no reasen is given, the default
+If no reason is given, the default
 .I unspecified
 is used.
 .RE
@@ -453,7 +453,7 @@ is the UNIX epoch of the revocation or ASN1 GERNERALIZEDTIME string in the forma
 .BR search
 .RS
 .RS
-Search certificate subject for a given string. Search string can be given on the command line. If omitted it will be read from standard input. SQL wildcards like % can be used. The serial numbers matching the search will be printed to standard output.
+Search certificate subject for a given string. Search string can be given on the command line. If omitted it will be read from standard input. SQL wild cards like % can be used. The serial numbers matching the search will be printed to standard output.
 .RE
 .RE
 
@@ -700,7 +700,7 @@ can be used to set the critical flag. Known keyUsage bits according to RFC 5280 
 .br
 .RE
 
-(see RFC 5280, Section 4.2.1.3 "Key Usage" for futher details).
+(see RFC 5280, Section 4.2.1.3 "Key Usage" for further details).
 .RE
 .RE
 
@@ -750,7 +750,7 @@ Use a template file for certificate signing.
 .RS
 New certificate will be valid for
 .I validfor
-days. Default ist the defined
+days. Default is the defined
 .I validity_period
 in the configuration or the template file.
 .RE
@@ -765,18 +765,18 @@ in the configuration or the template file.
 Print small summary of stored certificates. Output will be written to standard output.
 .br
 .B Note: \c
-Only the keysizes and hashing algorithm of valid certificates are shown.
+Only the key sizes and hashing algorithm of valid certificates are shown.
 .RE
 
 
 .SH CONFIGFILE
 The configuration file is structured like a INI file. It contains at least two sections. The 
 .B global
-section and a backend specific section based on the backend selected in the 
+section and a back end specific section based on the back end selected in the 
 .B global
-section. As it will contain sensitive informations like the path and the password for the private key of your certificate authority, access to this configuration file should be restricted!
+section. As it will contain sensitive information like the path and the password for the private key of your certificate authority, access to this configuration file should be restricted!
 
-Instead of using configuration settins in the configuration file, environment variables can be used instead (e.g. if run inside a docker or LXC container) or to replace single configuration settings.
+Instead of using configuration settings in the configuration file, environment variables can be used instead (e.g. if run inside a docker or LXC container) or to replace single configuration settings.
 
 Except for the logging, every setting can be given as environment variable.
 
@@ -788,7 +788,7 @@ If both the configuration file and environment variables are present for a confi
 The 
 .B global
 section contains general configuration settings. 
-.I Depending on the purpose, not all of the options must be set. For instance a configuration for a dedicated system to generate the revocation list doesn't need the CA key settings.
+.I Depending on the purpose, not all of the options must be set. For instance a configuration for a dedicated system to generate the revocation list does not need the CA key settings.
 
 .RE
 .RS
@@ -799,7 +799,7 @@ section contains general configuration settings.
 Environment variable:
 .I PKIDB_GLOBAL_BACKEND
 .br
-Which database backend to use. Possible options are:
+Which database back end to use. Possible options are:
 
 .I mysql\c
  \- MySQL, requires the mysqldb Python module
@@ -831,7 +831,7 @@ Absolute path to the public key of the CA certificate.
 Environment variable:
 .I PKIDB_GLOBAL_CA_PRIVATE_KEY
 .br
-Absoulte path to the private key of the CA certificate.
+Absolute path to the private key of the CA certificate.
 .RE
 .RE
 
@@ -994,7 +994,7 @@ Changing the message digest algorithm for CRL signing is only supported since ve
 .RS
 The 
 .B logging
-section is optional and contains options for logging. A unique user defined string can be used for each logname. The format should be all lowercase letters and numbers and underscores (_).
+section is optional and contains options for logging. A unique user defined string can be used for each log name. The format should be all lowercase letters and numbers and underscores (_).
 .br
 If no 
 .B logging
@@ -1006,7 +1006,7 @@ section has been given (or it is empty) the default will be used (Destination: s
 .br
 .RS
 .I level
-describes the loglevel and can be one of:
+describes the log level and can be one of:
 .RS
 
 .I info
@@ -1062,7 +1062,7 @@ logging.
 .RS
 The 
 .B mysql
-section contains configuration settings for the MySQL backend.
+section contains configuration settings for the MySQL back end.
 At least 
 .I database\c
 ,
@@ -1178,7 +1178,7 @@ Path to the client certificate key file (PKCS#1 format) for client authenticatio
 .RS
 The 
 .B pgsql
-section contains configuration settings for the PostgreSQL backend.
+section contains configuration settings for the PostgreSQL back end.
 At least 
 .I database\c
 ,
@@ -1377,7 +1377,7 @@ This requires PostgreSQL 8.4 or newer, as the client library doesn't support thi
 .RS
 The 
 .B sqlite3
-section contains configuration settings for the SQLite3 backend.
+section contains configuration settings for the SQLite3 back end.
 The
 .I database
 options must be set.
@@ -1397,7 +1397,7 @@ The absolute path to the SQLite3 database file
 .RE
 
 .SH TEMPLATEFILE
-Template files can be used for specific settings for certificate signing (like specific keyUsage) and a more convenient and reproducable way to sign certificates.
+Template files can be used for specific settings for certificate signing (like specific keyUsage) and a more convenient and reproducible way to sign certificates.
 Like the configuration file it is in the INI format and contains one or more sections.
 
 .BR global
@@ -1472,7 +1472,7 @@ Configuration file:
 .nf
 
 [global]
-# backend - to store data
+# back end - to store data
 #
 # mysql - MySQL (not implemented yet)
 # sqlite3 - SQLite3 (not implemented yet)
@@ -1496,16 +1496,16 @@ serial_number = random
 # default validity period for new certificates
 validity_period = 1095
 
-# renew autorenwable certificates if less than auto_renew_start_period days left
+# renew automatically renewable certificates if less than auto_renew_start_period days left
 auto_renew_start_period = 1
 
-# path to crl signing certificarte and private
+# path to crl signing certificate and private
 # key and the passphrase protecting it
 crl_public_key = /home/maus/_/python-pkidb/tmp/tmp/crl.pem
 crl_private_key = /home/maus/_/python-pkidb/tmp/tmp/crl.key
 crl_passphrase = AssembleTheMinions!
 
-# numver of days before the next crl is due
+# number of days before the next crl is due
 crl_validity_period = 30
 
 # message digest to use for crl signing
@@ -1526,7 +1526,7 @@ crl_digest = sha512
 log_warn_to_file=warning,file:/var/log/pkidb.log
 log_to_syslog=info,syslog:user
 
-# Backend configurations
+# Back end configurations
 [pgsql]
 host = 127.0.0.1
 port = 5432

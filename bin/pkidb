@@ -95,6 +95,7 @@ else:
 environment_to_configuration = {
     "PKIDB_GLOBAL_BACKEND": {"section": "global", "key": "backend"},
     "PKIDB_GLOBAL_CA_PUBLIC_KEY": {"section": "global", "key": "ca_public_key"},
+    "PKIDB_GLOBAL_CA_CERTIFICATE": {"section": "global", "key": "ca_certificate"},
     "PKIDB_GLOBAL_CA_PRIVATE_KEY": {"section": "global", "key": "ca_private_key"},
     "PKIDB_GLOBAL_CA_PASSPHRASE": {"section": "global", "key": "ca_passphrase"},
     "PKIDB_GLOBAL_DIGEST": {"section": "global", "key": "digest"},
@@ -102,6 +103,7 @@ environment_to_configuration = {
     "PKIDB_GLOBAL_VALIDITY_PERIOD": {"section": "global", "key": "validity_period"},
     "PKIDB_GLOBAL_AUTO_RENEW_START_PERIOD": {"section": "global", "key": "auto_renew_start_period"},
     "PKIDB_GLOBAL_CRL_PUBLIC_KEY": {"section": "global", "key": "crl_public_key"},
+    "PKIDB_GLOBAL_CRL_CERTIFICATE": {"section": "global", "key": "crl_certificate"},
     "PKIDB_GLOBAL_CRL_PRIVATE_KEY": {"section": "global", "key": "crl_private_key"},
     "PKIDB_GLOBAL_CRL_PASSPHRASE": {"section": "global", "key": "crl_passphrase"},
     "PKIDB_GLOBAL_CRL_VALIDITY_PERIOD": {"section": "global", "key": "crl_validity_period"},
@@ -2118,6 +2120,22 @@ def merge_site_configuration(optdict, site):
     return optdict
 
 
+def merge_alternative_names(optdict):
+    """
+    Merge alternative option names from configuration file into a single value
+    :param optdict: dictionary of options
+    :return: dictionary of options, alternative values merged (if present)
+    """
+    if "global" in optdict:
+        if "ca_certificate" in optdict:
+            optdict["global"]["ca_public_key"] = optdict["global"]["ca_certificate"]
+
+    if "crl_certificate" in optdict:
+        optdict["global"]["crl_public_key"] = optdict["global"]["crl_certificate"]
+
+    return optdict
+
+
 if __name__ == "__main__":
     failed = False
     selected_site = None
@@ -2170,6 +2188,8 @@ if __name__ == "__main__":
                 default_site = options["global"]["default_site"].strip()
                 if default_site != "":
                     options = merge_site_configuration(options, default_site)
+
+    options = merge_alternative_names(options)
 
     if not valid_options(options):
         __logger.error("Can't parse configuration.")

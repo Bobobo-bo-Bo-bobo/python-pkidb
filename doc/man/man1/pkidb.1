@@ -815,9 +815,15 @@ Which database back end to use. Possible options are:
 
 .RS
 .I ca_public_key
+(alternative:
+.I ca_certificate
+)
 .br
 Environment variable:
 .I PKIDB_GLOBAL_CA_PUBLIC_KEY
+(alternative:
+.I PKIDB_GLOBAL_CA_CERTIFICATE
+)
 .br
 .RS
 Absolute path to the public key of the CA certificate.
@@ -918,10 +924,16 @@ The default is
 
 .RS
 .I crl_public_key
+(alternative:
+.I crl_certificate
+)
 .br
 .RS
 Environment variable:
 .I PKIDB_GLOBAL_CRL_PUBLIC_KEY
+(alternative:
+.I CRL_CERTIFICATE
+)
 .br
 The absolute path to the public key for the certificate to sign the certificate revocation list. This can be the same as the CA certificate but it best practices recommend a separate certificate with a shorter
 validity period.

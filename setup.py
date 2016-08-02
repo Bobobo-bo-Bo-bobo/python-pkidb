@@ -2,7 +2,7 @@
 from distutils.core import setup
 
 
-PKIDB_VERSION = "0.8.13"
+PKIDB_VERSION = "0.8.14.1"
 
 PKIDB_SETUP = {
     "name": "pkidb",

@@ -34,7 +34,7 @@ import OpenSSL
 # default configuration file
 configfile = "/etc/pkidb/config.ini"
 
-__version__ = "0.8.13"
+__version__ = "0.8.14.1"
 
 shortoptions = {
     "main": "c:hVs:",

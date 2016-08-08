@@ -108,6 +108,7 @@ environment_to_configuration = {
     "PKIDB_GLOBAL_CRL_PASSPHRASE": {"section": "global", "key": "crl_passphrase"},
     "PKIDB_GLOBAL_CRL_VALIDITY_PERIOD": {"section": "global", "key": "crl_validity_period"},
     "PKIDB_GLOBAL_CRL_DIGEST": {"section": "global", "key": "crl_digest"},
+    "PKIDB_GLOBAL_LIST_AS_HEX": {"section": "global", "key": "list_as_hex"},
     "PKIDB_PGSQL_HOST": {"section": "pgsql", "key": "host"},
     "PKIDB_PGSQL_PORT": {"section": "pgsql", "key": "port"},
     "PKIDB_PGSQL_DATABASE": {"section": "pgsql", "key": "database"},
@@ -441,11 +442,12 @@ def remove_duplicates(duplist):
     return ordered
 
 
-def list_certificates(opts, dbbackend):
+def list_certificates(opts, dbbackend, cfg):
     """
     List certificates from backend
     :param opts: options
     :param dbbackend: backend
+    :param cfg: configuration
     :return:
     """
     output = None
@@ -476,6 +478,18 @@ def list_certificates(opts, dbbackend):
         else:
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (option,))
+
+    if "global" in cfg:
+        if "list_as_hex" in cfg["global"]:
+            if cfg["global"]["list_as_hex"].strip().lower() == "true":
+                hexadecimal = True
+            elif cfg["global"]["list_as_hex"].strip().lower() == "false":
+                hexadecimal = False
+            else:
+                __logger.error("Illegal value for list_as_hex, can be either True or False but not %s" %
+                               (cfg["global"]["list_as_hex"], ))
+                raise pkidbbackends.PKIDBException(message="Illegal value for list_as_hex, can be either True or False "
+                                                           "but not %s" % (cfg["global"]["list_as_hex"], ))
 
     serials = []
     if len(snfilter) == 0:
@@ -2252,7 +2266,7 @@ if __name__ == "__main__":
         elif command == "backup":
             backup_database(trailing[1:], backend)
         elif command == "list":
-            list_certificates(trailing[1:], backend)
+            list_certificates(trailing[1:], backend, options)
         elif command == "restore":
             restore_database(trailing[1:], backend)
         elif command == "delete":

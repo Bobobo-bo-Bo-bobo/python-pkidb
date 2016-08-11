@@ -1313,7 +1313,10 @@ class SQLite(Backend):
         try:
             query = {"search": searchstring, }
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE ?;", (query["search"],))
+            # although SQLite LIKE is case insensitive, it is ONLY case insensitive for pure
+            # ASCII chars. force insensitive match in case of unicode chars
+            cursor.execute("SELECT serial_number FROM certificate WHERE LOWER(subject) LIKE ?;",
+                           (query["search"].lower(), ))
             result = cursor.fetchall()
             cursor.close()
             self.__db.commit()

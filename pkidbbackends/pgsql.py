@@ -1457,7 +1457,7 @@ class PostgreSQL(Backend):
         try:
             query = {"search": searchstring, }
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE %(search)s;", query)
+            cursor.execute("SELECT serial_number FROM certificate WHERE subject ILIKE %(search)s;", query)
             result = cursor.fetchall()
             cursor.close()
             self.__db.commit()

@@ -1363,7 +1363,8 @@ class MySQL(Backend):
         try:
             query = {"search": searchstring, }
             cursor = self.__db.cursor()
-            cursor.execute("SELECT serial_number FROM certificate WHERE subject LIKE %s;", (query["search"],))
+            cursor.execute("SELECT serial_number FROM certificate WHERE LOWER(subject) LIKE %s;",
+                           (query["search"].lower(), ))
             result = cursor.fetchall()
             cursor.close()
             self.__db.commit()

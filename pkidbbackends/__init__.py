@@ -168,6 +168,39 @@ class Backend(object):
             sys.stderr.write("Error: Unknown log level %s\n" % (string,))
             raise PKIDBException(message="Unknown log level %s" % (string,))
 
+    def get_revocation_reason_map(self, entry):
+        """
+        Get the the value of revocation reason
+        :param entry: entry to look for
+        :return: value from map or None
+        """
+        if entry in self._revocation_reason_map:
+            return self._revocation_reason_map[entry]
+        else:
+            return None
+
+    def get_extended_keyusage_list(self, entry):
+        """
+        Get value from list of extended key usage map
+        :param entry: entry to look for
+        :return: value from dictionary or None
+        """
+        if entry in self._extended_keyusage_list:
+            return self._extended_keyusage_list[entry]
+        else:
+            return None
+
+    def get_keyusage_list(self, entry):
+        """
+        Get value from key usage list
+        :param entry: entry to look for
+        :return: value from dictionary or None
+        """
+        if entry in self._keyusage_list:
+            return self._keyusage_list[entry]
+        else:
+            return None
+
     def __init_logger(self, options):
         """
         Setup logging based on the configuration setting

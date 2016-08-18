@@ -1018,7 +1018,7 @@ def revoke_certificate(opts, dbbackend):
                                                                (value, getopterror.message))
 
         elif option in ("-r", "--reason"):
-            if value.lower() in dbbackend._revocation_reason_map:
+            if dbbackend.get_revocation_reason_map(value.lower()) is not None:
                 reason = value.lower()
             else:
                 __logger.error("%s is not a valid revocation reason" % (value,))
@@ -1179,7 +1179,7 @@ def sign_certificate(opts, config, dbbackend):
 
             extusagelist = extusage.split(",")
             for eusage in extusagelist:
-                if not eusage.strip().lower() in dbbackend._extended_keyusage_list:
+                if dbbackend.get_extended_keyusage_list(eusage.strip().lower()) is None:
                     if not re_oid.match(eusage.strip()):
                         __logger.error("Invalid extended key usage %s" % (eusage,))
                         raise pkidbbackends.PKIDBException("Invalid extended key usage %s" % (eusage,))
@@ -1198,7 +1198,7 @@ def sign_certificate(opts, config, dbbackend):
             usagelist = keyusage.split(",")
 
             for keyusage in usagelist:
-                if not keyusage.strip().lower() in dbbackend._keyusage_list:
+                if dbbackend.get_keyusage_list(keyusage.strip().lower()) is None:
                     __logger.error("%s is not a valid key usage" % (keyusage,))
                     raise pkidbbackends.PKIDBException("%s is not a valid key usage" % (keyusage,))
 
@@ -1494,8 +1494,8 @@ def import_certificate(opts, config, dbbackend):
                 reason = "unspecified"
 
             # check reason string
-            if reason.lower() in dbbackend._revocation_reason_map:
-                revoked = (dbbackend._revocation_reason_map[reason.lower()], revtime)
+            if dbbackend.get_revocation_reason_map(reason.lower()) is not None:
+                revoked = (dbbackend.get_revocation_reason_map(reason.lower()), revtime)
 
             elif option in ("-a", "--auto-renew"):
                 autorenewable = True

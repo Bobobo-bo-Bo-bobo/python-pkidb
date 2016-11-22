@@ -705,6 +705,19 @@ can be used to set the critical flag. Known keyUsage bits according to RFC 5280 
 .RE
 
 .RS
+.B \-n \c
+.br
+.B \-\-no\-register \c
+.RS
+Don't store certificate data - except the serial number - in the database.
+The serial number is
+.I ALWAYS
+stored in the backend to avoid conflicting serial numbers of certificates (especially if the serial numbers are
+generated using "increment" strategy).
+.RE
+.RE
+
+.RS
 .B \-o \c
 .I outputfile
 .br

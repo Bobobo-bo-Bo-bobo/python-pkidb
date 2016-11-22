@@ -223,7 +223,7 @@ class PostgreSQL(Backend):
             self.__db.commit()
         except psycopg2.Error as error:
             self.__db.rollback()
-            self.__logger("Can't lookup serial number from database: %s" % (error.message,))
+            self.__logger.error("Can't lookup serial number from database: %s" % (error.message,))
             raise PKIDBException(message="Error: Can't lookup serial number from database: %s" % (error.message,))
 
         if result >= self._MAX_SERIAL_NUMBER:

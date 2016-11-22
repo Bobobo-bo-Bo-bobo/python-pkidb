@@ -190,7 +190,7 @@ class MySQL(Backend):
             self.__db.commit()
         except MySQLdb.Error as error:
             self.__db.rollback()
-            self.__logger("Can't lookup serial number from database: %s" % (error.message,))
+            self.__logger.error("Can't lookup serial number from database: %s" % (error.message,))
             raise PKIDBException(message="Error: Can't lookup serial number from database: %s" % (error.message,))
 
         if result >= self._MAX_SERIAL_NUMBER:
@@ -1034,8 +1034,10 @@ class MySQL(Backend):
 
                 data = {
                     "serial_number": "%u (0x%02x)" % (long(result[0][0]), long(result[0][0])),
-                    "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(time.mktime(result[0][2].timetuple()))),
-                    "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(time.mktime(result[0][3].timetuple()))),
+                    "start_date": time.strftime("%a, %d %b %Y %H:%M:%S %z",
+                                                time.localtime(time.mktime(result[0][2].timetuple()))),
+                    "end_date": time.strftime("%a, %d %b %Y %H:%M:%S %z",
+                                              time.localtime(time.mktime(result[0][3].timetuple()))),
                     "subject": result[0][4],
                     "auto_renewable": result[0][5],
                     "issuer": result[0][8],
@@ -1059,7 +1061,8 @@ class MySQL(Backend):
                     data["keysize"] = -1
 
                 if data["state"] == "revoked":
-                    data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z", time.localtime(time.localtime(result[0][17].timetuple())))
+                    data["revocation_date"] = time.strftime("%a, %d %b %Y %H:%M:%S %z",
+                                                            time.localtime(time.localtime(result[0][17].timetuple())))
                     data["revocation_reason"] = self._revocation_reason_reverse_map[result[0][18]]
 
                 # convert 0/1 to real boolean False/True

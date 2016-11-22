@@ -608,7 +608,7 @@ class Backend(object):
         :return: digest (type string)
         """
 
-    def sign_request(self, csr, notbefore, notafter, cakey, issuer, extensions, digest=None):
+    def sign_request(self, csr, notbefore, notafter, cakey, issuer, extensions, register_cert=True, digest=None):
         """
         Create a certificate from a certificate signing request,
         :param csr: X509Request object of certificate signing request
@@ -617,7 +617,8 @@ class Backend(object):
         :param cakey: X509 object of CA signing key
         :param issuer: X509Name object containing the subject of CA
         :param extensions: list of x509 extension
-        :param digest: digest for signing, if None it will be take from configuration
+        :param register_cert: register certififate date
+        :param digest: digest for signing, if None it will be taken from configuration
         :return: signed certificate as X509 object
         """
 
@@ -655,16 +656,19 @@ class Backend(object):
             newcert.add_extensions(extensions)
 
         # sign new certificate
-        if digest:
+        if digest is not None:
             signdigest = digest
         else:
             signdigest = self._get_digest()
         newcert.sign(cakey, signdigest)
 
         if newcert:
-            # replace "locked" serial number with current certificate data
-            self.store_certificate(newcert, csr=csr, revoked=None, replace=True)
-
+            if register_cert:
+                # replace "locked" serial number with current certificate data
+                self.store_certificate(newcert, csr=csr, revoked=None, replace=True)
+            else:
+                # only store serial number to avoid potential collisions
+                self.insert_empty_cert_data(new_serial_number, "")
         else:
             # remove "locked" serial number because certificate signing failed
             self.remove_certificate(new_serial_number)

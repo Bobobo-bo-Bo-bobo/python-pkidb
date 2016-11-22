@@ -38,7 +38,7 @@ __version__ = "0.8.14.1"
 
 shortoptions = {
     "main": "c:hVs:",
-    "sign": "b:o:s:v:E:S:k:K:t:",
+    "sign": "b:o:s:v:E:S:k:K:t:n",
     "import": "c:r:a:p:d:",
     "housekeeping": "ap:",
     "statistics": "",
@@ -61,7 +61,7 @@ shortoptions = {
 longoptions = {
     "main": ["config=", "help", "version", "site="],
     "sign": ["output=", "start-in=", "valid-for=", "extension=", "san=", "keyusage=", "extended-keyusage=",
-             "basic-constraint=", "template="],
+             "basic-constraint=", "template=", "no-register"],
     "import": ["csr=", "revoked=", "auto-renew", "period=", "delta="],
     "housekeeping": ["auto-renew", "period="],
     "statistics": [],
@@ -410,6 +410,11 @@ def usage():
                                             digitalSignature, nonRepudiation (or contentCommitment), keyEncipherment,
                                             dataEncipherment, keyAgreement, keyCertSign, cRLSign, encipherOnly,
                                             decipherOnly (see RFC 5280, Section 4.2.1.3 "Key Usage" for futher details).
+
+     -n                                     Don't store certificate data - except the serial number - in the database.
+     --no-register                          The serial number is ALWAYS stored in the backend to avoid conflicting
+                                            serial numbers of certificates (especially if the serial numbers are
+                                            generated using "increment" strategy).
 
      -o <out>                               Write data to <outfile> instead of stdout
      --output=<out>
@@ -1125,8 +1130,9 @@ def sign_certificate(opts, config, dbbackend):
     notbefore = None
     valid_for = None
     templatedata = {"global": {}, "extension": [], }
+    register_cert = True
 
-    re_oid = re.compile("[0-9\.]+")
+    re_oid = re.compile("[0-9.]+")
     re_ca_flag = re.compile("CA:([A-Za-z]+)(.*)")
 
     try:
@@ -1290,6 +1296,8 @@ def sign_certificate(opts, config, dbbackend):
         elif option in ("-o", "--output"):
             output = value
 
+        elif option in ("-n", "--no-register"):
+            register_cert = False
         else:
             __logger.error("Unknown option %s" % (option,))
             raise pkidbbackends.PKIDBException(message="Error: Unknown option %s" % (option,))
@@ -1365,7 +1373,7 @@ def sign_certificate(opts, config, dbbackend):
     # We do not pass the issuer of the CA, because only for root CA is issuer == subject
     # Intermediate CAs will contain their issuing CA as issuer
     newcert = dbbackend.sign_request(csr, notbefore, valid_for, ca_priv_key, ca_pub_key.get_subject(),
-                                     extensions, digest)
+                                     extensions, register_cert, digest)
 
     newcert_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, newcert)
 

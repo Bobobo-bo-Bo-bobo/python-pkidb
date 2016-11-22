@@ -1,5 +1,5 @@
 .idea/*
 *.pyc
-tmp
+tmp/
 *.swp
 build/*

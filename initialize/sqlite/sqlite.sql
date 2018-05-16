@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS "certificate" (
   -- numeric  variable  user-specified precision, exact up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
   -- 
   -- serial_number is the primary key
-  serial_number NUMERIC PRIMARY KEY CHECK(serial_number > 0),
+  serial_number TEXT PRIMARY KEY CHECK(serial_number <> ''),
 
   -- SSL version (Note: SSL starts version at 0)
   version INTEGER CHECK(version >= 0),

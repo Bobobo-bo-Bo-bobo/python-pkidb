@@ -108,7 +108,7 @@ class SQLite(Backend):
 
     def _get_state(self, serial):
         try:
-            qdata = (serial,)
+            qdata = (str(serial),)
 
             cursor = self.__db.cursor()
             cursor.execute("SELECT state FROM certificate WHERE serial_number=?;", qdata)
@@ -133,7 +133,7 @@ class SQLite(Backend):
             raise PKIDBException(message="Can't read certificate from database: %s" % (error.message,))
 
     def _has_serial_number(self, serial):
-        query = (serial,)
+        query = (str(serial),)
 
         self.__logger.info("Looking for serial number %s in database" % (str(serial),))
 
@@ -192,6 +192,8 @@ class SQLite(Backend):
                 found = False
                 while not found:
                     new_serial = random.randint(1, self._MAX_SERIAL_NUMBER)
+                    # SQLite can't handle 64 bit unsigned integers, force string
+                    new_serial = str(new_serial)
                     if self._has_serial_number(new_serial):
                         found = False
                     else:
@@ -199,6 +201,8 @@ class SQLite(Backend):
 
             elif self.__config["global"]["serial_number"] == "increment":
                 new_serial = self._get_last_serial_number()
+                # SQLite can't handle 64 bit unsigned integers, force string
+                new_serial = str(new_serial)
                 if new_serial:
                     new_serial += 1
 
@@ -299,6 +303,11 @@ class SQLite(Backend):
         self.__logger.info("Storing certificate in database")
 
         data = self._extract_data(cert, csr, revoked)
+
+        # SQLite can't handle unsigned 64bit int Although NUMERICAL _should_ be able to handle large numbers, the
+        # sqlite3 module fails.
+        if "serial" in data:
+            data["serial"] = str(data["serial"])
 
         # check if serial_number already exist
         try:
@@ -537,7 +546,7 @@ class SQLite(Backend):
             # insert empty data to "register" serial number until the
             # signed certificate can be committed
             dummy_data = {
-                "serial": serial,
+                "serial": str(serial),
                 "subject": subject,
                 "state": self._certificate_status_map["temporary"],
             }
@@ -566,7 +575,7 @@ class SQLite(Backend):
 
         try:
             cursor = self.__db.cursor()
-            cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (serial,))
+            cursor.execute("DELETE FROM certificate WHERE serial_number=?;", (str(serial),))
 
             self.__logger.info("Certificate with serial number %s has been removed from the database" % (str(serial),))
 
@@ -620,7 +629,7 @@ class SQLite(Backend):
     def revoke_certificate(self, serial, reason, revocation_date, force=False):
         try:
             qdata = {
-                "serial": serial,
+                "serial": str(serial),
                 "reason": self._revocation_reason_map[reason],
                 "date": revocation_date,
                 "state": self._certificate_status_map["revoked"],
@@ -634,7 +643,7 @@ class SQLite(Backend):
                 if len(result) == 0:
                     qdata["version"] = 2
                     qdata["subject"] = "Placeholder, set by revoking non-existent certificate with serial number %s " \
-                                       "and using the force flag." % (serial,)
+                                       "and using the force flag." % (str(serial),)
                     qdata["certificate"] = qdata["subject"]
 
                     cursor.execute("INSERT INTO certificate (serial_number, version, subject, certificate, state) "
@@ -658,10 +667,10 @@ class SQLite(Backend):
     def get_certificate(self, serial):
 
         qdata = {
-            "serial": serial,
+            "serial": str(serial),
         }
 
-        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (serial,))
+        self.__logger.info("Getting ASN1 data for certificate with serial number 0x%s" % (str(serial),))
 
         try:
             cursor = self.__db.cursor()
@@ -967,7 +976,7 @@ class SQLite(Backend):
         return True
 
     def get_certificate_data(self, serial):
-        qdata = {"serial": serial, }
+        qdata = {"serial": str(serial), }
 
         try:
             cursor = self.__db.cursor()
@@ -1048,9 +1057,9 @@ class SQLite(Backend):
         except sqlite3.Error as error:
             self.__db.rollback()
             self.__logger.error("Can't lookup certificate with serial number %s in database: %s"
-                                % (serial, error.message))
+                                % (str(serial), error.message))
             raise PKIDBException(message="Can't lookup certificate with serial number %s in database: %s"
-                                         % (serial, error.message))
+                                         % (str(serial), error.message))
 
         return data
 
@@ -1074,7 +1083,7 @@ class SQLite(Backend):
             cursor = self.__db.cursor()
 
             qdata = {
-                "serial": serial,
+                "serial": str(serial),
                 "auto_renewable": auto_renew,
                 "auto_renew_start_period": auto_renew_start_period,
                 "auto_renew_validity_period": auto_renew_validity_period,
@@ -1105,7 +1114,7 @@ class SQLite(Backend):
                     self.__logger.info("Setting auto_renew_start_period of certificate %s to %f days." %
                                        (str(serial), qdata["auto_renew_start_period"] / 86400.))
                     udata = {
-                        "serial": serial,
+                        "serial": str(serial),
                     }
                     # set auto_renew_validity_period to validity_period of not set
                     if not auto_renew_validity_period:
@@ -1129,7 +1138,7 @@ class SQLite(Backend):
                                        (str(serial), qdata["auto_renew_validity_period"] / 86400.))
 
                     udata = {
-                        "serial": serial,
+                        "serial": str(serial),
                     }
                     # set auto_renew_start_period to validity_period of not set
                     if not auto_renew_start_period:
@@ -1233,10 +1242,10 @@ class SQLite(Backend):
             "certificate": None,
             "signing_request": None,
         }
-        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (serial,))
+        self.__logger.info("Fetching metadata for certificate with serial number %s from database." % (str(serial),))
 
         try:
-            qdata = {"serial": serial, }
+            qdata = {"serial": str(serial), }
             cursor = self.__db.cursor()
             cursor.execute("SELECT auto_renewable, extract(EPOCH FROM auto_renew_start_period), "
                            "extract(EPOCH FROM auto_renew_validity_period), state, "
@@ -1272,7 +1281,7 @@ class SQLite(Backend):
                 else:
                     returnval[request] = None
                     self.__logger.warning("Skipping unknown meta data field %s for certificate with serial number %s"
-                                          % (request, serial))
+                                          % (request, str(serial)))
             return returnval
 
     def _set_meta_data(self, serial, metadata):
@@ -1287,18 +1296,18 @@ class SQLite(Backend):
             cursor = self.__db.cursor()
             data = metadata
             # add serial number to array
-            data["serial"] = serial
+            data["serial"] = str(serial)
 
             for meta in metadata:
                 if meta != "serial":
                     if meta in self._metadata:
                         query = "UPDATE certificate SET %s=? WHERE serial_number=?;" % (meta,)
-                        self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], serial))
+                        self.__logger.info("Setting %s to %s for serial number %s" % (meta, metadata[meta], str(serial)))
 
                         cursor.execute(query, (data[meta], data["serial"]))
                     else:
                         self.__logger.warning("Unknown meta data field %s for certificate with serial number %s"
-                                              % (meta, serial))
+                                              % (meta, str(serial)))
 
             cursor.close()
             self.__db.commit()

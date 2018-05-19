@@ -1466,7 +1466,11 @@ def import_certificate(opts, config, dbbackend):
     csr = None
     revoked = None
     autorenewable = False
-    auto_renew_start_period = float(config["global"]["auto_renew_start_period"])
+
+    if "auto_renew_start_period" in config["global"]:
+        auto_renew_start_period = float(config["global"]["auto_renew_start_period"])
+    else:
+        auto_renew_start_period = None
 
     for (option, value) in optionval:
         if option in ("-c", "--csr"):

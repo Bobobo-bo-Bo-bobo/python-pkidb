@@ -207,7 +207,7 @@ class SQLite(Backend):
                     new_serial += 1
 
         self.__logger.info("New serial number is %s" % (str(new_serial),))
-        return new_serial
+        return int(new_serial)
 
     def _store_extension(self, extlist):
         result = []

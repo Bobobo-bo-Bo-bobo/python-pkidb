@@ -30,7 +30,6 @@ ca_public_key = /path/to/public/ca/certificate
 ca_private_key = /path/to/private/ca/certificate
 ca_passphrase = ItsSoFluffyImGonnaDie!
 
-ca_vault_path = secrets/pki/ca
 
 # default message digest to use when signing certificates
 # see man 1 dgst for supported digest algorithm
@@ -57,13 +56,6 @@ crl_passphrase = AssembleTheMinions!
 ; public key, private key and passphrases found in vault data will override
 ; vaules defined in the configuration file
 ; 
-; # configration    vault field
-; # *_passphrase    passphrase
-; # *_public_key    public_key
-; # *_private_key   private_key
-;
-; the password is expected to be in the passphrase field
-crl_vault_path = secrets/pki/crl
 
 # number of days before the next crl is due
 crl_validity_period = 30
@@ -86,6 +78,28 @@ insecure_ssl = False
 ; role_id and secret_id required for vault login
 role_id = c0dedead-beef-c0de-dead-beefc0dedead
 secret_id = c0dedead-beef-c0de-dead-beefc0dedead
+
+# Note: If specified values of ca_vault_* and/or crl_vault_* override corresponding vault_* settings
+#       This can be used to keep ca and crl separated (even ins separated vaults)
+ca_vault_path = secrets/pki/ca
+; ca_vault_address = 
+; ca_vault_role_id =
+; ca_vault_secred_id = 
+; ca_vault_insecure_ssl = 
+
+crl_vault_path = secrets/pki/crl
+; crl_vault_address = 
+; crl_vault_role_id =
+; crl_vault_secred_id = 
+; crl_vault_insecure_ssl = 
+
+# Note: the vault fields are hard coded as:
+; # configration    vault field
+; # *_passphrase    passphrase
+; # *_public_key    public_key
+; # *_private_key   private_key
+;
+; the password is expected to be in the passphrase field
 
 [logging]
 # format:

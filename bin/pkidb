@@ -2087,7 +2087,7 @@ def version():
     :return: None
     """
     print("""python-pkidb version %s
-Copyright (C) 2015 - 2018 by Andreas Maus <maus@ypbind.de>
+Copyright (C) by Andreas Maus <maus@ypbind.de>
 This program comes with ABSOLUTELY NO WARRANTY.
 
 python-pkidb is distributed under the Terms of the GNU General

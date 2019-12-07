@@ -51,11 +51,7 @@ crl_public_key = /path/to/public/crl/certificate
 ; alternative:
 ; crl_certificate = /path/to/public/crl/certificate
 crl_private_key = /path/to/private/crl/certificate
-; crl_passphrase will be ignored if crl_vault_path is set
 crl_passphrase = AssembleTheMinions!
-; public key, private key and passphrases found in vault data will override
-; vaules defined in the configuration file
-; 
 
 # number of days before the next crl is due
 crl_validity_period = 30
@@ -66,40 +62,6 @@ crl_digest = sha512
 # show serial numbers in "list" output as hexadecimal values
 # default: false
 list_as_hex = True
-
-[vault]
-; schema and address of vault server, do NOT use unencrypted http in production!
-address = https://localhost:8200
-; ca certificate to CA file containing the signing CA of the vault server
-ca_cert = /path/to/ca/cert/for/vault/connection
-; skip SSL verification
-insecure_ssl = False
-
-; role_id and secret_id required for vault login
-role_id = c0dedead-beef-c0de-dead-beefc0dedead
-secret_id = c0dedead-beef-c0de-dead-beefc0dedead
-
-# Note: If specified values of ca_vault_* and/or crl_vault_* override corresponding vault_* settings
-#       This can be used to keep ca and crl separated (even ins separated vaults)
-ca_vault_path = secrets/pki/ca
-; ca_vault_address = 
-; ca_vault_role_id =
-; ca_vault_secred_id = 
-; ca_vault_insecure_ssl = 
-
-crl_vault_path = secrets/pki/crl
-; crl_vault_address = 
-; crl_vault_role_id =
-; crl_vault_secred_id = 
-; crl_vault_insecure_ssl = 
-
-# Note: the vault fields are hard coded as:
-; # configration    vault field
-; # *_passphrase    passphrase
-; # *_public_key    public_key
-; # *_private_key   private_key
-;
-; the password is expected to be in the passphrase field
 
 [logging]
 # format:
